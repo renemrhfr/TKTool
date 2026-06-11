@@ -8,6 +8,15 @@ it turned out more useful than expected — not because it wants to be a product
 The UI is in German. So is the data model in places (`werktage`, `allokiert`,
 `supportMonate`). Historically grown, not going to change.
 
+## Screenshots
+
+![Planner](screenshots/planner.png)
+*Screenshot of the Planner View*
+
+
+![Themes](screenshots/themes.png)
+*Various Themes for different Vibes*
+
 ## Core concepts
 
 ### One JSON file, your folder
