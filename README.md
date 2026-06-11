@@ -10,6 +10,9 @@ The UI is in German. So is the data model in places (`werktage`, `allokiert`,
 
 ## Screenshots
 
+![Dashboard](screenshots/dashboard.png)
+*Screenshot of the Dashboard View*
+
 ![Planner](screenshots/planner.png)
 *Screenshot of the Planner View*
 
