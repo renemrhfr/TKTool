@@ -1,0 +1,153 @@
+body[data-theme="switch"] {
+  --bg: #ebebeb;
+  --bg-elev: #f6f6f6;
+  --surface: #ffffff;
+  --surface-hover: #f2f2f2;
+  --border: #d8d8d8;
+  --text: #242424;
+  --text-secondary: #5d6268;
+  --text-muted: #8d9298;
+  --accent: #e60012;
+  --accent-hover: #ff3b49;
+  --accent-light: #ffe6e8;
+  --today-bg: #e7f5ff;
+  --today-text: #00a3e0;
+  --today-line: #e60012;
+  --danger: #e60012;
+  --danger-light: #ffe6e8;
+  --success: #39b54a;
+  --success-light: #e8f7ea;
+  --warning: #f2a900;
+  --warning-light: #fff5db;
+  --purple: #7b61ff;
+  --purple-light: #eeebff;
+  --blue: #00a3e0;
+  --weekend-bg: #dedede;
+  --weekend-bg-strong: #d2d2d2;
+  --weekend-border: #c2c2c2;
+  --weekend-text: #686d73;
+  --weekend-support-bg: #f1e5c8;
+  --weekend-support-bg-strong: #e9d9b2;
+  --weekend-support-border: #d8c28d;
+  --font-body: var(--font-sans);
+  --board-todo-bg: #e7f5ff;
+  --board-backlog-bg: #ffffff;
+  --board-waiting-bg: #fff5db;
+  --board-done-bg: #e8f7ea;
+  --task-done-shadow: inset 0 8px 0 rgba(0, 0, 0, 0.025);
+  --badge-todo-text: #007cad;
+  --badge-todo-bg: #e7f5ff;
+  --badge-todo-border: #b7dff1;
+  --badge-backlog-text: #6f747a;
+  --badge-backlog-bg: #f7f7f7;
+  --badge-backlog-border: #dedede;
+  --badge-waiting-text: #9b6d00;
+  --badge-waiting-bg: #fff5db;
+  --badge-waiting-border: #ead28f;
+  --badge-done-text: #2c7d39;
+  --badge-done-bg: #e8f7ea;
+  --badge-done-border: #c2e4c7;
+  --badge-win-text: #6850d8;
+  --badge-win-bg: #eeebff;
+  --badge-win-border: #d4ccff;
+  --badge-highlight-text: #0b7f75;
+  --badge-highlight-bg: #e8f7f5;
+  --badge-highlight-border: #c3e5e0;
+  --badge-concern-text: #d51c2c;
+  --badge-concern-bg: #ffe6e8;
+  --badge-concern-border: #f3bdc4;
+  --badge-note-text: #6850d8;
+  --badge-note-bg: #eeebff;
+  --badge-note-border: #d4ccff;
+  --badge-focus-text: #d51c2c;
+  --badge-focus-bg: #ffe6e8;
+  --badge-focus-border: #f3bdc4;
+  --stat-todo-bg: #e7f5ff;
+  --stat-backlog-bg: #ffffff;
+  --stat-waiting-bg: #fff5db;
+  --stat-done-bg: #e8f7ea;
+  --stat-wins-text: #6850d8;
+  --stat-wins-bg: #eeebff;
+  --quicknotes-bar-bg: #ffffff;
+  --quicknotes-bar-bg-hover: #f2f2f2;
+  --quicknotes-bar-gradient: linear-gradient(180deg, #ffffff 0%, #f7f7f7 100%);
+  --quicknotes-bar-gradient-hover: linear-gradient(180deg, #ffffff 0%, #eeeeee 100%);
+  --quicknotes-bar-border: #d8d8d8;
+  --quicknotes-indicator-border: rgba(0, 0, 0, 0.1);
+  --quicknotes-indicator-bg: rgba(0, 0, 0, 0.035);
+  --quicknotes-indicator-active-border: rgba(57, 181, 74, 0.28);
+  --quicknotes-indicator-active-bg: rgba(57, 181, 74, 0.12);
+  --quicknotes-indicator-active-text: #2c7d39;
+  --quicknotes-capture-border: rgba(0, 0, 0, 0.1);
+  --quicknotes-capture-bg: rgba(255, 255, 255, 0.75);
+  --quicknotes-capture-bg-hover: rgba(255, 255, 255, 1);
+  --timeline-projekt: #00a3e0;
+  --timeline-ticket: #e60012;
+  --timeline-incident: #d51c2c;
+  --timeline-abwesenheit: #8d9298;
+  --radius: 18px;
+  --radius-sm: 12px;
+  --radius-md: 18px;
+  --radius-lg: 22px;
+  --border-width: 1px;
+  --border-strong-width: 1px;
+  --border-accent-width: 0;
+  --header-height: 56px;
+  --layout-gap: 14px;
+  --stack-gap: 12px;
+  --main-padding-y: 16px;
+  --card-padding: 13px;
+  --control-padding-y: 8px;
+  --control-padding-x: 14px;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-float: 0 10px 24px rgba(0, 0, 0, 0.14);
+  --shadow-popover: 0 16px 32px rgba(0, 0, 0, 0.16);
+  --label-letter-spacing: 0.04em;
+  --brand-letter-spacing: 0.02em;
+  --active-font-weight: 700;
+  --nav-active-border-width: 0;
+  --row-status-width: 4px;
+  --row-danger-width: 4px;
+}
+
+body[data-theme="switch"] .header {
+  background: transparent;
+  border-bottom-color: transparent;
+}
+
+body[data-theme="switch"] .header-inner {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0 0 24px 24px;
+  padding: 0 14px;
+  box-shadow: var(--shadow-card);
+}
+
+body[data-theme="switch"] .logo {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  letter-spacing: 0;
+}
+
+body[data-theme="switch"] .nav button,
+body[data-theme="switch"] .header-actions button,
+body[data-theme="switch"] .theme-trigger {
+  border-radius: 999px;
+}
+
+body[data-theme="switch"] .nav button.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+body[data-theme="switch"] .card {
+  border-left-width: 1px;
+}

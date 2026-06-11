@@ -1,0 +1,105 @@
+body[data-theme="dark"],
+body[data-theme="everforest-dark"] {
+  --bg: #232a2e;
+  --bg-elev: #272e33;
+  --surface: #2d353b;
+  --surface-hover: #343f44;
+  --border: #414b50;
+  --text: #d3c6aa;
+  --text-secondary: #9da98f;
+  --text-muted: #859289;
+  --accent: #e69875;
+  --accent-hover: #f0a37d;
+  --accent-light: #4a4037;
+  --today-bg: #4a2f33;
+  --today-text: #f0a37d;
+  --today-line: #e67e80;
+  --danger: #e67e80;
+  --danger-light: #4a2f33;
+  --success: #a7c080;
+  --success-light: #394634;
+  --warning: #dbbc7f;
+  --warning-light: #4b4335;
+  --purple: #d699b6;
+  --purple-light: #493843;
+  --blue: #7fbbb3;
+  --weekend-bg: #4a5358;
+  --weekend-bg-strong: #596368;
+  --weekend-border: #717c81;
+  --weekend-text: #b8b2a1;
+  --weekend-support-bg: #605744;
+  --weekend-support-bg-strong: #6b614d;
+  --weekend-support-border: #8c7d5f;
+  --board-todo-bg: #243036;
+  --board-backlog-bg: #313a40;
+  --board-waiting-bg: #3c342c;
+  --board-done-bg: #303b2f;
+  --task-done-shadow: inset 0 8px 0 rgba(255, 255, 255, 0.03);
+  --badge-todo-text: #7fbbb3;
+  --badge-todo-bg: #243036;
+  --badge-todo-border: #3f585f;
+  --badge-backlog-text: #9da98f;
+  --badge-backlog-bg: #313a40;
+  --badge-backlog-border: #475258;
+  --badge-waiting-text: #dbbc7f;
+  --badge-waiting-bg: #3c342c;
+  --badge-waiting-border: #5a5145;
+  --badge-done-text: #a7c080;
+  --badge-done-bg: #303b2f;
+  --badge-done-border: #4c5c49;
+  --badge-win-text: #d699b6;
+  --badge-win-bg: #3b313a;
+  --badge-win-border: #5a4a57;
+  --badge-highlight-text: #91c7a5;
+  --badge-highlight-bg: #26362d;
+  --badge-highlight-border: #3f5a49;
+  --badge-concern-text: #e6b67e;
+  --badge-concern-bg: #3f342a;
+  --badge-concern-border: #6a5640;
+  --badge-note-text: #d699b6;
+  --badge-note-bg: #3c333d;
+  --badge-note-border: #5c4d5d;
+  --badge-focus-text: #e69875;
+  --badge-focus-bg: #433730;
+  --badge-focus-border: #665146;
+  --stat-todo-bg: #243036;
+  --stat-backlog-bg: #313a40;
+  --stat-waiting-bg: #3c342c;
+  --stat-done-bg: #303b2f;
+  --stat-wins-text: #d699b6;
+  --stat-wins-bg: #3b313a;
+  --quicknotes-bar-bg: #2d353b;
+  --quicknotes-bar-bg-hover: #343f44;
+  --quicknotes-bar-gradient: linear-gradient(180deg, #313a40 0%, #2d353b 100%);
+  --quicknotes-bar-gradient-hover: linear-gradient(180deg, #39464c 0%, #343f44 100%);
+  --quicknotes-bar-border: #475258;
+  --quicknotes-indicator-border: #55626a;
+  --quicknotes-indicator-bg: rgba(255, 255, 255, 0.05);
+  --quicknotes-indicator-active-border: rgba(132, 192, 122, 0.4);
+  --quicknotes-indicator-active-bg: rgba(132, 192, 122, 0.16);
+  --quicknotes-indicator-active-text: #9ed18c;
+  --quicknotes-capture-border: #55626a;
+  --quicknotes-capture-bg: rgba(255, 255, 255, 0.05);
+  --quicknotes-capture-bg-hover: rgba(255, 255, 255, 0.09);
+  --radius: 2px;
+  --radius-sm: 1px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+  --border-width: 1px;
+  --border-strong-width: 2px;
+  --border-accent-width: 3px;
+  --shadow-card: none;
+  --shadow-float: 0 3px 10px rgba(0, 0, 0, 0.28);
+  --shadow-popover: 0 10px 24px rgba(0, 0, 0, 0.32);
+  --label-letter-spacing: 0.1em;
+  --active-font-weight: 600;
+}
+
+body[data-theme="dark"] .overview-meta .stat-number,
+body[data-theme="everforest-dark"] .overview-meta .stat-number {
+  color: #d3c6aa;
+}
+
+body[data-theme="dark"] .stats-inline .stat-number,
+body[data-theme="everforest-dark"] .stats-inline .stat-number {
+  color: #d3c6aa;

@@ -1,0 +1,171 @@
+body[data-theme="serum"] {
+  --bg: #121820;
+  --bg-elev: #1a222c;
+  --surface: #232d38;
+  --surface-hover: #2c3844;
+  --border: #40505e;
+  --text: #d9e5ed;
+  --text-secondary: #aebdc6;
+  --text-muted: #74838d;
+  --accent: #75d64b;
+  --accent-hover: #a4f071;
+  --accent-light: #233f28;
+  --today-bg: #203a36;
+  --today-text: #70cfff;
+  --today-line: #53b9f4;
+  --danger: #f0566f;
+  --danger-light: #3b2029;
+  --success: #75d64b;
+  --success-light: #233f28;
+  --warning: #d7c85b;
+  --warning-light: #3c3822;
+  --purple: #9e73e8;
+  --purple-light: #302944;
+  --blue: #53b9f4;
+  --weekend-bg: #28333d;
+  --weekend-bg-strong: #313d49;
+  --weekend-border: #4b5d6d;
+  --weekend-text: #a9bac5;
+  --weekend-support-bg: #373521;
+  --weekend-support-bg-strong: #444128;
+  --weekend-support-border: #69633a;
+  --font-body: var(--font-technical);
+  --board-todo-bg: #1b3441;
+  --board-backlog-bg: #232d38;
+  --board-waiting-bg: #38351f;
+  --board-done-bg: #223b28;
+  --task-done-shadow: inset 0 8px 0 rgba(117, 214, 75, 0.055);
+  --badge-todo-text: #77cfff;
+  --badge-todo-bg: #1b3441;
+  --badge-todo-border: #3b6c82;
+  --badge-backlog-text: #aebdc6;
+  --badge-backlog-bg: #232d38;
+  --badge-backlog-border: #40505e;
+  --badge-waiting-text: #e5d66d;
+  --badge-waiting-bg: #38351f;
+  --badge-waiting-border: #69633a;
+  --badge-done-text: #a4f071;
+  --badge-done-bg: #223b28;
+  --badge-done-border: #4d7a3d;
+  --badge-win-text: #b994f6;
+  --badge-win-bg: #302944;
+  --badge-win-border: #5c4a83;
+  --badge-highlight-text: #a4f071;
+  --badge-highlight-bg: #223b28;
+  --badge-highlight-border: #4d7a3d;
+  --badge-concern-text: #ff8094;
+  --badge-concern-bg: #3b2029;
+  --badge-concern-border: #743849;
+  --badge-note-text: #b994f6;
+  --badge-note-bg: #302944;
+  --badge-note-border: #5c4a83;
+  --badge-focus-text: #77cfff;
+  --badge-focus-bg: #1b3441;
+  --badge-focus-border: #3b6c82;
+  --stat-todo-bg: #1b3441;
+  --stat-backlog-bg: #232d38;
+  --stat-waiting-bg: #38351f;
+  --stat-done-bg: #223b28;
+  --stat-wins-text: #b994f6;
+  --stat-wins-bg: #302944;
+  --quicknotes-bar-bg: #1a222c;
+  --quicknotes-bar-bg-hover: #232d38;
+  --quicknotes-bar-gradient: linear-gradient(180deg, #25313d 0%, #1a222c 100%);
+  --quicknotes-bar-gradient-hover: linear-gradient(180deg, #2e3b47 0%, #232d38 100%);
+  --quicknotes-bar-border: #40505e;
+  --quicknotes-indicator-border: rgba(117, 214, 75, 0.32);
+  --quicknotes-indicator-bg: rgba(117, 214, 75, 0.08);
+  --quicknotes-indicator-active-border: rgba(117, 214, 75, 0.48);
+  --quicknotes-indicator-active-bg: rgba(117, 214, 75, 0.16);
+  --quicknotes-indicator-active-text: #b4f080;
+  --quicknotes-capture-border: rgba(83, 185, 244, 0.28);
+  --quicknotes-capture-bg: rgba(83, 185, 244, 0.07);
+  --quicknotes-capture-bg-hover: rgba(83, 185, 244, 0.13);
+  --timeline-projekt: #53b9f4;
+  --timeline-ticket: #75d64b;
+  --timeline-incident: #f0566f;
+  --timeline-abwesenheit: #74838d;
+  --radius: 3px;
+  --radius-sm: 1px;
+  --radius-md: 4px;
+  --radius-lg: 5px;
+  --border-width: 1px;
+  --border-strong-width: 1px;
+  --border-accent-width: 2px;
+  --header-height: 46px;
+  --layout-gap: 8px;
+  --stack-gap: 7px;
+  --card-padding: 9px;
+  --control-padding-y: 5px;
+  --control-padding-x: 9px;
+  --shadow-card: inset 0 1px 0 rgba(255, 255, 255, 0.035), inset 0 -1px 0 rgba(0, 0, 0, 0.28);
+  --shadow-float: 0 0 0 1px rgba(83, 185, 244, 0.12), 0 12px 26px rgba(0, 0, 0, 0.46);
+  --shadow-popover: 0 0 0 1px rgba(83, 185, 244, 0.14), 0 18px 38px rgba(0, 0, 0, 0.5);
+  --label-letter-spacing: 0.08em;
+  --brand-letter-spacing: 0.06em;
+  --active-font-weight: 700;
+  --nav-active-border-width: 2px;
+  --row-status-width: 2px;
+  --row-danger-width: 3px;
+}
+
+body[data-theme="serum"] {
+  background-image: linear-gradient(180deg, rgba(83, 185, 244, 0.05) 0%, transparent 180px);
+}
+
+body[data-theme="serum"] .header {
+  background: #111820;
+  border-bottom-color: #0a0f15;
+  box-shadow: none;
+}
+
+body[data-theme="serum"] .header-inner {
+  gap: 2px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), inset 0 -1px 0 rgba(0, 0, 0, 0.55);
+}
+
+body[data-theme="serum"] .logo {
+  align-self: stretch;
+  display: inline-flex;
+  align-items: center;
+  min-width: 88px;
+  padding: 0 12px;
+  background: linear-gradient(180deg, #2b333c 0%, #1b232d 100%);
+  border: 1px solid #0b1016;
+  border-bottom-color: #313b46;
+  color: #cfd8df;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-shadow: 0 1px 0 #fff, 0 -1px 0 rgba(0, 0, 0, 0.6);
+}
+
+body[data-theme="serum"] .nav button,
+body[data-theme="serum"] .header-actions button,
+body[data-theme="serum"] .theme-trigger {
+  position: relative;
+  align-self: stretch;
+  border-radius: 0;
+  border-color: #0b1016;
+  border-left-width: 1px;
+  background: linear-gradient(180deg, #202933 0%, #151d26 100%);
+  color: #aeb8c1;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035), inset 0 -1px 0 rgba(0, 0, 0, 0.55);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+body[data-theme="serum"] .nav button.active {
+  background: linear-gradient(180deg, #334453 0%, #22303d 100%);
+  color: #e8f6ff;
+  border-color: #0b1016;
+  border-top-color: #75d64b;
+  border-left-color: #0b1016;
+  box-shadow: inset 0 3px 0 #75d64b, inset 0 -1px 0 rgba(0, 0, 0, 0.58), 0 0 0 1px rgba(117, 214, 75, 0.08);
+}
+
+body[data-theme="serum"] .card {
+  box-shadow: inset 0 1px 0 rgba(83, 185, 244, 0.18), inset 0 -1px 0 rgba(0, 0, 0, 0.32), var(--shadow-card);
+}

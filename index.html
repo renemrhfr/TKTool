@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TKTool</title>
+<link rel="stylesheet" href="./themes/light.css">
+<link rel="stylesheet" href="./styles.css">
+<link rel="stylesheet" href="./themes/dark.css">
+<link rel="stylesheet" href="./themes/gruvbox-dark.css">
+<link rel="stylesheet" href="./themes/catppuccin-mocha.css">
+<link rel="stylesheet" href="./themes/tokyo-night.css">
+<link rel="stylesheet" href="./themes/rose-pine-dawn.css">
+<link rel="stylesheet" href="./themes/paper.css">
+<link rel="stylesheet" href="./themes/nord.css">
+<link rel="stylesheet" href="./themes/switch.css">
+<link rel="stylesheet" href="./themes/matrix.css">
+<link rel="stylesheet" href="./themes/serum.css">
+</head>
+<body>
+
+<header class="header">
+  <div class="header-inner">
+    <div class="logo">tk_</div>
+    <nav class="nav" id="nav">
+      <button data-view="reviews" class="active">dashboard</button>
+      <button data-view="overview">todo</button>
+      <button data-view="planung">planung</button>
+      <button data-view="team">team</button>
+      <button data-view="kontakte">kontakte</button>
+      <button data-view="meetings">meetings</button>
+    </nav>
+    <div class="header-search">
+      <input
+        id="globalSearchInput"
+        type="search"
+        placeholder="suche über alles..."
+        autocomplete="off"
+        oninput="handleGlobalSearchInput(this.value)"
+        onkeydown="handleGlobalSearchKeydown(event)"
+      >
+    </div>
+    <div class="header-actions">
+      <div class="theme-picker" id="themePicker">
+        <button class="theme-trigger" id="themeTrigger" type="button" onclick="toggleThemeMenu(event)" aria-haspopup="menu" aria-expanded="false" aria-label="Einstellungen öffnen" title="Einstellungen">
+          <span class="theme-trigger-icon" aria-hidden="true">&#9881;</span>
+          <span class="theme-trigger-label" aria-hidden="true">einstellungen</span>
+        </button>
+        <div class="theme-menu" id="themeMenu" role="menu" aria-label="Einstellungen"></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div id="setupScreen" style="display:none;position:fixed;inset:0;z-index:9999;background:var(--bg,#f2efe6);display:none;flex-direction:column;align-items:center;justify-content:center;gap:1rem;font-family:inherit;">
+  <h2 style="margin:0;">Speicherort wählen</h2>
+  <p style="color:var(--text-secondary,#a7b39a);max-width:460px;text-align:center;margin:0;">Wähle den Datenordner für `tktool-data.json`.</p>
+  <div style="display:flex;flex-direction:column;gap:.75rem;align-items:center;">
+    <button onclick="connectStorage()" style="padding:.65rem 1rem;font-size:.9rem;border-radius:0;border:1px solid var(--accent,#c77b2f);background:var(--accent,#c77b2f);color:#fff;cursor:pointer;">Datenordner auswählen</button>
+  </div>
+</div>
+<main class="main" id="app"></main>
+
+<div class="quicknotes" id="quicknotes">
+  <div class="quicknotes-bar" onclick="toggleQuickNotes()">
+    <span class="quicknotes-label-wrap">
+      <span class="quicknotes-label">quicknotes</span>
+      <span class="quicknotes-indicator" id="quicknotesIndicator" aria-label="Quicknotes vorhanden" hidden></span>
+    </span>
+    <span class="quicknotes-actions">
+      <span class="quicknotes-kbd">ctrl+j</span>
+      <button class="quicknotes-capture" type="button" onclick="event.stopPropagation(); openCapture()" title="Schnellerfassung (Ctrl+K)">
+        <span class="quicknotes-capture-label">capture</span>
+        <span class="quicknotes-kbd">ctrl+k</span>
+      </button>
+    </span>
+  </div>
+  <div class="quicknotes-panel">
+    <textarea class="quicknotes-editor" id="quicknotesEditor" placeholder="notizen hier eintippen..." spellcheck="false"></textarea>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal" id="modal"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<input type="file" id="importInput" accept=".json" style="display:none" onchange="handleImport(event)">
+
+<script src="./js/data.js"></script>
+<script src="./js/helpers.js"></script>
+<script src="./js/nav.js"></script>
+<script src="./js/todo.js"></script>
+<script src="./js/team.js"></script>
+<script src="./js/meetings.js"></script>
+<script src="./js/dashboard.js"></script>
+<script src="./js/search.js"></script>
+<script src="./js/capture.js"></script>
+<script src="./js/planung.js"></script>
+<script src="./js/ui.js"></script>
+</body>
+</html>
