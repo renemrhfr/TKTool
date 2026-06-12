@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+set -eu
+
+node scripts/pack-single-html.js
+git add TKTool.html
