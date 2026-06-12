@@ -84,15 +84,7 @@ On first launch you pick a data directory; `tktool-data.json` is created
 there.
 
 For the easiest download, use `TKTool.html` from the repository root. It contains
-the app's HTML, CSS, and JavaScript in one file and is refreshed by the local
-pre-commit hook.
-
-To enable the hook locally:
-
-```bash
-git config core.hooksPath .githooks
-chmod +x .githooks/pre-commit
-```
+the app's HTML, CSS, and JavaScript in one file and is refreshed with each update i push.
 
 ## Architecture decisions
 
