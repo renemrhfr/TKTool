@@ -195,29 +195,28 @@ body[data-theme="matrix"] .card {
   100% { transform: translate(0, 0) skewX(0); text-shadow: 0 0 6px rgba(56, 184, 74, 0.28); }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  body[data-theme="matrix"] .nav button,
-  body[data-theme="matrix"] .header-actions button,
-  body[data-theme="matrix"] .theme-trigger,
-  body[data-theme="matrix"] .btn,
-  body[data-theme="matrix"] .filter-btn,
-  body[data-theme="matrix"] .view-toggle-btn,
-  body[data-theme="matrix"] .segmented-toggle-btn {
-    transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease, box-shadow 120ms ease, transform 120ms ease, text-shadow 120ms ease;
-    will-change: transform;
-  }
+body[data-theme="matrix"] .nav button,
+body[data-theme="matrix"] .header-actions button,
+body[data-theme="matrix"] .theme-trigger,
+body[data-theme="matrix"] .btn,
+body[data-theme="matrix"] .filter-btn,
+body[data-theme="matrix"] .view-toggle-btn,
+body[data-theme="matrix"] .segmented-toggle-btn {
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease, box-shadow 120ms ease, transform 120ms ease, text-shadow 120ms ease;
+  will-change: transform;
+}
 
-  body[data-theme="matrix"] .nav button:hover,
-  body[data-theme="matrix"] .header-actions button:hover,
-  body[data-theme="matrix"] .theme-trigger:hover,
-  body[data-theme="matrix"] .btn:hover,
-  body[data-theme="matrix"] .filter-btn:hover,
-  body[data-theme="matrix"] .view-toggle-btn:hover,
-  body[data-theme="matrix"] .segmented-toggle-btn:hover {
-    animation: matrix-glitch 360ms steps(2, end);
-    border-color: #58d65f;
-    box-shadow: 0 0 0 1px rgba(56, 184, 74, 0.2), 0 0 16px rgba(56, 184, 74, 0.16);
-  }
+body[data-theme="matrix"] .nav button:hover,
+body[data-theme="matrix"] .header-actions button:hover,
+body[data-theme="matrix"] .theme-trigger:hover,
+body[data-theme="matrix"] .btn:hover,
+body[data-theme="matrix"] .filter-btn:hover,
+body[data-theme="matrix"] .view-toggle-btn:hover,
+body[data-theme="matrix"] .segmented-toggle-btn:hover {
+  animation: matrix-glitch 360ms steps(2, end);
+  border-color: #58d65f;
+  box-shadow: 0 0 0 1px rgba(56, 184, 74, 0.2), 0 0 16px rgba(56, 184, 74, 0.16);
+  text-shadow: -1px 0 #34d9ff, 1px 0 #ff5c7a, 0 0 8px rgba(56, 184, 74, 0.45);
 }
 body[data-theme="matrix"] #editDate::-webkit-calendar-picker-indicator {
   filter: invert(1);
