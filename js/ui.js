@@ -177,24 +177,71 @@ document.addEventListener('click', e => {
 // ============================================================
 // INIT
 // ============================================================
+function showSetupScreen(mode = 'pick') {
+  const setup = document.getElementById('setupScreen');
+  const kicker = document.getElementById('setupKicker');
+  const title = document.getElementById('setupTitle');
+  const text = document.getElementById('setupText');
+  const button = document.getElementById('setupButton');
+  const altButton = document.getElementById('setupAltButton');
+  const hint = document.getElementById('setupHint');
+  const reconnect = mode === 'reconnect';
+
+  if (kicker) kicker.textContent = reconnect ? 'start' : 'setup';
+  if (title) title.textContent = reconnect ? 'Zugriff erlauben' : 'Speicherort wählen';
+  if (text) {
+    text.textContent = reconnect
+      ? 'Chrome braucht kurz deine Freigabe, damit TKTool deine lokalen Daten laden kann.'
+      : 'Wähle einen Ordner, in dem TKTool deine Daten speichern darf.';
+  }
+  if (button) button.textContent = reconnect ? 'Zugriff erlauben' : 'Datenordner auswählen';
+  if (altButton) altButton.hidden = !reconnect;
+  if (hint) {
+    hint.textContent = reconnect
+      ? 'Deine Daten bleiben lokal.'
+      : 'Deine Daten bleiben lokal in deinem Ordner.';
+  }
+  if (setup) setup.style.display = 'flex';
+}
+
+async function finishStorageConnection(handle) {
+  dirHandle = handle;
+  document.getElementById('setupScreen').style.display = 'none';
+  await loadData();
+  render();
+}
+
 async function connectStorage() {
   try {
-    dirHandle = await pickDataDirectory();
-    document.getElementById('setupScreen').style.display = 'none';
-    await loadData();
-    render();
+    const handle = await getSavedDirHandle() || await pickDataDirectory();
+    await finishStorageConnection(handle);
+  } catch (err) {
+    console.error('Directory pick cancelled or failed:', err);
+  }
+}
+
+async function chooseStorageDirectory() {
+  try {
+    const handle = await pickDataDirectory();
+    await finishStorageConnection(handle);
   } catch (err) {
     console.error('Directory pick cancelled or failed:', err);
   }
 }
 
 (async () => {
-  const saved = await getSavedDirHandle();
+  const saved = await getStoredDirHandle();
   if (saved) {
-    dirHandle = saved;
-    await loadData();
-    render();
+    if (await hasHandlePermission(saved)) {
+      dirHandle = saved;
+      await loadData();
+      render();
+    } else {
+      render();
+      showSetupScreen('reconnect');
+    }
   } else {
-    document.getElementById('setupScreen').style.display = 'flex';
+    render();
+    showSetupScreen('pick');
   }
 })();

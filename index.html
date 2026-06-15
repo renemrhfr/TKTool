@@ -52,11 +52,21 @@
   </div>
 </header>
 
-<div id="setupScreen" style="display:none;position:fixed;inset:0;z-index:9999;background:var(--bg,#f2efe6);display:none;flex-direction:column;align-items:center;justify-content:center;gap:1rem;font-family:inherit;">
-  <h2 style="margin:0;">Speicherort wählen</h2>
-  <p style="color:var(--text-secondary,#a7b39a);max-width:460px;text-align:center;margin:0;">Wähle den Datenordner für `tktool-data.json`.</p>
-  <div style="display:flex;flex-direction:column;gap:.75rem;align-items:center;">
-    <button onclick="connectStorage()" style="padding:.65rem 1rem;font-size:.9rem;border-radius:0;border:1px solid var(--accent,#c77b2f);background:var(--accent,#c77b2f);color:#fff;cursor:pointer;">Datenordner auswählen</button>
+<div id="setupScreen" class="setup-screen">
+  <div class="setup-shell">
+    <div class="setup-brand">
+      <span class="logo">tk_</span>
+    </div>
+    <div class="setup-panel">
+      <div class="setup-kicker" id="setupKicker">setup</div>
+      <h2 id="setupTitle">Speicherort wählen</h2>
+      <p id="setupText">Wähle einen Ordner, in dem TKTool deine Daten speichern darf.</p>
+      <div class="setup-actions">
+        <button id="setupButton" class="btn btn-primary setup-button" onclick="connectStorage()">Datenordner auswählen</button>
+        <button id="setupAltButton" class="btn btn-secondary setup-button" onclick="chooseStorageDirectory()" hidden>Anderen Ordner auswählen</button>
+      </div>
+      <div class="setup-hint" id="setupHint">Deine Daten bleiben lokal in deinem Ordner.</div>
+    </div>
   </div>
 </div>
 <main class="main" id="app"></main>

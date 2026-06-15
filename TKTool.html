@@ -444,6 +444,87 @@ textarea,
   width: min(100%, 1680px);
 }
 
+.setup-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: color-mix(in srgb, var(--bg) 70%, transparent);
+  backdrop-filter: blur(8px) saturate(0.9);
+  -webkit-backdrop-filter: blur(8px) saturate(0.9);
+}
+
+.setup-shell {
+  width: min(100%, 520px);
+  display: grid;
+  gap: var(--layout-gap);
+  box-shadow: var(--shadow-popover);
+}
+
+.setup-brand {
+  height: var(--header-height);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border-bottom: var(--border-width) solid var(--border);
+}
+
+.setup-panel {
+  background: var(--surface);
+  border: var(--border-width) solid var(--border);
+  border-left: var(--border-accent-width) solid var(--accent);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  display: grid;
+  gap: 14px;
+}
+
+.setup-kicker {
+  color: var(--text-muted);
+  font-size: 10px;
+  letter-spacing: var(--label-letter-spacing);
+  text-transform: uppercase;
+}
+
+.setup-panel h2 {
+  color: var(--text);
+  font-size: 20px;
+  line-height: 1.2;
+  font-weight: var(--heavy-font-weight);
+}
+
+.setup-panel p {
+  color: var(--text-secondary);
+  font-size: 13px;
+  max-width: none;
+}
+
+.setup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--control-gap);
+}
+
+.setup-button {
+  width: fit-content;
+  min-height: 34px;
+}
+
+.setup-button[hidden] {
+  display: none;
+}
+
+.setup-hint {
+  border-top: var(--border-width) solid var(--border);
+  padding-top: 10px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
 .card {
   background: var(--surface);
   border: var(--border-width) solid var(--border);
@@ -6174,11 +6255,21 @@ body[data-theme="serum"] .card {
   </div>
 </header>
 
-<div id="setupScreen" style="display:none;position:fixed;inset:0;z-index:9999;background:var(--bg,#f2efe6);display:none;flex-direction:column;align-items:center;justify-content:center;gap:1rem;font-family:inherit;">
-  <h2 style="margin:0;">Speicherort wählen</h2>
-  <p style="color:var(--text-secondary,#a7b39a);max-width:460px;text-align:center;margin:0;">Wähle den Datenordner für `tktool-data.json`.</p>
-  <div style="display:flex;flex-direction:column;gap:.75rem;align-items:center;">
-    <button onclick="connectStorage()" style="padding:.65rem 1rem;font-size:.9rem;border-radius:0;border:1px solid var(--accent,#c77b2f);background:var(--accent,#c77b2f);color:#fff;cursor:pointer;">Datenordner auswählen</button>
+<div id="setupScreen" class="setup-screen">
+  <div class="setup-shell">
+    <div class="setup-brand">
+      <span class="logo">tk_</span>
+    </div>
+    <div class="setup-panel">
+      <div class="setup-kicker" id="setupKicker">setup</div>
+      <h2 id="setupTitle">Speicherort wählen</h2>
+      <p id="setupText">Wähle einen Ordner, in dem TKTool deine Daten speichern darf.</p>
+      <div class="setup-actions">
+        <button id="setupButton" class="btn btn-primary setup-button" onclick="connectStorage()">Datenordner auswählen</button>
+        <button id="setupAltButton" class="btn btn-secondary setup-button" onclick="chooseStorageDirectory()" hidden>Anderen Ordner auswählen</button>
+      </div>
+      <div class="setup-hint" id="setupHint">Deine Daten bleiben lokal in deinem Ordner.</div>
+    </div>
   </div>
 </div>
 <main class="main" id="app"></main>
@@ -6305,14 +6396,40 @@ async function idbSet(key, val) {
 // --- File handle management ---
 let dirHandle = null;
 
-async function getSavedHandle(key) {
+async function getStoredHandle(key) {
   try {
-    const h = await idbGet(key);
-    if (!h) return null;
-    if ((await h.queryPermission({ mode: 'readwrite' })) === 'granted') return h;
-    if ((await h.requestPermission({ mode: 'readwrite' })) === 'granted') return h;
+    return await idbGet(key);
+  } catch {
     return null;
-  } catch { return null; }
+  }
+}
+
+async function ensureHandlePermission(handle) {
+  if (!handle) return null;
+  try {
+    if ((await handle.queryPermission({ mode: 'readwrite' })) === 'granted') return handle;
+    if ((await handle.requestPermission({ mode: 'readwrite' })) === 'granted') return handle;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+async function hasHandlePermission(handle) {
+  if (!handle) return false;
+  try {
+    return (await handle.queryPermission({ mode: 'readwrite' })) === 'granted';
+  } catch {
+    return false;
+  }
+}
+
+async function getSavedHandle(key) {
+  return ensureHandlePermission(await getStoredHandle(key));
+}
+
+async function getStoredDirHandle() {
+  return getStoredHandle(IDB_KEY);
 }
 
 async function getSavedDirHandle() {
@@ -6390,7 +6507,6 @@ function saveData(d) {
     toast('Speichern fehlgeschlagen!');
   });
 }
-
 
 </script>
 <script data-source="./js/helpers.js">
@@ -11545,25 +11661,72 @@ document.addEventListener('click', e => {
 // ============================================================
 // INIT
 // ============================================================
+function showSetupScreen(mode = 'pick') {
+  const setup = document.getElementById('setupScreen');
+  const kicker = document.getElementById('setupKicker');
+  const title = document.getElementById('setupTitle');
+  const text = document.getElementById('setupText');
+  const button = document.getElementById('setupButton');
+  const altButton = document.getElementById('setupAltButton');
+  const hint = document.getElementById('setupHint');
+  const reconnect = mode === 'reconnect';
+
+  if (kicker) kicker.textContent = reconnect ? 'start' : 'setup';
+  if (title) title.textContent = reconnect ? 'Zugriff erlauben' : 'Speicherort wählen';
+  if (text) {
+    text.textContent = reconnect
+      ? 'Chrome braucht kurz deine Freigabe, damit TKTool deine lokalen Daten laden kann.'
+      : 'Wähle einen Ordner, in dem TKTool deine Daten speichern darf.';
+  }
+  if (button) button.textContent = reconnect ? 'Zugriff erlauben' : 'Datenordner auswählen';
+  if (altButton) altButton.hidden = !reconnect;
+  if (hint) {
+    hint.textContent = reconnect
+      ? 'Deine Daten bleiben lokal.'
+      : 'Deine Daten bleiben lokal in deinem Ordner.';
+  }
+  if (setup) setup.style.display = 'flex';
+}
+
+async function finishStorageConnection(handle) {
+  dirHandle = handle;
+  document.getElementById('setupScreen').style.display = 'none';
+  await loadData();
+  render();
+}
+
 async function connectStorage() {
   try {
-    dirHandle = await pickDataDirectory();
-    document.getElementById('setupScreen').style.display = 'none';
-    await loadData();
-    render();
+    const handle = await getSavedDirHandle() || await pickDataDirectory();
+    await finishStorageConnection(handle);
+  } catch (err) {
+    console.error('Directory pick cancelled or failed:', err);
+  }
+}
+
+async function chooseStorageDirectory() {
+  try {
+    const handle = await pickDataDirectory();
+    await finishStorageConnection(handle);
   } catch (err) {
     console.error('Directory pick cancelled or failed:', err);
   }
 }
 
 (async () => {
-  const saved = await getSavedDirHandle();
+  const saved = await getStoredDirHandle();
   if (saved) {
-    dirHandle = saved;
-    await loadData();
-    render();
+    if (await hasHandlePermission(saved)) {
+      dirHandle = saved;
+      await loadData();
+      render();
+    } else {
+      render();
+      showSetupScreen('reconnect');
+    }
   } else {
-    document.getElementById('setupScreen').style.display = 'flex';
+    render();
+    showSetupScreen('pick');
   }
 })();
 

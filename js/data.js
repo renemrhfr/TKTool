@@ -92,14 +92,40 @@ async function idbSet(key, val) {
 // --- File handle management ---
 let dirHandle = null;
 
-async function getSavedHandle(key) {
+async function getStoredHandle(key) {
   try {
-    const h = await idbGet(key);
-    if (!h) return null;
-    if ((await h.queryPermission({ mode: 'readwrite' })) === 'granted') return h;
-    if ((await h.requestPermission({ mode: 'readwrite' })) === 'granted') return h;
+    return await idbGet(key);
+  } catch {
     return null;
-  } catch { return null; }
+  }
+}
+
+async function ensureHandlePermission(handle) {
+  if (!handle) return null;
+  try {
+    if ((await handle.queryPermission({ mode: 'readwrite' })) === 'granted') return handle;
+    if ((await handle.requestPermission({ mode: 'readwrite' })) === 'granted') return handle;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+async function hasHandlePermission(handle) {
+  if (!handle) return false;
+  try {
+    return (await handle.queryPermission({ mode: 'readwrite' })) === 'granted';
+  } catch {
+    return false;
+  }
+}
+
+async function getSavedHandle(key) {
+  return ensureHandlePermission(await getStoredHandle(key));
+}
+
+async function getStoredDirHandle() {
+  return getStoredHandle(IDB_KEY);
 }
 
 async function getSavedDirHandle() {
@@ -177,4 +203,3 @@ function saveData(d) {
     toast('Speichern fehlgeschlagen!');
   });
 }
-
