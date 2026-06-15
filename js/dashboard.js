@@ -427,11 +427,6 @@ function renderReviews() {
 
       <div class="review-meeting-stack">
         <div class="card">
-          <div class="card-header"><span class="card-title">Events</span></div>
-          ${renderReviewMarkerList(upcomingMarkers, 'Keine kommenden Events')}
-        </div>
-
-        <div class="card">
           <div class="card-header"><span class="card-title">Nächste Meetings</span></div>
           ${renderReviewMeetingList(upcomingMeetings, 'Keine kommenden Meetings')}
         </div>
@@ -440,6 +435,11 @@ function renderReviews() {
           <div class="card-header"><span class="card-title">Nächste 1:1</span></div>
           ${renderReviewMeetingList(upcomingOneOnOnes, 'Keine kommenden 1:1s')}
         </div>
+      </div>
+
+      <div class="card review-events-card">
+        <div class="card-header"><span class="card-title">Events</span></div>
+        ${renderReviewMarkerList(upcomingMarkers, 'Keine kommenden Events')}
       </div>
 
       <div class="card review-due-card">
@@ -455,4 +455,3 @@ function renderReviews() {
     ${renderMonthImpactPanel(currentMonthLabel)}
   `;
 }
-

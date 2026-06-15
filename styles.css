@@ -2162,6 +2162,10 @@ textarea,
   min-width: 0;
 }
 
+.review-events-card {
+  grid-column: 1 / -1;
+}
+
 .dashboard-links {
   display: flex;
   align-items: center;
