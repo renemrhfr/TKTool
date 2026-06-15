@@ -149,11 +149,11 @@ document.addEventListener('keydown', e => {
     toggleSudoMode();
     return;
   }
-  if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     e.preventDefault();
-    openCapture();
+    openCapture(e.shiftKey ? { captureMode: 'teammate' } : {});
   }
-  if ((e.ctrlKey || e.metaKey) && e.key === 'j') {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'j') {
     e.preventDefault();
     toggleQuickNotes();
   }

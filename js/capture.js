@@ -63,6 +63,13 @@ function updateCaptureModeUI() {
   if (monthGroup) monthGroup.style.display = showMonthGroup ? '' : 'none';
 }
 
+function updateCaptureTypeUI() {
+  const type = document.getElementById('captureType')?.value || 'todo';
+  const statusSelect = document.getElementById('captureStatus');
+  if (statusSelect && type === 'win') statusSelect.value = 'done';
+  updateCaptureModeUI();
+}
+
 function currentEditType() {
   return document.getElementById('editType')?.value || 'todo';
 }
@@ -88,6 +95,7 @@ function openCapture(prefill = {}) {
   const selectedPersonId = prefill.personId || null;
   const selectedMeetingId = prefill.meetingId || null;
   const captureMode = prefill.captureMode || captureModeForType(prefill.type);
+  const captureStatus = prefill.status || (prefill.type === 'win' ? 'done' : 'todo');
   const personOpts = personOptions(selectedPersonId);
   const meetingOpts = meetingOptions(selectedMeetingId, { personId: selectedPersonId });
 
@@ -109,7 +117,7 @@ function openCapture(prefill = {}) {
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">Typ</label>
-            <select class="form-select" id="captureType" onchange="updateCaptureModeUI()">
+            <select class="form-select" id="captureType" onchange="updateCaptureTypeUI()">
               <option value="todo" ${(!prefill.type || prefill.type === 'todo') ? 'selected' : ''}>Todo</option>
               <option value="win" ${prefill.type === 'win' ? 'selected' : ''}>Win</option>
             </select>
@@ -117,10 +125,10 @@ function openCapture(prefill = {}) {
           <div class="form-group">
             <label class="form-label">Status</label>
             <select class="form-select" id="captureStatus">
-              <option value="todo" ${(!prefill.status || prefill.status === 'todo') ? 'selected' : ''}>Todo</option>
-              <option value="backlog" ${prefill.status === 'backlog' ? 'selected' : ''}>Backlog</option>
-              <option value="waiting" ${prefill.status === 'waiting' ? 'selected' : ''}>Warte auf...</option>
-              <option value="done" ${prefill.status === 'done' ? 'selected' : ''}>Done</option>
+              <option value="todo" ${captureStatus === 'todo' ? 'selected' : ''}>Todo</option>
+              <option value="backlog" ${captureStatus === 'backlog' ? 'selected' : ''}>Backlog</option>
+              <option value="waiting" ${captureStatus === 'waiting' ? 'selected' : ''}>Warte auf...</option>
+              <option value="done" ${captureStatus === 'done' ? 'selected' : ''}>Done</option>
             </select>
           </div>
         </div>
