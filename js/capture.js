@@ -1158,11 +1158,13 @@ function closeOverlay() {
   document.getElementById('modal').className = 'modal';
 }
 
-function toast(msg) {
+let toastTimer = null;
+function toast(msg, duration = 2000) {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2000);
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), duration);
 }
 
 function downloadFile(name, content) {

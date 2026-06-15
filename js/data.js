@@ -154,6 +154,7 @@ async function readDataFile() {
   try {
     const fh = await dir.getFileHandle(DATA_FILENAME);
     const file = await fh.getFile();
+    lastMtime = file.lastModified;
     const text = await file.text();
     const d = JSON.parse(text);
     const merged = { ...defaultData(), ...d };
@@ -168,16 +169,93 @@ async function readDataFile() {
     merged.blocks = (merged.blocks || []).map(({ status, ...block }) => block);
     return merged;
   } catch {
+    lastMtime = 0;
     return defaultData();
   }
 }
 
-async function writeDataFile(data) {
+// --- Concurrency-safe persistence ---------------------------------
+// lastMtime: lastModified of the data file as we last read/wrote it.
+// Used to detect when another instance (other tab/window/browser)
+// wrote the file behind our back, so we merge instead of clobbering.
+let lastMtime = 0;
+// writeChain serializes writes within this instance so two saves never
+// run createWritable() concurrently.
+let writeChain = Promise.resolve();
+// syncChannel notifies other instances in the same browser to reload.
+let syncChannel = null;
+try {
+  syncChannel = new BroadcastChannel('tktool-sync');
+  syncChannel.onmessage = async e => {
+    if (!e.data || e.data.t !== 'saved') return;
+    // Don't yank the view out from under someone who is typing — the
+    // merge-on-write guard protects the data either way. Reload on the
+    // next save/render cycle instead.
+    const el = document.activeElement;
+    if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
+    try {
+      await loadData();
+      if (typeof render === 'function') render();
+    } catch {}
+  };
+} catch {
+  syncChannel = null;
+}
+
+async function getFileMtime(dir) {
+  try {
+    const fh = await dir.getFileHandle(DATA_FILENAME);
+    return (await fh.getFile()).lastModified;
+  } catch {
+    return 0; // file does not exist yet
+  }
+}
+
+// Union two collections by id. Base = theirs (on disk); our entries win
+// on shared ids, disk-only entries are kept. Guarantees no capture is
+// lost on either side (edit conflicts resolve to our version).
+function mergeById(mine, theirs) {
+  if (!Array.isArray(theirs)) return Array.isArray(mine) ? mine : [];
+  if (!Array.isArray(mine)) return theirs;
+  const byId = new Map();
+  for (const t of theirs) byId.set(t.id, t);
+  for (const m of mine) byId.set(m.id, m);
+  return [...byId.values()];
+}
+
+function mergeData(mine, theirs) {
+  const out = defaultData();
+  for (const key of Object.keys(out)) out[key] = mergeById(mine[key], theirs[key]);
+  return out;
+}
+
+async function writeDataFileNow() {
   const dir = await ensureDirHandle();
+  let payload = data;
+  const current = await getFileMtime(dir);
+  // The file changed since we last synced -> another instance wrote it.
+  if (lastMtime && current && current !== lastMtime) {
+    let disk = null;
+    try { disk = await readDataFile(); } catch { disk = null; }
+    if (disk) {
+      payload = mergeData(data, disk);
+      data = payload;
+      toast('Externe Änderung erkannt – zusammengeführt');
+      if (typeof render === 'function') { try { render(); } catch {} }
+    }
+  }
   const fh = await dir.getFileHandle(DATA_FILENAME, { create: true });
   const writable = await fh.createWritable();
-  await writable.write(JSON.stringify(data, null, 2));
+  await writable.write(JSON.stringify(payload, null, 2));
   await writable.close();
+  lastMtime = await getFileMtime(dir);
+  if (syncChannel) { try { syncChannel.postMessage({ t: 'saved' }); } catch {} }
+}
+
+function writeDataFile() {
+  // Serialize writes; run regardless of whether the previous one failed.
+  writeChain = writeChain.then(writeDataFileNow, writeDataFileNow);
+  return writeChain;
 }
 
 // --- Public API (same interface as before) ---
@@ -198,8 +276,8 @@ async function loadData() {
 
 function saveData(d) {
   data = d;
-  writeDataFile(d).catch(err => {
+  writeDataFile().catch(err => {
     console.error('Save failed:', err);
-    toast('Speichern fehlgeschlagen!');
+    toast('⚠ Speichern fehlgeschlagen – Änderung NICHT gesichert!', 5000);
   });
 }
