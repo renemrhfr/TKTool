@@ -243,7 +243,7 @@ function renderReviews() {
   const period = reviewPeriod();
   const currentMonthLabel = currentMonth();
   const dueItems = data.items
-    .filter(item => item.status !== 'done' && item.date && item.date <= todayStr())
+    .filter(item => item.status !== 'done' && item.status !== 'backlog' && item.date && item.date <= todayStr())
     .sort(compareByDueDate);
   const upcomingOneOnOnes = data.meetings
     .filter(meeting => meeting.type === 'oneOnOne' && (!meeting.date || meeting.date >= todayStr()))

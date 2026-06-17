@@ -37,6 +37,7 @@ function setCaptureMode(mode) {
   if (!input) return;
   input.value = mode === 'teammate' ? 'teammate' : 'personal';
   updateCaptureModeUI();
+  updateCaptureDateUI();
 }
 
 function updateCaptureModeUI() {
@@ -68,6 +69,18 @@ function updateCaptureTypeUI() {
   const statusSelect = document.getElementById('captureStatus');
   if (statusSelect && type === 'win') statusSelect.value = 'done';
   updateCaptureModeUI();
+  updateCaptureDateUI();
+}
+
+function updateCaptureDateUI() {
+  const mode = currentCaptureMode();
+  const type = document.getElementById('captureType')?.value || 'todo';
+  const status = document.getElementById('captureStatus')?.value || 'todo';
+  const dateInput = document.getElementById('captureDate');
+  if (!dateInput) return;
+  const dateDisabled = mode === 'personal' && type !== 'win' && status === 'backlog';
+  dateInput.disabled = dateDisabled;
+  if (dateDisabled) dateInput.value = '';
 }
 
 function currentEditType() {
@@ -88,6 +101,17 @@ function updateEditItemTypeUI() {
   if (meetingGroup) meetingGroup.style.display = isGrowth ? 'none' : '';
   if (personLabel) personLabel.textContent = isGrowth ? 'Teammitglied' : 'Person';
   if (monthInput && document.getElementById('editDate')?.value) monthInput.value = document.getElementById('editDate').value.slice(0, 7);
+  updateEditItemDateUI();
+}
+
+function updateEditItemDateUI() {
+  const type = currentEditType();
+  const status = document.getElementById('editStatus')?.value || 'todo';
+  const dateInput = document.getElementById('editDate');
+  if (!dateInput) return;
+  const dateDisabled = !isGrowthType(type) && status === 'backlog';
+  dateInput.disabled = dateDisabled;
+  if (dateDisabled) dateInput.value = '';
 }
 
 function openCapture(prefill = {}) {
@@ -124,7 +148,7 @@ function openCapture(prefill = {}) {
           </div>
           <div class="form-group">
             <label class="form-label">Status</label>
-            <select class="form-select" id="captureStatus">
+            <select class="form-select" id="captureStatus" onchange="updateCaptureDateUI()">
               <option value="todo" ${captureStatus === 'todo' ? 'selected' : ''}>Todo</option>
               <option value="backlog" ${captureStatus === 'backlog' ? 'selected' : ''}>Backlog</option>
               <option value="waiting" ${captureStatus === 'waiting' ? 'selected' : ''}>Warte auf...</option>
@@ -166,7 +190,7 @@ function openCapture(prefill = {}) {
         </div>
         <div class="form-group">
           <label class="form-label">Datum</label>
-          <input type="date" class="form-input" id="captureDate" value="${prefill.date || todayStr()}">
+          <input type="date" class="form-input" id="captureDate" value="${captureStatus === 'backlog' ? '' : (prefill.date || todayStr())}">
         </div>
       </div>
       <div class="form-group" id="captureMonthGroup">
@@ -188,6 +212,7 @@ function openCapture(prefill = {}) {
   `;
   openOverlay();
   updateCaptureModeUI();
+  updateCaptureDateUI();
   setTimeout(() => document.getElementById('captureText').focus(), 100);
 }
 
@@ -216,12 +241,13 @@ function saveCapture() {
     };
   } else {
     const type = document.getElementById('captureType').value;
+    const status = document.getElementById('captureStatus').value;
     const personId = type === 'win' ? null : (document.getElementById('capturePerson').value || null);
-    const date = document.getElementById('captureDate').value;
+    const date = status === 'backlog' ? '' : document.getElementById('captureDate').value;
     item = {
       id: uid(),
       type,
-      status: document.getElementById('captureStatus').value,
+      status,
       text,
       personId,
       meetingId: document.getElementById('captureMeeting').value || null,
@@ -279,7 +305,7 @@ function openEditItem(id) {
         </div>
         <div class="form-group">
           <label class="form-label">Status</label>
-          <select class="form-select" id="editStatus">
+          <select class="form-select" id="editStatus" onchange="updateEditItemDateUI()">
             <option value="todo" ${item.status === 'todo' ? 'selected' : ''}>Todo</option>
             <option value="backlog" ${item.status === 'backlog' ? 'selected' : ''}>Backlog</option>
             <option value="waiting" ${item.status === 'waiting' ? 'selected' : ''}>Warte auf...</option>
@@ -297,7 +323,7 @@ function openEditItem(id) {
         </div>
         <div class="form-group">
           <label class="form-label">Datum</label>
-          <input type="date" class="form-input" id="editDate" value="${item.date}">
+          <input type="date" class="form-input" id="editDate" value="${item.status === 'backlog' ? '' : item.date}">
         </div>
       </div>
       <div class="form-group">
@@ -343,6 +369,7 @@ function saveEditItem(id) {
   } else {
     item.status = document.getElementById('editStatus').value;
     item.meetingId = document.getElementById('editMeeting').value || null;
+    if (item.status === 'backlog') item.date = '';
     item.month = document.getElementById('editMonth').value;
   }
 
@@ -405,6 +432,7 @@ function onItemDrop(event, status) {
   if (!item || item.status === status) return;
 
   item.status = status;
+  if (status === 'backlog') item.date = '';
   saveData(data);
   toast('Status aktualisiert');
   render();
