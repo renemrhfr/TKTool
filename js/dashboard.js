@@ -61,7 +61,9 @@ function reviewMarkerRelativeLabel(date) {
   const diff = Math.round((parseISO(date) - parseISO(todayStr())) / 86400000);
   if (diff === 0) return 'heute';
   if (diff === 1) return 'morgen';
-  return `in ${diff} Tagen`;
+  if (diff <= 13) return `in ${diff} Tagen`;
+  const weeks = Math.round(diff / 7);
+  return `in ${weeks} Wochen`;
 }
 
 function renderReviewMarkerList(markers, emptyText) {

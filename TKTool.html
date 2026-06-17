@@ -6397,7 +6397,7 @@ body[data-theme="serum"] .card {
 // ============================================================
 // DATA LAYER — File System Access API
 // ============================================================
-const APP_VERSION = '1.0.1';
+const APP_VERSION = '1.0.2';
 const DATA_FILENAME = 'tktool-data.json';
 const IDB_NAME = 'tktool-fs';
 const IDB_STORE = 'handles';
@@ -8954,7 +8954,9 @@ function reviewMarkerRelativeLabel(date) {
   const diff = Math.round((parseISO(date) - parseISO(todayStr())) / 86400000);
   if (diff === 0) return 'heute';
   if (diff === 1) return 'morgen';
-  return `in ${diff} Tagen`;
+  if (diff <= 13) return `in ${diff} Tagen`;
+  const weeks = Math.round(diff / 7);
+  return `in ${weeks} Wochen`;
 }
 
 function renderReviewMarkerList(markers, emptyText) {
