@@ -1,5 +1,6 @@
 #!/usr/bin/env sh
 set -eu
 
+node scripts/bump-version.js
 node scripts/pack-single-html.js
-git add TKTool.html
+git add js/data.js TKTool.html

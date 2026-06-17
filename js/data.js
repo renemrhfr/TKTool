@@ -1,6 +1,7 @@
 // ============================================================
 // DATA LAYER — File System Access API
 // ============================================================
+const APP_VERSION = '1.0.1';
 const DATA_FILENAME = 'tktool-data.json';
 const IDB_NAME = 'tktool-fs';
 const IDB_STORE = 'handles';

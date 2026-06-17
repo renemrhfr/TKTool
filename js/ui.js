@@ -60,6 +60,12 @@ function renderThemeMenu() {
       <button class="theme-action" type="button" role="menuitem" onclick="exportBackup()">backup</button>
       <button class="theme-action" type="button" role="menuitem" onclick="importBackup()">import</button>
     </div>
+    <div class="theme-menu-divider" aria-hidden="true"></div>
+    <div class="theme-menu-section" aria-label="App">
+      <div class="theme-menu-label">app</div>
+      <button class="theme-action" type="button" role="menuitem" onclick="closeThemeMenu(); checkForUpdate({ silent: false })">auf updates prüfen</button>
+      <div class="theme-menu-version">v${APP_VERSION}</div>
+    </div>
   `;
 }
 
