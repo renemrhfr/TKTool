@@ -63,6 +63,13 @@ function renderThemeMenu() {
     <div class="theme-menu-divider" aria-hidden="true"></div>
     <div class="theme-menu-section" aria-label="App">
       <div class="theme-menu-label">app</div>
+      ${window.pendingUpdate ? `
+        <button class="theme-action theme-action-update" type="button" role="menuitem" onclick="closeThemeMenu(); downloadUpdate()">
+          <span class="theme-action-update-dot" aria-hidden="true"></span>
+          update herunterladen
+          <span class="theme-action-update-version">v${APP_VERSION} → v${window.pendingUpdate.version}</span>
+        </button>
+      ` : ''}
       <button class="theme-action" type="button" role="menuitem" onclick="closeThemeMenu(); checkForUpdate({ silent: false })">auf updates prüfen</button>
       <div class="theme-menu-version">v${APP_VERSION}</div>
     </div>
