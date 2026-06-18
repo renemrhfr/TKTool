@@ -1775,6 +1775,16 @@ textarea,
   align-self: stretch;
 }
 
+.overview-add-todo-btn {
+  justify-content: center;
+  width: 32px;
+  min-width: 32px;
+  padding-left: 0;
+  padding-right: 0;
+  font-size: 16px;
+  line-height: 1;
+}
+
 .overview-search-toggle {
   margin-left: 0;
   flex: 0 0 auto;

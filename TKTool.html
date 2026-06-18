@@ -1912,6 +1912,16 @@ textarea,
   align-self: stretch;
 }
 
+.overview-add-todo-btn {
+  justify-content: center;
+  width: 32px;
+  min-width: 32px;
+  padding-left: 0;
+  padding-right: 0;
+  font-size: 16px;
+  line-height: 1;
+}
+
 .overview-search-toggle {
   margin-left: 0;
   flex: 0 0 auto;
@@ -6441,7 +6451,7 @@ body[data-theme="serum"] .card {
 // ============================================================
 // DATA LAYER — File System Access API
 // ============================================================
-const APP_VERSION = '1.0.5';
+const APP_VERSION = '1.0.6';
 const DATA_FILENAME = 'tktool-data.json';
 const IDB_NAME = 'tktool-fs';
 const IDB_STORE = 'handles';
@@ -7299,6 +7309,13 @@ function renderOverview() {
               value="${esc(viewState.overviewQuery || '')}"
               oninput="setOverviewQuery(this.value)"
             >
+            <button
+              class="btn btn-primary btn-sm overview-add-todo-btn"
+              type="button"
+              onclick="openCapture({ type: 'todo', status: 'todo', month: '${month}' })"
+              title="Todo hinzufügen"
+              aria-label="Todo hinzufügen"
+            >+</button>
             ${query ? `<button class="btn btn-secondary btn-sm" onclick="clearOverviewQuery()">Reset</button>` : ''}
           </div>
           <div class="view-toggle overview-search-toggle" role="tablist" aria-label="Todo Ansicht">
@@ -7751,7 +7768,6 @@ function overviewLayout() {
     return 'list';
   }
 }
-
 
 </script>
 <script data-source="./js/team.js">

@@ -38,6 +38,13 @@ function renderOverview() {
               value="${esc(viewState.overviewQuery || '')}"
               oninput="setOverviewQuery(this.value)"
             >
+            <button
+              class="btn btn-primary btn-sm overview-add-todo-btn"
+              type="button"
+              onclick="openCapture({ type: 'todo', status: 'todo', month: '${month}' })"
+              title="Todo hinzufügen"
+              aria-label="Todo hinzufügen"
+            >+</button>
             ${query ? `<button class="btn btn-secondary btn-sm" onclick="clearOverviewQuery()">Reset</button>` : ''}
           </div>
           <div class="view-toggle overview-search-toggle" role="tablist" aria-label="Todo Ansicht">
@@ -490,4 +497,3 @@ function overviewLayout() {
     return 'list';
   }
 }
-
