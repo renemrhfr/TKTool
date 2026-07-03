@@ -3570,6 +3570,10 @@ button.tf-metric {
   margin-bottom: 12px;
 }
 
+.capture-mode-toggle {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .segmented-toggle-btn {
   border: none;
   background: transparent;
@@ -6451,7 +6455,7 @@ body[data-theme="serum"] .card {
 // ============================================================
 // DATA LAYER — File System Access API
 // ============================================================
-const APP_VERSION = '1.0.6';
+const APP_VERSION = '1.0.7';
 const DATA_FILENAME = 'tktool-data.json';
 const IDB_NAME = 'tktool-fs';
 const IDB_STORE = 'handles';
@@ -9510,6 +9514,7 @@ function personOptions(selectedId) {
 }
 
 function captureModeForType(type) {
+  if (type === 'meeting' || type === 'oneOnOne') return 'meeting';
   return isGrowthType(type) ? 'teammate' : 'personal';
 }
 
@@ -9520,7 +9525,7 @@ function currentCaptureMode() {
 function setCaptureMode(mode) {
   const input = document.getElementById('captureMode');
   if (!input) return;
-  input.value = mode === 'teammate' ? 'teammate' : 'personal';
+  input.value = ['personal', 'teammate', 'meeting'].includes(mode) ? mode : 'personal';
   updateCaptureModeUI();
   updateCaptureDateUI();
 }
@@ -9529,11 +9534,14 @@ function updateCaptureModeUI() {
   const mode = currentCaptureMode();
   const personalActive = mode === 'personal';
   const teammateActive = mode === 'teammate';
-  const personalType = document.getElementById('captureType')?.value || 'todo';
+  const meetingActive = mode === 'meeting';
   const personalBtn = document.getElementById('captureModePersonal');
   const teammateBtn = document.getElementById('captureModeTeammate');
+  const meetingBtn = document.getElementById('captureModeMeeting');
+  const textGroup = document.getElementById('captureTextGroup');
   const personalFields = document.getElementById('capturePersonalFields');
   const teammateFields = document.getElementById('captureTeammateFields');
+  const meetingFields = document.getElementById('captureMeetingFields');
   const personalPersonGroup = document.getElementById('capturePersonalPersonGroup');
   const meetingGroup = document.getElementById('captureMeetingGroup');
   const notesGroup = document.getElementById('captureNotesGroup');
@@ -9541,12 +9549,16 @@ function updateCaptureModeUI() {
   const showMonthGroup = personalActive;
   if (personalBtn) personalBtn.classList.toggle('active', personalActive);
   if (teammateBtn) teammateBtn.classList.toggle('active', teammateActive);
+  if (meetingBtn) meetingBtn.classList.toggle('active', meetingActive);
+  if (textGroup) textGroup.style.display = meetingActive ? 'none' : '';
   if (personalFields) personalFields.style.display = personalActive ? '' : 'none';
   if (teammateFields) teammateFields.style.display = teammateActive ? '' : 'none';
+  if (meetingFields) meetingFields.style.display = meetingActive ? '' : 'none';
   if (personalPersonGroup) personalPersonGroup.style.display = personalActive ? '' : 'none';
   if (meetingGroup) meetingGroup.style.display = personalActive ? '' : 'none';
   if (notesGroup) notesGroup.style.display = personalActive ? '' : 'none';
   if (monthGroup) monthGroup.style.display = showMonthGroup ? '' : 'none';
+  if (meetingActive) updateCaptureMeetingTypeUI();
 }
 
 function updateCaptureTypeUI() {
@@ -9566,6 +9578,37 @@ function updateCaptureDateUI() {
   const dateDisabled = mode === 'personal' && type !== 'win' && status === 'backlog';
   dateInput.disabled = dateDisabled;
   if (dateDisabled) dateInput.value = '';
+}
+
+function currentCaptureMeetingType() {
+  return document.getElementById('captureMeetingType')?.value || 'meeting';
+}
+
+function setCaptureMeetingType(type) {
+  const input = document.getElementById('captureMeetingType');
+  if (!input) return;
+  input.value = type === 'oneOnOne' ? 'oneOnOne' : 'meeting';
+  updateCaptureMeetingTypeUI();
+}
+
+function updateCaptureMeetingTypeUI() {
+  const type = currentCaptureMeetingType();
+  const isOneOnOne = type === 'oneOnOne';
+  const meetingBtn = document.getElementById('captureMeetingTypeMeeting');
+  const oneOnOneBtn = document.getElementById('captureMeetingTypeOneOnOne');
+  const titleGroup = document.getElementById('captureMeetingTitleGroup');
+  const teamGroup = document.getElementById('captureMeetingTeamGroup');
+  const personGroup = document.getElementById('captureMeetingPersonGroup');
+  const oneOnOneDateHint = document.getElementById('captureOneOnOneDateHint');
+  const dateInput = document.getElementById('meetingDate');
+  if (meetingBtn) meetingBtn.classList.toggle('active', !isOneOnOne);
+  if (oneOnOneBtn) oneOnOneBtn.classList.toggle('active', isOneOnOne);
+  if (titleGroup) titleGroup.style.display = isOneOnOne ? 'none' : '';
+  if (teamGroup) teamGroup.style.display = isOneOnOne ? 'none' : '';
+  if (personGroup) personGroup.style.display = isOneOnOne ? '' : 'none';
+  if (oneOnOneDateHint) oneOnOneDateHint.style.display = isOneOnOne ? '' : 'none';
+  if (dateInput && !isOneOnOne && !dateInput.value) dateInput.value = todayStr();
+  updateMeetingStatusPreview();
 }
 
 function currentEditType() {
@@ -9605,8 +9648,20 @@ function openCapture(prefill = {}) {
   const selectedMeetingId = prefill.meetingId || null;
   const captureMode = prefill.captureMode || captureModeForType(prefill.type);
   const captureStatus = prefill.status || (prefill.type === 'win' ? 'done' : 'todo');
+  const captureMeetingType = prefill.meetingType || (prefill.type === 'oneOnOne' ? 'oneOnOne' : 'meeting');
   const personOpts = personOptions(selectedPersonId);
   const meetingOpts = meetingOptions(selectedMeetingId, { personId: selectedPersonId });
+  const teamPersons = data.persons
+    .filter(p => p.type !== 'kontakt')
+    .slice()
+    .sort(comparePersonsByName);
+  const oneOnOnePersonOpts = teamPersons
+    .map(p => `<option value="${p.id}" ${selectedPersonId === p.id ? 'selected' : ''}>${esc(p.name)}</option>`)
+    .join('');
+  const existingMeetingTitles = [...new Set(data.meetings
+    .filter(m => m.type === 'meeting' && m.title)
+    .map(m => m.title))];
+  const meetingDate = prefill.date || (captureMeetingType === 'oneOnOne' ? '' : todayStr());
 
   document.getElementById('modal').innerHTML = `
     <div class="modal-header">
@@ -9615,11 +9670,12 @@ function openCapture(prefill = {}) {
     </div>
     <div class="modal-body">
       <input type="hidden" id="captureMode" value="${captureMode}">
-      <div class="segmented-toggle">
+      <div class="segmented-toggle capture-mode-toggle">
         <button type="button" class="segmented-toggle-btn" id="captureModePersonal" onclick="setCaptureMode('personal')">mein impact</button>
         <button type="button" class="segmented-toggle-btn" id="captureModeTeammate" onclick="setCaptureMode('teammate')">teamentwicklung</button>
+        <button type="button" class="segmented-toggle-btn" id="captureModeMeeting" onclick="setCaptureMode('meeting')">meeting</button>
       </div>
-      <div class="form-group">
+      <div class="form-group" id="captureTextGroup">
         <textarea class="form-textarea" id="captureText" placeholder="Was ist passiert / was muss getan werden?" rows="3" autofocus>${esc(prefill.text || '')}</textarea>
       </div>
       <div id="capturePersonalFields">
@@ -9665,6 +9721,44 @@ function openCapture(prefill = {}) {
           </div>
         </div>
       </div>
+      <div id="captureMeetingFields">
+        <input type="hidden" id="captureMeetingType" value="${captureMeetingType}">
+        <div class="segmented-toggle">
+          <button type="button" class="segmented-toggle-btn" id="captureMeetingTypeMeeting" onclick="setCaptureMeetingType('meeting')">meeting</button>
+          <button type="button" class="segmented-toggle-btn" id="captureMeetingTypeOneOnOne" onclick="setCaptureMeetingType('oneOnOne')">1:1</button>
+        </div>
+        <div class="form-group" id="captureMeetingTitleGroup">
+          <label class="form-label">Titel</label>
+          <input class="form-input" id="meetingTitle" list="meetingTitleSuggestions" placeholder="z.B. Standup, TK-Meeting, Retro...">
+          <datalist id="meetingTitleSuggestions">
+            ${existingMeetingTitles.map(title => `<option value="${esc(title)}">`).join('')}
+          </datalist>
+        </div>
+        <div class="form-group" id="captureMeetingTeamGroup">
+          <label class="form-label" style="display:flex;align-items:center;gap:8px">
+            <input type="checkbox" id="meetingIsTeam" checked onchange="updateMeetingStatusPreview()">
+            <span>Team-Meeting</span>
+          </label>
+        </div>
+        <div class="form-group" id="captureMeetingPersonGroup">
+          <label class="form-label">Mit</label>
+          <select class="form-select" id="meetingPerson" onchange="updateMeetingStatusPreview()">
+            <option value="">Person wählen...</option>
+            ${oneOnOnePersonOpts}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Datum</label>
+          <input type="date" class="form-input" id="meetingDate" value="${meetingDate}" onchange="updateMeetingStatusPreview()">
+          <div class="form-hint" id="captureOneOnOneDateHint">Leer lassen für eine 1:1-Agenda ohne Termin.</div>
+        </div>
+        <div id="meetingStatusPreview">${renderMeetingFormStatusPreview(meetingDate, captureMeetingType === 'oneOnOne', selectedPersonId || '', true)}</div>
+        <div id="meetingCarryoverPreview">${renderMeetingFormCarryoverPreview(captureMeetingType === 'oneOnOne', selectedPersonId || '', meetingDate)}</div>
+        <div class="form-group">
+          <label class="form-label">Vorbereitung</label>
+          <textarea class="form-textarea" id="meetingPrep" placeholder="Was möchte ich ansprechen..." rows="3">${esc(prefill.prep || '')}</textarea>
+        </div>
+      </div>
       <div class="form-row">
         <div class="form-group" id="capturePersonalPersonGroup">
           <label class="form-label">Person (optional)</label>
@@ -9698,13 +9792,23 @@ function openCapture(prefill = {}) {
   openOverlay();
   updateCaptureModeUI();
   updateCaptureDateUI();
-  setTimeout(() => document.getElementById('captureText').focus(), 100);
+  setTimeout(() => {
+    const focusTarget = currentCaptureMode() === 'meeting'
+      ? (currentCaptureMeetingType() === 'oneOnOne' ? document.getElementById('meetingPerson') : document.getElementById('meetingTitle'))
+      : document.getElementById('captureText');
+    focusTarget?.focus();
+  }, 100);
 }
 
 function saveCapture() {
+  const mode = currentCaptureMode();
+  if (mode === 'meeting') {
+    saveCaptureMeeting();
+    return;
+  }
+
   const text = document.getElementById('captureText').value.trim();
   if (!text) return;
-  const mode = currentCaptureMode();
   let item;
   if (mode === 'teammate') {
     const personId = document.getElementById('captureGrowthPerson').value || null;
@@ -9749,6 +9853,38 @@ function saveCapture() {
   closeOverlay();
   toast('Item gespeichert');
   render();
+}
+
+function saveCaptureMeeting() {
+  const type = currentCaptureMeetingType();
+  const isOneOnOne = type === 'oneOnOne';
+  const personId = isOneOnOne ? (document.getElementById('meetingPerson')?.value || '') : '';
+  if (isOneOnOne && !personId) {
+    toast('Person wählen');
+    document.getElementById('meetingPerson')?.focus();
+    return;
+  }
+
+  const title = isOneOnOne
+    ? ''
+    : (document.getElementById('meetingTitle')?.value.trim() || 'Meeting');
+  const meeting = {
+    id: uid(),
+    type,
+    isTeamMeeting: isOneOnOne ? false : !!document.getElementById('meetingIsTeam')?.checked,
+    title,
+    date: document.getElementById('meetingDate')?.value || '',
+    personId: isOneOnOne ? personId : null,
+    participants: [],
+    prep: document.getElementById('meetingPrep')?.value.trim() || '',
+    notes: '',
+  };
+
+  data.meetings.push(meeting);
+  saveData(data);
+  closeOverlay();
+  toast('Meeting erstellt');
+  navigate('meetings:detail', { meetingId: meeting.id });
 }
 
 function updateCaptureMeetingOptions() {
@@ -10089,8 +10225,9 @@ function updateMeetingStatusPreview() {
   const preview = document.getElementById('meetingStatusPreview');
   const carryoverPreview = document.getElementById('meetingCarryoverPreview');
   const date = document.getElementById('meetingDate')?.value;
-  const isOneOnOne = !!document.getElementById('meetingPerson');
-  const personId = document.getElementById('meetingPerson')?.value || '';
+  const captureMeetingType = document.getElementById('captureMeetingType')?.value;
+  const isOneOnOne = captureMeetingType ? captureMeetingType === 'oneOnOne' : !!document.getElementById('meetingPerson');
+  const personId = isOneOnOne ? (document.getElementById('meetingPerson')?.value || '') : '';
   const isTeam = document.getElementById('meetingIsTeam')?.checked ?? true;
   if (preview) preview.innerHTML = renderMeetingFormStatusPreview(date, isOneOnOne, personId, isTeam);
   if (carryoverPreview) carryoverPreview.innerHTML = renderMeetingFormCarryoverPreview(isOneOnOne, personId, date);

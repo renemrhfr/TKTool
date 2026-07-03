@@ -3433,6 +3433,10 @@ button.tf-metric {
   margin-bottom: 12px;
 }
 
+.capture-mode-toggle {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .segmented-toggle-btn {
   border: none;
   background: transparent;
