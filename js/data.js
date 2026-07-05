@@ -1,7 +1,7 @@
 // ============================================================
 // DATA LAYER — File System Access API
 // ============================================================
-const APP_VERSION = '1.0.7';
+const APP_VERSION = '1.0.8';
 const DATA_FILENAME = 'tktool-data.json';
 const IDB_NAME = 'tktool-fs';
 const IDB_STORE = 'handles';
@@ -9,6 +9,8 @@ const IDB_KEY = 'dataDir';
 const THEME_KEY = 'tktool-theme';
 const OVERVIEW_LAYOUT_KEY = 'tktool-overview-layout';
 const REVIEW_PERIOD_KEY = 'tktool-review-period';
+const JIRA_BASE_KEY = 'tktool-jira-base';
+const PLANUNG_WEEKENDS_KEY = 'tktool-planung-weekends';
 const THEMES = [
   'light',
   'dark',

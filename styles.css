@@ -1676,6 +1676,14 @@ textarea,
   letter-spacing: var(--label-letter-spacing);
 }
 
+.jira-link {
+  color: var(--accent);
+  text-decoration: none;
+  text-transform: none;
+  letter-spacing: normal;
+}
+.jira-link:hover { text-decoration: underline; }
+
 .form-input, .form-textarea, .form-select {
   width: 100%;
   padding: var(--control-padding-y) var(--control-padding-x);

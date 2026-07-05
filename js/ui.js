@@ -59,6 +59,7 @@ function renderThemeMenu() {
       <div class="theme-menu-label">daten</div>
       <button class="theme-action" type="button" role="menuitem" onclick="exportBackup()">backup</button>
       <button class="theme-action" type="button" role="menuitem" onclick="importBackup()">import</button>
+      <button class="theme-action" type="button" role="menuitem" onclick="configureJiraBase()">jira-url</button>
     </div>
     <div class="theme-menu-divider" aria-hidden="true"></div>
     <div class="theme-menu-section" aria-label="App">
@@ -74,6 +75,19 @@ function renderThemeMenu() {
       <div class="theme-menu-version">v${APP_VERSION}</div>
     </div>
   `;
+}
+
+function configureJiraBase() {
+  closeThemeMenu();
+  const current = getJiraBaseUrl();
+  const input = prompt('Jira Base-URL (z.B. https://jira.firma.at)\nLeer lassen zum Entfernen.', current);
+  if (input === null) return;
+  const val = input.trim().replace(/\/+$/, '');
+  try {
+    if (val) localStorage.setItem(JIRA_BASE_KEY, val);
+    else localStorage.removeItem(JIRA_BASE_KEY);
+  } catch {}
+  toast(val ? 'Jira-URL gespeichert' : 'Jira-URL entfernt');
 }
 
 function updateThemeMenuSelection(theme) {

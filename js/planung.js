@@ -219,10 +219,17 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
       .map(b => {
         const sISO = b.start < startDate ? startDate : b.start;
         const eISO = b.end > endDate ? endDate : b.end;
-        const sIdx = days.findIndex(d => d.iso === sISO);
+        let sIdx = days.findIndex(d => d.iso === sISO);
         let eIdx = days.findIndex(d => d.iso === eISO);
-        if (sIdx < 0) return null;
-        if (eIdx < 0) eIdx = cols - 1;
+        // Start/Ende fällt auf einen ausgeblendeten Tag (Wochenende):
+        // auf den nächsten bzw. vorherigen sichtbaren Tag snappen.
+        if (sIdx < 0) sIdx = days.findIndex(d => d.iso > sISO);
+        if (eIdx < 0) {
+          for (let i = days.length - 1; i >= 0; i--) {
+            if (days[i].iso < eISO) { eIdx = i; break; }
+          }
+        }
+        if (sIdx < 0 || eIdx < 0 || eIdx < sIdx) return null; // liegt komplett auf ausgeblendeten Tagen
         return { b, sIdx, eIdx };
       })
       .filter(Boolean)
@@ -256,7 +263,7 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
       const title = [
         b.label || '(ohne Label)',
         `${formatDate(b.start)}–${formatDate(b.end)}`,
-        b.jiraRef ? 'Jira: ' + b.jiraRef : '',
+        b.jiraRef ? 'Jira: ' + b.jiraRef + (jiraUrl(b.jiraRef) ? ' (Cmd/Strg-Klick öffnet)' : '') : '',
       ].filter(Boolean).join('\n');
       const leftPct = (sIdx / cols) * 100;
       const widthPct = ((eIdx - sIdx + 1) / cols) * 100;
@@ -265,7 +272,7 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
         style="left:${leftPct}%;width:${widthPct}%;top:${topPx}px;height:${laneSize}px"
         data-block-id="${b.id}"
         title="${esc(title)}"
-        onclick="event.stopPropagation();if(_suppressNextBlockClick)return;openBlockForm('${b.id}')"
+        onclick="event.stopPropagation();if(_suppressNextBlockClick)return;if((event.metaKey||event.ctrlKey)&&openBlockJira('${b.id}'))return;openBlockForm('${b.id}')"
         onpointerdown="onBlockPointerDown(event,'${b.id}')">
         <span class="tl-block-label">${esc(b.label || b.typ)}</span>
       </div>`;
@@ -367,6 +374,15 @@ function planungExtraFutureWeeks() {
   return Math.max(0, parseInt(viewState.planungExtraFutureWeeks || 0, 10) || 0);
 }
 
+function planungShowWeekends() {
+  try { return localStorage.getItem(PLANUNG_WEEKENDS_KEY) === '1'; } catch { return false; }
+}
+
+function togglePlanungWeekends() {
+  try { localStorage.setItem(PLANUNG_WEEKENDS_KEY, planungShowWeekends() ? '0' : '1'); } catch {}
+  render();
+}
+
 function planungWeekOffset() {
   return parseInt(viewState.planungWeekOffset || 0, 10) || 0;
 }
@@ -434,6 +450,7 @@ function renderPlanung() {
           <div class="planung-sort">
             <button class="filter-btn ${sort === 'frei' ? 'active' : ''}" onclick="setPlanungSort('frei')">frei</button>
             <button class="filter-btn ${sort === 'name' ? 'active' : ''}" onclick="setPlanungSort('name')">name</button>
+            <button class="filter-btn ${planungShowWeekends() ? 'active' : ''}" onclick="togglePlanungWeekends()" title="Samstag/Sonntag ein-/ausblenden">sa/so</button>
           </div>
           <div class="overview-actions planung-actions">
             <button class="btn btn-primary btn-sm" onclick="openBlockForm(null)">+ Block</button>
@@ -443,7 +460,7 @@ function renderPlanung() {
       </div>
     </div>
 
-    ${personIds.length ? renderTimeline({ personIds, startDate: start, endDate: end, options: { idPrefix: 'planung', supportAnchorMonth: month, insertLane: true, showCapacity: sort === 'frei' } })
+    ${personIds.length ? renderTimeline({ personIds, startDate: start, endDate: end, options: { idPrefix: 'planung', supportAnchorMonth: month, insertLane: true, showCapacity: sort === 'frei', showWeekends: planungShowWeekends() } })
       : '<div class="empty-state"><div class="empty-state-icon">&#128197;</div><div class="empty-state-text">Keine Teammitglieder</div></div>'}
 
     <div class="tl-legend">
@@ -517,7 +534,7 @@ function renderPersonPlanungCard(person) {
         <div><strong>Nächste:</strong> ${next ? formatMonthName(next) : '—'}</div>
       </div>
 
-      ${renderTimeline({ personIds: [person.id], startDate: startISO, endDate: endISO, options: { idPrefix: 'person', supportAnchorMonth: curMonth } })}
+      ${renderTimeline({ personIds: [person.id], startDate: startISO, endDate: endISO, options: { idPrefix: 'person', supportAnchorMonth: curMonth, showWeekends: planungShowWeekends() } })}
 
       <div class="support-editor">
         <div class="support-editor-head">Support-Rotation verwalten</div>
@@ -666,8 +683,11 @@ function openBlockForm(blockId, prefillPersonId, prefillStart, prefillEnd) {
         </div>
       </div>
       <div class="form-group">
-        <label class="form-label">Jira-Ref (optional)</label>
-        <input class="form-input" id="blockJira" value="${b ? esc(b.jiraRef || '') : ''}" placeholder="TK-1234">
+        <label class="form-label" style="display:flex;justify-content:space-between;align-items:baseline">
+          Jira-Ref (optional)
+          <a id="blockJiraLink" class="jira-link" target="_blank" rel="noopener" href="${b && jiraUrl(b.jiraRef) ? esc(jiraUrl(b.jiraRef)) : '#'}" ${b && jiraUrl(b.jiraRef) ? '' : 'hidden'}>öffnen ↗</a>
+        </label>
+        <input class="form-input" id="blockJira" value="${b ? esc(b.jiraRef || '') : ''}" placeholder="TK-1234" oninput="updateBlockJiraLink(this.value)">
       </div>
       <div class="form-group">
         <label class="form-label">Notiz</label>
@@ -681,6 +701,25 @@ function openBlockForm(blockId, prefillPersonId, prefillStart, prefillEnd) {
     </div>
   `;
   openOverlay();
+}
+
+function updateBlockJiraLink(val) {
+  const a = document.getElementById('blockJiraLink');
+  if (!a) return;
+  const href = jiraUrl((val || '').trim());
+  a.hidden = !href;
+  if (href) a.href = href;
+}
+
+// Opens the block's Jira ticket in a new tab. Returns false when there is
+// nothing to open (no ref or no base URL configured) so the caller can
+// fall back to the edit form.
+function openBlockJira(blockId) {
+  const b = data.blocks.find(x => x.id === blockId);
+  const url = b ? jiraUrl(b.jiraRef) : null;
+  if (!url) return false;
+  window.open(url, '_blank', 'noopener');
+  return true;
 }
 
 function saveBlock(id) {
@@ -954,7 +993,7 @@ function exportMonthBlocks(month) {
     byPerson[pid].sort((a, b) => a.start.localeCompare(b.start));
     byPerson[pid].forEach(b => {
       md += `- ${b.label || '(ohne Label)'} · ${b.typ}`;
-      if (b.jiraRef) md += ` · ${b.jiraRef}`;
+      if (b.jiraRef) md += ` · ${jiraMd(b.jiraRef)}`;
       md += '\n';
     });
     md += '\n';
@@ -977,7 +1016,7 @@ function exportPersonBlocks(personId) {
     md += `## Allokationen\n`;
     blocks.slice().sort((a, b) => a.start.localeCompare(b.start)).forEach(b => {
       md += `- ${b.label || '(ohne Label)'} · ${b.typ}`;
-      if (b.jiraRef) md += ` · ${b.jiraRef}`;
+      if (b.jiraRef) md += ` · ${jiraMd(b.jiraRef)}`;
       md += '\n';
     });
     md += '\n';

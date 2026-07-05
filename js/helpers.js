@@ -33,6 +33,21 @@ function formatWeekdayShort(d) {
   return new Date(d).toLocaleDateString('de-AT', { weekday: 'short' }).replace('.', '');
 }
 
+function getJiraBaseUrl() {
+  try { return localStorage.getItem(JIRA_BASE_KEY) || ''; } catch { return ''; }
+}
+
+function jiraUrl(ref) {
+  const base = getJiraBaseUrl().replace(/\/+$/, '');
+  if (!base || !ref) return null;
+  return (/\/browse$/.test(base) ? base : base + '/browse') + '/' + encodeURIComponent(ref);
+}
+
+function jiraMd(ref) {
+  const url = jiraUrl(ref);
+  return url ? `[${ref}](${url})` : ref;
+}
+
 function comparePersonsByName(a, b) {
   return (a?.name || '').localeCompare(b?.name || '', 'de-AT', { sensitivity: 'base' });
 }
