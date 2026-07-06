@@ -4375,6 +4375,16 @@ button.tf-metric {
 .tl-block-incident { background: var(--timeline-incident); }
 .tl-block-abwesenheit { background: var(--timeline-abwesenheit); }
 
+.tl-block-done { opacity: 0.45; }
+.tl-block-done .tl-block-label { text-decoration: line-through; }
+.tl-block-check { flex: 0 0 auto; font-weight: 700; }
+.tl-block-overdue { box-shadow: 0 0 0 2px var(--danger); }
+.tl-block-swatch-overdue {
+  background: transparent;
+  border-color: var(--danger);
+  box-shadow: 0 0 0 1px var(--danger);
+}
+
 .tl-block-preview {
   background: transparent;
   border: 2px dashed var(--accent);
@@ -4489,6 +4499,148 @@ button.tf-metric {
 }
 
 .planung-actions .btn { width: auto; }
+
+.form-group-parked { flex: 0 0 auto; display: flex; align-items: flex-end; }
+.form-group-parked .form-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding-bottom: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.form-input[readonly] { opacity: 0.5; }
+
+.planung-overdue-btn { color: var(--danger); border-color: var(--danger); }
+.planung-overdue-btn:hover { color: var(--danger); border-color: var(--danger); filter: brightness(1.1); }
+.planung-overdue-btn.active {
+  color: var(--danger);
+  border-color: var(--danger);
+  border-left: 2px solid var(--danger);
+}
+
+.planung-overdue-panel {
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--danger);
+  background: var(--surface);
+  margin-bottom: 12px;
+}
+.planung-overdue-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 10px;
+  font-size: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.planung-overdue-row:last-child { border-bottom: none; }
+.planung-overdue-info {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  cursor: pointer;
+}
+.planung-overdue-info:hover .planung-overdue-label { color: var(--accent); }
+.planung-overdue-person { font-weight: 600; flex: 0 0 auto; }
+.planung-overdue-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.planung-overdue-date { color: var(--danger); flex: 0 0 auto; font-size: 11px; }
+.planung-overdue-actions { display: flex; gap: 6px; flex: 0 0 auto; }
+
+.planung-parked {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 0 0 10px;
+  font-size: 11px;
+}
+.planung-parked-head { color: var(--text-muted); text-transform: lowercase; }
+.planung-parked-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  font-size: 11px;
+  border: 1px dashed var(--border);
+  border-radius: 3px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.planung-parked-chip:hover { border-color: var(--accent); color: var(--accent); }
+.planung-parked-person { font-weight: 600; }
+
+.person-blocks { padding: 10px 2px; }
+.person-blocks-head { font-size: 12px; font-weight: 600; margin-bottom: 6px; }
+.person-blocks-sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: lowercase;
+  margin: 8px 0 4px;
+}
+.person-blocks-more {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-size: 10px;
+  color: var(--accent);
+  cursor: pointer;
+  text-transform: lowercase;
+}
+.person-blocks-more:hover { text-decoration: underline; }
+.person-block-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  font-size: 12px;
+  cursor: pointer;
+  border-radius: 3px;
+}
+.person-block-row:hover { background: var(--surface); }
+.person-block-row.person-block-done { opacity: 0.5; }
+.person-block-row.person-block-done .person-block-label { text-decoration: line-through; }
+.person-block-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.person-block-range { color: var(--text-muted); font-size: 11px; flex: 0 0 auto; }
+.person-block-overdue {
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  border-radius: 3px;
+  padding: 0 5px;
+  font-size: 10px;
+  text-transform: lowercase;
+  flex: 0 0 auto;
+}
+.person-block-check {
+  margin-left: auto;
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+}
+.person-block-check:hover { border-color: var(--success, var(--accent)); color: var(--success, var(--accent)); }
+.person-block-checked { margin-left: auto; color: var(--text-muted); flex: 0 0 auto; }
 
 .planung-info {
   display: flex;

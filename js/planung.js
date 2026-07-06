@@ -75,8 +75,22 @@ function formatMonthName(m) {
   return months[parseInt(mo) - 1] + ' ' + y;
 }
 
+// --- Block status helpers ---
+// "Geparkt": Block ohne Datum — schon angelegt, aber noch keiner Woche zugeordnet.
+function isBlockParked(b) {
+  return !b.start || !b.end;
+}
+// Abwesenheiten sind mit Ablauf einfach vorbei, die muss niemand "erledigen".
+function blockNeedsDone(b) {
+  return b.typ !== 'abwesenheit';
+}
+function isBlockOverdue(b) {
+  return !isBlockParked(b) && blockNeedsDone(b) && !b.done && b.end < todayStr();
+}
+
 // --- Overlapping block workdays within [winStart, winEnd] ---
 function blockWorkdaysInWindow(b, winStart, winEnd) {
+  if (isBlockParked(b)) return 0;
   if (b.end < winStart || b.start > winEnd) return 0;
   const s = b.start > winStart ? b.start : winStart;
   const e = b.end < winEnd ? b.end : winEnd;
@@ -86,6 +100,7 @@ function blockWorkdaysInWindow(b, winStart, winEnd) {
 function allocatedWorkdaysInWindow(blocks, winStart, winEnd) {
   const days = new Set();
   blocks.forEach(b => {
+    if (isBlockParked(b)) return;
     if (b.end < winStart || b.start > winEnd) return;
     let d = parseISO(b.start > winStart ? b.start : winStart);
     const end = parseISO(b.end < winEnd ? b.end : winEnd);
@@ -215,7 +230,7 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
 
     // Blocks
     const personBlocks = data.blocks
-      .filter(b => b.personId === pid && b.end >= startDate && b.start <= endDate)
+      .filter(b => b.personId === pid && !isBlockParked(b) && b.end >= startDate && b.start <= endDate)
       .map(b => {
         const sISO = b.start < startDate ? startDate : b.start;
         const eISO = b.end > endDate ? endDate : b.end;
@@ -260,9 +275,12 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
       const isSingleDay = sISO === eISO;
       const classes = ['tl-block', `tl-block-${b.typ}`];
       if (isSingleDay) classes.push('tl-block-single');
+      if (b.done) classes.push('tl-block-done');
+      else if (isBlockOverdue(b)) classes.push('tl-block-overdue');
       const title = [
         b.label || '(ohne Label)',
         `${formatDate(b.start)}–${formatDate(b.end)}`,
+        b.done ? 'erledigt' : (isBlockOverdue(b) ? 'überfällig — noch nicht erledigt' : ''),
         b.jiraRef ? 'Jira: ' + b.jiraRef + (jiraUrl(b.jiraRef) ? ' (Cmd/Strg-Klick öffnet)' : '') : '',
       ].filter(Boolean).join('\n');
       const leftPct = (sIdx / cols) * 100;
@@ -274,7 +292,7 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
         title="${esc(title)}"
         onclick="event.stopPropagation();if(_suppressNextBlockClick)return;if((event.metaKey||event.ctrlKey)&&openBlockJira('${b.id}'))return;openBlockForm('${b.id}')"
         onpointerdown="onBlockPointerDown(event,'${b.id}')">
-        <span class="tl-block-label">${esc(b.label || b.typ)}</span>
+        ${b.done ? '<span class="tl-block-check">&#x2713;</span>' : ''}<span class="tl-block-label">${esc(b.label || b.typ)}</span>
       </div>`;
     }).join('');
 
@@ -435,6 +453,47 @@ function renderPlanung() {
     personIds = _tlFrozenOrder.filter(id => personIds.includes(id)).concat(extras);
   }
 
+  const personName = pid => {
+    const p = data.persons.find(x => x.id === pid);
+    return p ? p.name : '(unbekannt)';
+  };
+
+  const overdue = data.blocks.filter(isBlockOverdue).sort((a, b) => a.end.localeCompare(b.end));
+  const overdueChip = overdue.length ? `
+    <button class="filter-btn planung-overdue-btn ${viewState.planungShowOverdue ? 'active' : ''}"
+      onclick="togglePlanungOverdue()"
+      title="Abgelaufene Blöcke, die noch nicht erledigt sind">${overdue.length} offen</button>
+  ` : '';
+  const overduePanel = (overdue.length && viewState.planungShowOverdue) ? `
+    <div class="planung-overdue-panel">
+      ${overdue.map(b => `
+        <div class="planung-overdue-row">
+          <span class="planung-overdue-info" onclick="openBlockForm('${b.id}')" title="Block öffnen">
+            <span class="planung-overdue-person">${esc(personName(b.personId))}</span>
+            <span class="planung-overdue-label">${esc(b.label || b.typ)}</span>
+            <span class="planung-overdue-date">bis ${formatDate(b.end)}</span>
+          </span>
+          <span class="planung-overdue-actions">
+            <button class="btn btn-sm btn-secondary" onclick="extendBlockToThisWeek('${b.id}')" title="Ende auf Freitag dieser Woche setzen">+1 woche</button>
+            <button class="btn btn-sm btn-secondary" onclick="markBlockDone('${b.id}')" title="Als erledigt markieren">&#x2713; done</button>
+          </span>
+        </div>
+      `).join('')}
+    </div>
+  ` : '';
+
+  const parked = data.blocks.filter(isBlockParked);
+  const parkedRow = parked.length ? `
+    <div class="planung-parked">
+      <span class="planung-parked-head">geparkt</span>
+      ${parked.map(b => `
+        <button class="planung-parked-chip" onclick="openBlockForm('${b.id}')" title="Klicken zum Einplanen">
+          <span class="planung-parked-person">${esc(personName(b.personId))}</span>${esc(b.label || b.typ)}
+        </button>
+      `).join('')}
+    </div>
+  ` : '';
+
   return `
     <div class="section-header">
       <div class="overview-toolbar">
@@ -451,6 +510,7 @@ function renderPlanung() {
             <button class="filter-btn ${sort === 'frei' ? 'active' : ''}" onclick="setPlanungSort('frei')">frei</button>
             <button class="filter-btn ${sort === 'name' ? 'active' : ''}" onclick="setPlanungSort('name')">name</button>
             <button class="filter-btn ${planungShowWeekends() ? 'active' : ''}" onclick="togglePlanungWeekends()" title="Samstag/Sonntag ein-/ausblenden">sa/so</button>
+            ${overdueChip}
           </div>
           <div class="overview-actions planung-actions">
             <button class="btn btn-primary btn-sm" onclick="openBlockForm(null)">+ Block</button>
@@ -460,6 +520,9 @@ function renderPlanung() {
       </div>
     </div>
 
+    ${overduePanel}
+    ${parkedRow}
+
     ${personIds.length ? renderTimeline({ personIds, startDate: start, endDate: end, options: { idPrefix: 'planung', supportAnchorMonth: month, insertLane: true, showCapacity: sort === 'frei', showWeekends: planungShowWeekends() } })
       : '<div class="empty-state"><div class="empty-state-icon">&#128197;</div><div class="empty-state-text">Keine Teammitglieder</div></div>'}
 
@@ -467,6 +530,7 @@ function renderPlanung() {
       ${BLOCK_TYPES.map(t => `<span class="tl-legend-item"><span class="tl-block-swatch tl-block-${t.val}"></span>${t.label}</span>`).join('')}
       <span class="tl-legend-item"><span class="tl-legend-today"></span>Heute</span>
       <span class="tl-legend-item"><span class="tl-sup-badge">SUP</span>Support-Rotation</span>
+      <span class="tl-legend-item"><span class="tl-block-swatch tl-block-swatch-overdue"></span>überfällig</span>
     </div>
   `;
 }
@@ -498,6 +562,30 @@ function setPlanungSort(sort) {
   render();
 }
 
+function togglePlanungOverdue() {
+  viewState.planungShowOverdue = !viewState.planungShowOverdue;
+  render();
+}
+
+function extendBlockToThisWeek(id) {
+  const b = data.blocks.find(x => x.id === id);
+  if (!b || isBlockParked(b)) return;
+  const friday = toISO(addDays(startOfWeek(parseISO(todayStr())), 4));
+  b.end = friday > todayStr() ? friday : todayStr();
+  saveData(data);
+  toast('Block bis ' + formatDate(b.end) + ' verlängert');
+  render();
+}
+
+function markBlockDone(id) {
+  const b = data.blocks.find(x => x.id === id);
+  if (!b) return;
+  b.done = true;
+  saveData(data);
+  toast('Block erledigt');
+  render();
+}
+
 // ============================================================
 // PERSON PLANUNG (timeline + support editor on detail page)
 // ============================================================
@@ -518,6 +606,36 @@ function renderPersonPlanungCard(person) {
   const last = past.length ? past[past.length - 1] : null;
   const next = future.length ? future[0] : null;
 
+  const pBlocks = data.blocks.filter(b => b.personId === person.id && blockNeedsDone(b));
+  const openBlocks = pBlocks.filter(b => !isBlockParked(b) && !b.done).sort((a, b) => a.start.localeCompare(b.start));
+  const parkedList = pBlocks.filter(isBlockParked);
+  const allDone = pBlocks.filter(b => !isBlockParked(b) && b.done).sort((a, b) => b.start.localeCompare(a.start));
+  const showAllDone = !!viewState.personBlocksShowAll;
+  const doneBlocks = showAllDone ? allDone : allDone.slice(0, 8);
+  const blockRow = (b) => `
+    <div class="person-block-row ${b.done ? 'person-block-done' : ''}" onclick="openBlockForm('${b.id}')">
+      <span class="tl-block-swatch tl-block-${b.typ}"></span>
+      <span class="person-block-label">${esc(b.label || b.typ)}</span>
+      <span class="person-block-range">${isBlockParked(b) ? 'geparkt' : formatDate(b.start) + '–' + formatDate(b.end)}</span>
+      ${isBlockOverdue(b) ? '<span class="person-block-overdue">überfällig</span>' : ''}
+      ${b.done
+        ? '<span class="person-block-checked">&#x2713;</span>'
+        : `<button class="person-block-check" onclick="event.stopPropagation();markBlockDone('${b.id}')" title="Als erledigt markieren">&#x2713;</button>`}
+    </div>`;
+  const blocksSection = (openBlocks.length || parkedList.length || doneBlocks.length) ? `
+    <div class="person-blocks">
+      <div class="person-blocks-head">Blöcke</div>
+      ${openBlocks.map(blockRow).join('')}
+      ${parkedList.map(blockRow).join('')}
+      ${doneBlocks.length ? `
+        <div class="person-blocks-sub">
+          erledigt · ${allDone.length}
+          ${allDone.length > 8 ? `<button class="person-blocks-more" onclick="togglePersonBlocksShowAll()">${showAllDone ? 'weniger' : 'alle anzeigen'}</button>` : ''}
+        </div>
+        ${doneBlocks.map(blockRow).join('')}` : ''}
+    </div>
+  ` : '';
+
   return `
     <div class="card">
       <div class="card-header">
@@ -536,6 +654,8 @@ function renderPersonPlanungCard(person) {
 
       ${renderTimeline({ personIds: [person.id], startDate: startISO, endDate: endISO, options: { idPrefix: 'person', supportAnchorMonth: curMonth, showWeekends: planungShowWeekends() } })}
 
+      ${blocksSection}
+
       <div class="support-editor">
         <div class="support-editor-head">Support-Rotation verwalten</div>
         <div class="support-months-list">
@@ -553,6 +673,11 @@ function renderPersonPlanungCard(person) {
       </div>
     </div>
   `;
+}
+
+function togglePersonBlocksShowAll() {
+  viewState.personBlocksShowAll = !viewState.personBlocksShowAll;
+  render();
 }
 
 function changePersonTimelineMonths(delta) {
@@ -644,9 +769,10 @@ function openBlockForm(blockId, prefillPersonId, prefillStart, prefillEnd) {
   const personOpts = data.persons.filter(p => p.type !== 'kontakt')
     .map(p => `<option value="${p.id}" ${((b && b.personId === p.id) || prefillPersonId === p.id) ? 'selected' : ''}>${esc(p.name)}</option>`).join('');
 
-  const start = b ? b.start : (prefillStart || todayStr());
-  const end = b ? b.end : (prefillEnd || todayStr());
+  const start = b ? (b.start || '') : (prefillStart || todayStr());
+  const end = b ? (b.end || '') : (prefillEnd || todayStr());
   const typ = b ? b.typ : 'ticket';
+  const parked = b ? isBlockParked(b) : false;
   document.getElementById('modal').innerHTML = `
     <div class="modal-header">
       <span class="modal-title">${b ? 'Block bearbeiten' : 'Neuer Block'}</span>
@@ -667,20 +793,32 @@ function openBlockForm(blockId, prefillPersonId, prefillStart, prefillEnd) {
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Start</label>
-          <input type="date" class="form-input" id="blockStart" value="${start}">
+          <input type="date" class="form-input" id="blockStart" value="${parked ? '' : start}" ${parked ? 'readonly' : ''}>
         </div>
         <div class="form-group">
           <label class="form-label">Ende</label>
-          <input type="date" class="form-input" id="blockEnd" value="${end}">
+          <input type="date" class="form-input" id="blockEnd" value="${parked ? '' : end}" ${parked ? 'readonly' : ''}>
+        </div>
+        <div class="form-group form-group-parked">
+          <label class="form-label" title="Noch keiner Woche zugeordnet — Block erscheint in der geparkt-Zeile">
+            <input type="checkbox" id="blockParked" ${parked ? 'checked' : ''} onchange="toggleBlockParked(this.checked)">
+            <span>Geparkt</span>
+          </label>
         </div>
       </div>
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Typ</label>
-          <select class="form-select" id="blockTyp">
+          <select class="form-select" id="blockTyp" onchange="document.getElementById('blockDoneGroup').hidden = this.value === 'abwesenheit'">
             ${BLOCK_TYPES.map(t => `<option value="${t.val}" ${typ === t.val ? 'selected' : ''}>${t.label}</option>`).join('')}
           </select>
         </div>
+      </div>
+      <div class="form-group" id="blockDoneGroup" ${typ === 'abwesenheit' ? 'hidden' : ''}>
+        <label class="form-label" style="display:flex;align-items:center;gap:8px">
+          <input type="checkbox" id="blockDone" ${b && b.done ? 'checked' : ''}>
+          <span>Erledigt</span>
+        </label>
       </div>
       <div class="form-group">
         <label class="form-label" style="display:flex;justify-content:space-between;align-items:baseline">
@@ -701,6 +839,15 @@ function openBlockForm(blockId, prefillPersonId, prefillStart, prefillEnd) {
     </div>
   `;
   openOverlay();
+}
+
+function toggleBlockParked(checked) {
+  const s = document.getElementById('blockStart');
+  const e = document.getElementById('blockEnd');
+  if (!s || !e) return;
+  if (checked) { s.value = ''; e.value = ''; }
+  s.readOnly = checked;
+  e.readOnly = checked;
 }
 
 function updateBlockJiraLink(val) {
@@ -730,20 +877,33 @@ function saveBlock(id) {
   const typ = document.getElementById('blockTyp').value;
   const jiraRef = document.getElementById('blockJira').value.trim();
   const notiz = document.getElementById('blockNotiz').value.trim();
+  const doneEl = document.getElementById('blockDone');
+  const done = typ !== 'abwesenheit' && !!(doneEl && doneEl.checked);
+  const parkedEl = document.getElementById('blockParked');
+  const parked = !!(parkedEl && parkedEl.checked);
 
-  if (!personId || !start || !end) { toast('Person, Start und Ende nötig'); return; }
-  if (end < start) { const tmp = start; start = end; end = tmp; }
+  if (!personId) { toast('Person nötig'); return; }
+  if (parked) {
+    // Geparkt: ohne Datum anlegen, taucht in der "geparkt"-Zeile auf
+    start = null;
+    end = null;
+  } else {
+    if (!start && !end) { toast('Start und Ende nötig — oder Geparkt anhaken'); return; }
+    if (!start) start = end;
+    if (!end) end = start;
+    if (end < start) { const tmp = start; start = end; end = tmp; }
+  }
 
   if (id) {
     const b = data.blocks.find(x => x.id === id);
     if (!b) return;
-    Object.assign(b, { personId, label, start, end, typ, jiraRef: jiraRef || null, notiz: notiz || null });
+    Object.assign(b, { personId, label, start, end, typ, done, jiraRef: jiraRef || null, notiz: notiz || null });
   } else {
-    data.blocks.push({ id: uid(), personId, label, start, end, typ, jiraRef: jiraRef || null, notiz: notiz || null });
+    data.blocks.push({ id: uid(), personId, label, start, end, typ, done, jiraRef: jiraRef || null, notiz: notiz || null });
   }
   saveData(data);
   closeOverlay();
-  toast(id ? 'Block aktualisiert' : 'Block angelegt');
+  toast(id ? 'Block aktualisiert' : (start ? 'Block angelegt' : 'Block geparkt'));
   render();
 }
 
