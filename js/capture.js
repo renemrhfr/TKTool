@@ -54,6 +54,7 @@ function updateCaptureModeUI() {
   const teammateFields = document.getElementById('captureTeammateFields');
   const meetingFields = document.getElementById('captureMeetingFields');
   const personalPersonGroup = document.getElementById('capturePersonalPersonGroup');
+  const dateGroup = document.getElementById('captureDateGroup');
   const meetingGroup = document.getElementById('captureMeetingGroup');
   const notesGroup = document.getElementById('captureNotesGroup');
   const monthGroup = document.getElementById('captureMonthGroup');
@@ -66,6 +67,7 @@ function updateCaptureModeUI() {
   if (teammateFields) teammateFields.style.display = teammateActive ? '' : 'none';
   if (meetingFields) meetingFields.style.display = meetingActive ? '' : 'none';
   if (personalPersonGroup) personalPersonGroup.style.display = personalActive ? '' : 'none';
+  if (dateGroup) dateGroup.style.display = meetingActive ? 'none' : '';
   if (meetingGroup) meetingGroup.style.display = personalActive ? '' : 'none';
   if (notesGroup) notesGroup.style.display = personalActive ? '' : 'none';
   if (monthGroup) monthGroup.style.display = showMonthGroup ? '' : 'none';
@@ -278,7 +280,7 @@ function openCapture(prefill = {}) {
             ${personOpts}
           </select>
         </div>
-        <div class="form-group">
+        <div class="form-group" id="captureDateGroup">
           <label class="form-label">Datum</label>
           <input type="date" class="form-input" id="captureDate" value="${captureStatus === 'backlog' ? '' : (prefill.date || todayStr())}">
         </div>
