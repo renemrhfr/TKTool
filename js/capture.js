@@ -1322,9 +1322,11 @@ function closeOverlay() {
 }
 
 let toastTimer = null;
-function toast(msg, duration = 2000) {
+function toast(msg, duration = 2000, kind = 'info') {
   const t = document.getElementById('toast');
   t.textContent = msg;
+  t.classList.toggle('toast-error', kind === 'error');
+  t.setAttribute('role', kind === 'error' ? 'alert' : 'status');
   t.classList.add('show');
   if (toastTimer) clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('show'), duration);

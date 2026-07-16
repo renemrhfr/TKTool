@@ -233,8 +233,10 @@ function showSetupScreen(mode = 'pick') {
 
 async function finishStorageConnection(handle) {
   dirHandle = handle;
-  document.getElementById('setupScreen').style.display = 'none';
+  // Load first: if it fails, the setup screen stays visible instead of
+  // leaving a blank app behind.
   await loadData();
+  document.getElementById('setupScreen').style.display = 'none';
   render();
 }
 
@@ -244,6 +246,7 @@ async function connectStorage() {
     await finishStorageConnection(handle);
   } catch (err) {
     console.error('Directory pick cancelled or failed:', err);
+    if (err?.name !== 'AbortError') reportUiError('Datenordner konnte nicht geöffnet werden', err);
   }
 }
 
@@ -253,6 +256,7 @@ async function chooseStorageDirectory() {
     await finishStorageConnection(handle);
   } catch (err) {
     console.error('Directory pick cancelled or failed:', err);
+    if (err?.name !== 'AbortError') reportUiError('Datenordner konnte nicht geöffnet werden', err);
   }
 }
 

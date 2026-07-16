@@ -3738,6 +3738,7 @@ button.tf-metric {
   position: fixed;
   bottom: 90px;
   right: 10px;
+  max-width: min(520px, calc(100vw - 20px));
   background: var(--surface);
   color: var(--text);
   border: var(--border-width) solid var(--border);
@@ -3754,6 +3755,12 @@ button.tf-metric {
 }
 
 .toast.show { opacity: 1; transform: translateY(0); }
+
+.toast.toast-error {
+  border-color: var(--danger);
+  border-left-color: var(--danger);
+  background: var(--danger-light);
+}
 
 /* Update banner */
 .theme-menu-version {
