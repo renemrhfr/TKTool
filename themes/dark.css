@@ -3,7 +3,7 @@ body[data-theme="everforest-dark"] {
   --bg: #232a2e;
   --bg-elev: #272e33;
   --surface: #2d353b;
-  --surface-hover: #343f44;
+  --surface-hover: #3b494f;
   --border: #414b50;
   --text: #d3c6aa;
   --text-secondary: #9da98f;
@@ -103,3 +103,4 @@ body[data-theme="everforest-dark"] .overview-meta .stat-number {
 body[data-theme="dark"] .stats-inline .stat-number,
 body[data-theme="everforest-dark"] .stats-inline .stat-number {
   color: #d3c6aa;
+}

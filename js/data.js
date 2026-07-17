@@ -1,7 +1,7 @@
 // ============================================================
 // DATA LAYER — File System Access API
 // ============================================================
-const APP_VERSION = '1.0.11';
+const APP_VERSION = '1.0.12';
 const DATA_FILENAME = 'tktool-data.json';
 const IDB_NAME = 'tktool-fs';
 const IDB_STORE = 'handles';
@@ -20,6 +20,7 @@ const THEMES = [
   'catppuccin-mocha',
   'tokyo-night',
   'rose-pine-dawn',
+  'daylight',
   'paper',
   'nord',
   'switch',
@@ -33,6 +34,7 @@ const THEME_LABELS = {
   'catppuccin-mocha': 'mocha',
   'tokyo-night': 'tokyo',
   'rose-pine-dawn': 'dawn',
+  daylight: 'daylight',
   paper: 'paper',
   nord: 'nord',
   switch: 'switch',
@@ -46,6 +48,7 @@ const THEME_COLORS = {
   'catppuccin-mocha': ['#1e1e2e', '#cba6f7'],
   'tokyo-night': ['#1a1b26', '#7aa2f7'],
   'rose-pine-dawn': ['#faf4ed', '#d7827e'],
+  daylight: ['#f4f8fc', '#2563a6'],
   paper: ['#f7f7f4', '#111111'],
   nord: ['#2e3440', '#88c0d0'],
   switch: ['#ebebeb', '#e60012'],

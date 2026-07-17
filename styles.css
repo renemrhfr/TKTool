@@ -1,6 +1,8 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
+  --interactive-hover-bg: color-mix(in srgb, var(--surface-hover) 82%, var(--accent) 18%);
+  --interactive-hover-border: color-mix(in srgb, var(--accent) 58%, var(--border));
   font-family: var(--font-body);
   background: var(--bg);
   color: var(--text);
@@ -106,9 +108,9 @@ textarea,
 }
 
 .nav button:hover {
-  background: var(--surface);
+  background: var(--interactive-hover-bg);
   color: var(--text);
-  border-color: var(--border);
+  border-color: var(--interactive-hover-border);
 }
 
 .nav button.active {
@@ -155,7 +157,7 @@ textarea,
 .theme-picker.open .theme-trigger {
   border-color: var(--accent);
   color: var(--accent);
-  background: var(--surface);
+  background: var(--interactive-hover-bg);
 }
 
 .theme-trigger {
@@ -234,12 +236,14 @@ textarea,
 
 .theme-option:hover,
 .theme-option.active {
-  background: var(--surface);
   border-color: var(--border);
   color: var(--text);
 }
 
+.theme-option:hover { background: var(--interactive-hover-bg); }
+
 .theme-option.active {
+  background: var(--accent-light);
   color: var(--accent);
   border-left-color: var(--accent);
   font-weight: var(--active-font-weight);
@@ -282,8 +286,8 @@ textarea,
 }
 
 .theme-action:hover {
-  background: var(--surface);
-  border-color: var(--border);
+  background: var(--interactive-hover-bg);
+  border-color: var(--interactive-hover-border);
   color: var(--text);
 }
 
@@ -514,7 +518,7 @@ textarea,
   white-space: nowrap;
 }
 
-.task-table tbody tr:hover { background: var(--surface-hover); }
+.task-table tbody tr:hover { background: var(--interactive-hover-bg); }
 .task-table tbody tr.is-done { opacity: 0.68; }
 .task-table tbody tr.task-table-done-start td {
   border-top: var(--border-accent-width) solid var(--success);
@@ -562,7 +566,7 @@ textarea,
   color: var(--text-muted);
   font-size: 12px;
 }
-.task-table-action-group button:hover { background: var(--surface); color: var(--text); border-color: var(--border); }
+.task-table-action-group button:hover { background: var(--interactive-hover-bg); color: var(--text); border-color: var(--interactive-hover-border); }
 .task-section { border-left-color: var(--border); }
 .task-todo { border-left-color: var(--blue); }
 .task-backlog { border-left-color: var(--text-muted); }
@@ -640,8 +644,8 @@ textarea,
 }
 
 .search-result-card:hover {
-  border-color: var(--accent);
-  background: var(--surface-hover);
+  border-color: var(--interactive-hover-border);
+  background: var(--interactive-hover-bg);
 }
 
 .search-result-head {
@@ -684,7 +688,7 @@ textarea,
 .item:last-child { margin-bottom: 0; }
 .item[draggable="true"] { cursor: grab; }
 .item.dragging { opacity: 0.45; cursor: grabbing; }
-.item:hover { background: var(--surface-hover); border-left-color: var(--accent); }
+.item:hover { background: var(--interactive-hover-bg); border-left-color: var(--accent); }
 .view-toggle {
   display: inline-flex;
   border: var(--border-width) solid var(--border);
@@ -705,14 +709,14 @@ textarea,
 }
 
 .view-toggle-btn:last-child { border-right: 0; }
-.view-toggle-btn:hover { background: var(--surface-hover); color: var(--text); }
+.view-toggle-btn:hover { background: var(--interactive-hover-bg); color: var(--text); }
 .view-toggle-btn.active { background: var(--accent-light); color: var(--accent); font-weight: var(--active-font-weight); }
 
 .drop-target { transition: border-color var(--transition-fast), background-color var(--transition-fast); }
 .drop-target.drop-over {
   border-color: var(--accent);
   border-left-color: var(--accent);
-  background: var(--surface-hover);
+  background: var(--interactive-hover-bg);
 }
 
 .item-check {
@@ -729,7 +733,7 @@ textarea,
   transition: border-color var(--transition-fast), background-color var(--transition-fast);
 }
 
-.item-check:hover { border-color: var(--accent); }
+.item-check:hover { border-color: var(--accent); background: var(--interactive-hover-bg); }
 .item-check.checked { background: var(--success); border-color: var(--success); }
 .item-check.checked::after { content: '✓'; color: #fff; font-size: 11px; font-weight: 700; }
 
@@ -778,6 +782,7 @@ textarea,
 .item-link-chip:hover {
   border-color: var(--accent);
   color: var(--accent);
+  background: var(--interactive-hover-bg);
 }
 
 .item-date {
@@ -824,7 +829,7 @@ textarea,
   font-size: 12px;
 }
 
-.item-actions button:hover { background: var(--surface); color: var(--text); border-color: var(--border); }
+.item-actions button:hover { background: var(--interactive-hover-bg); color: var(--text); border-color: var(--interactive-hover-border); }
 
 .person-avatar-badge {
   display: inline-flex;
@@ -904,8 +909,9 @@ textarea,
 
 .team-list-row + .team-list-row { border-top: var(--border-width) solid var(--border); }
 .team-list-row:hover,
-.team-list-row.active { background: var(--bg-elev); }
-.team-list-row.active { border-color: var(--accent); }
+.team-list-row.active { background: var(--interactive-hover-bg); }
+.team-list-row:hover { border-color: var(--interactive-hover-border); }
+.team-list-row.active { border-color: var(--accent); background: var(--accent-light); }
 
 .team-list-main,
 .team-detail-identity {
@@ -1089,7 +1095,7 @@ textarea,
   font: inherit;
 }
 
-.team-meeting-row:hover { border-color: var(--accent); }
+.team-meeting-row:hover { border-color: var(--interactive-hover-border); background: var(--interactive-hover-bg); }
 .team-meeting-title { font-weight: 600; }
 .team-meeting-date { color: var(--text-muted); font-size: 11px; white-space: nowrap; }
 
@@ -1106,7 +1112,7 @@ textarea,
 .person-card:hover {
   border-color: var(--accent);
   border-left-color: var(--accent);
-  background: var(--surface-hover);
+  background: var(--interactive-hover-bg);
 }
 
 .person-name {
@@ -1199,7 +1205,7 @@ textarea,
 
 .member-link:hover {
   border-color: var(--accent);
-  background: var(--surface-hover);
+  background: var(--interactive-hover-bg);
   color: var(--text);
   transform: translateY(-1px);
 }
@@ -1245,7 +1251,7 @@ textarea,
 .meeting-card:hover {
   border-color: var(--accent);
   border-left-color: var(--accent);
-  background: var(--surface-hover);
+  background: var(--interactive-hover-bg);
 }
 
 .meeting-type-icon {
@@ -1376,7 +1382,7 @@ textarea,
   padding: 2px 4px;
   border: 1px solid transparent;
 }
-.prep-bullet:hover { border-color: var(--border); background: var(--surface); }
+.prep-bullet:hover { border-color: var(--interactive-hover-border); background: var(--interactive-hover-bg); }
 .prep-bullet input[type=checkbox] {
   margin: 6px 0 0 0;
   cursor: pointer;
@@ -1414,7 +1420,7 @@ textarea,
   flex-shrink: 0;
 }
 .prep-bullet:hover .prep-bullet-delete { opacity: 1; }
-.prep-bullet-delete:hover { color: var(--danger); }
+.prep-bullet-delete:hover { color: var(--danger); background: var(--interactive-hover-bg); }
 .prep-empty {
   color: var(--text-muted);
   font-size: 12px;
@@ -1434,7 +1440,7 @@ textarea,
   background: var(--surface);
   font-size: 13px;
 }
-.insight-row:hover { border-left-color: var(--accent); }
+.insight-row:hover { border-left-color: var(--accent); background: var(--interactive-hover-bg); }
 .insight-label {
   color: var(--text-muted);
   font-size: 11px;
@@ -1474,7 +1480,7 @@ textarea,
 .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
 .btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
 .btn-secondary { background: transparent; color: var(--text-secondary); }
-.btn-secondary:hover { border-color: var(--accent); color: var(--accent); background: var(--surface); }
+.btn-secondary:hover { border-color: var(--accent); color: var(--accent); background: var(--interactive-hover-bg); }
 .btn-danger { background: transparent; color: var(--danger); border-color: var(--danger); }
 .btn-danger:hover { background: var(--danger-light); }
 .btn-sm { padding: 4px 7px; font-size: 12px; }
@@ -1533,6 +1539,11 @@ textarea,
   cursor: pointer;
   color: var(--text-muted);
   padding: 2px;
+}
+
+.modal-close:hover {
+  color: var(--text);
+  background: var(--interactive-hover-bg);
 }
 
 .modal-body { padding: 8px 10px 10px; }
@@ -1881,7 +1892,7 @@ textarea,
 .overview-actions-menu summary:hover {
   border-color: var(--accent);
   color: var(--accent);
-  background: var(--surface);
+  background: var(--interactive-hover-bg);
 }
 
 .overview-actions-menu[open] summary::after {
@@ -1990,9 +2001,9 @@ textarea,
 }
 
 .overview-focus-delete:hover {
-  background: var(--surface);
+  background: var(--interactive-hover-bg);
   color: var(--text);
-  border-color: var(--border);
+  border-color: var(--interactive-hover-border);
 }
 
 .overview-focus-empty {
@@ -2133,6 +2144,11 @@ textarea,
 
 .review-meeting-row:last-child {
   padding-bottom: 0;
+}
+
+.review-meeting-row:hover {
+  background: var(--interactive-hover-bg);
+  box-shadow: inset 2px 0 0 var(--accent);
 }
 
 .review-meeting-badge {
@@ -2372,7 +2388,7 @@ textarea,
 
 .dashboard-link:hover,
 .dashboard-link-empty:hover {
-  background: var(--surface-hover);
+  background: var(--interactive-hover-bg);
   border-color: color-mix(in srgb, var(--accent) 58%, var(--border));
 }
 
@@ -2455,6 +2471,8 @@ textarea,
 
 .dashboard-link-edit:hover {
   color: var(--accent);
+  background: var(--interactive-hover-bg);
+  border-color: var(--interactive-hover-border);
   border-color: var(--border);
   background: var(--surface);
 }
@@ -2475,7 +2493,7 @@ textarea,
 .dashboard-link-add:hover {
   border-color: var(--accent);
   color: var(--accent);
-  background: var(--surface-hover);
+  background: var(--interactive-hover-bg);
 }
 
 .dashboard-review-action {
@@ -2624,7 +2642,7 @@ textarea,
 
 .review-row:hover {
   border-color: color-mix(in srgb, var(--accent) 38%, var(--border));
-  background: var(--surface-hover);
+  background: var(--interactive-hover-bg);
 }
 
 .review-row[open] {
@@ -2825,7 +2843,7 @@ textarea,
 }
 
 .review-due-item-main:hover {
-  background: var(--surface-hover);
+  background: var(--interactive-hover-bg);
 }
 
 .review-due-item-date {
@@ -3042,7 +3060,7 @@ button.tf-metric {
 
 .tf-metric-action:hover {
   border-color: color-mix(in srgb, var(--accent) 52%, var(--border));
-  background: var(--surface-hover);
+  background: var(--interactive-hover-bg);
 }
 
 .tf-metric-action:focus-visible {
@@ -3128,8 +3146,6 @@ button.tf-metric {
 .stat-wins { color: var(--stat-wins-text); background: var(--stat-wins-bg); }
 .stat-backlog { color: var(--text-secondary); background: var(--stat-backlog-bg); }
 
-}
-
 .focus-card {
   background: transparent;
   border: 1px solid var(--border);
@@ -3160,7 +3176,7 @@ button.tf-metric {
   text-transform: lowercase;
 }
 
-.filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+.filter-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--interactive-hover-bg); }
 .filter-btn.active {
   background: var(--surface);
   color: var(--accent);
@@ -3272,7 +3288,7 @@ button.tf-metric {
 }
 
 .oneonone-carryover-signal:hover {
-  background: var(--surface-hover);
+  background: var(--interactive-hover-bg);
   border-color: color-mix(in srgb, var(--accent) 42%, var(--border));
 }
 
@@ -3335,7 +3351,7 @@ button.tf-metric {
   cursor: pointer;
 }
 
-.meeting-section-toggle:hover { color: var(--accent); }
+.meeting-section-toggle:hover { color: var(--accent); background: var(--interactive-hover-bg); }
 
 .meeting-section-toggle-icon {
   font-size: 16px;
@@ -3407,7 +3423,7 @@ button.tf-metric {
 }
 
 .growth-entry:hover {
-  background: var(--surface-hover);
+  background: var(--interactive-hover-bg);
 }
 
 .growth-highlight {
@@ -3457,7 +3473,7 @@ button.tf-metric {
 }
 
 .segmented-toggle-btn.active {
-  background: var(--surface-hover);
+  background: var(--interactive-hover-bg);
   color: var(--text);
 }
 
@@ -3545,7 +3561,7 @@ button.tf-metric {
 }
 
 .impact-entry:hover {
-  background: var(--surface-hover);
+  background: var(--interactive-hover-bg);
   border-color: var(--accent);
 }
 
@@ -3602,7 +3618,7 @@ button.tf-metric {
 }
 
 .impact-person-chip:hover {
-  background: var(--surface-hover);
+  background: var(--interactive-hover-bg);
   border-color: var(--accent);
 }
 
@@ -3711,7 +3727,7 @@ button.tf-metric {
 .month-selector button:hover {
   border-color: var(--accent);
   color: var(--accent);
-  background: var(--surface);
+  background: var(--interactive-hover-bg);
 }
 
 .month-label {
@@ -3836,7 +3852,7 @@ button.tf-metric {
 }
 
 .update-banner-action:hover {
-  background: var(--surface-hover);
+  background: var(--interactive-hover-bg);
   border-color: var(--accent);
   color: var(--text);
 }
@@ -3852,7 +3868,7 @@ button.tf-metric {
   padding: 0 2px;
 }
 
-.update-banner-close:hover { color: var(--text); }
+.update-banner-close:hover { color: var(--text); background: var(--interactive-hover-bg); }
 
 /* QuickNotes */
 .quicknotes {
@@ -3885,6 +3901,7 @@ button.tf-metric {
 .quicknotes-bar:hover {
   background-color: var(--quicknotes-bar-bg-hover);
   background-image: var(--quicknotes-bar-gradient-hover);
+  box-shadow: inset 0 0 0 1px var(--interactive-hover-border);
 }
 
 .quicknotes-label {
@@ -3948,6 +3965,7 @@ button.tf-metric {
 
 .quicknotes-capture:hover {
   background: var(--quicknotes-capture-bg-hover);
+  border-color: var(--accent);
 }
 
 .quicknotes-capture-label {
@@ -4198,7 +4216,7 @@ button.tf-metric {
   min-width: 0;
   background: color-mix(in srgb, var(--surface) 88%, var(--bg-elev));
 }
-.tl-person:hover { background: var(--surface-hover); }
+.tl-person:hover { background: var(--interactive-hover-bg); }
 .tl-person-main,
 .tl-person-top {
   display: flex;
@@ -4581,7 +4599,7 @@ button.tf-metric {
   color: var(--text-secondary);
   cursor: pointer;
 }
-.planung-parked-chip:hover { border-color: var(--accent); color: var(--accent); }
+.planung-parked-chip:hover { border-color: var(--accent); color: var(--accent); background: var(--interactive-hover-bg); }
 .planung-parked-person { font-weight: 600; }
 
 .person-blocks { padding: 10px 2px; }
@@ -4614,7 +4632,7 @@ button.tf-metric {
   cursor: pointer;
   border-radius: 3px;
 }
-.person-block-row:hover { background: var(--surface); }
+.person-block-row:hover { background: var(--interactive-hover-bg); }
 .person-block-row.person-block-done { opacity: 0.5; }
 .person-block-row.person-block-done .person-block-label { text-decoration: line-through; }
 .person-block-label {
@@ -4646,7 +4664,7 @@ button.tf-metric {
   font-size: 12px;
   line-height: 1;
 }
-.person-block-check:hover { border-color: var(--success, var(--accent)); color: var(--success, var(--accent)); }
+.person-block-check:hover { border-color: var(--success, var(--accent)); color: var(--success, var(--accent)); background: var(--interactive-hover-bg); }
 .person-block-checked { margin-left: auto; color: var(--text-muted); flex: 0 0 auto; }
 
 .planung-info {
@@ -4878,7 +4896,7 @@ button.tf-metric {
 }
 .meeting-range-tabs button:last-child { border-right: 0; }
 .meeting-range-tabs button:hover {
-  background: var(--surface-hover);
+  background: var(--interactive-hover-bg);
   color: var(--text);
 }
 .meeting-range-tabs button.active {
@@ -4933,9 +4951,12 @@ button.tf-metric {
   align-items: start;
 }
 .meeting-list-row + .meeting-list-row { border-top: 1px solid var(--border); }
-.meeting-list-row:hover { background: var(--bg-elev); }
+.meeting-list-row:hover {
+  background: var(--interactive-hover-bg);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
 .meeting-list-row.active {
-  background: var(--bg-elev);
+  background: var(--accent-light);
   border-left-color: var(--accent);
 }
 .meeting-list-datebox {
@@ -5097,7 +5118,7 @@ button.tf-metric {
   cursor: pointer;
   border-radius: 4px;
 }
-.meetings-empty-card:hover { border-color: var(--accent); }
+.meetings-empty-card:hover { border-color: var(--accent); background: var(--interactive-hover-bg); }
 .meetings-empty-card-label {
   font-size: 10px;
   letter-spacing: .05em;
