@@ -85,3 +85,131 @@ body[data-theme="hyrule"] {
   --timeline-incident: #a5413b;
   --timeline-abwesenheit: #607058;
 }
+
+.hyrule-easter-eggs {
+  position: static;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+body[data-theme="hyrule"] .hyrule-easter-eggs {
+  visibility: visible;
+}
+
+body[data-theme="hyrule"] .main {
+  position: relative;
+  z-index: 1;
+}
+
+.hyrule-triforce {
+  position: fixed;
+  z-index: 0;
+  right: clamp(24px, 4vw, 72px);
+  bottom: clamp(58px, 8vh, 104px);
+  width: 132px;
+  height: 114px;
+  opacity: 0.08;
+  filter: drop-shadow(0 0 7px rgba(166, 124, 33, 0.28));
+  animation: hyrule-triforce-breathe 13s ease-in-out infinite;
+}
+
+.hyrule-triforce span {
+  position: absolute;
+  width: 64px;
+  height: 56px;
+  background: linear-gradient(145deg, rgba(255, 244, 183, 0.95), rgba(166, 124, 33, 0.88));
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+
+.hyrule-triforce span:nth-child(1) { top: 0; left: 34px; }
+.hyrule-triforce span:nth-child(2) { left: 0; bottom: 0; }
+.hyrule-triforce span:nth-child(3) { right: 0; bottom: 0; }
+
+.hyrule-triforce::after {
+  content: "";
+  position: absolute;
+  inset: -45%;
+  background: linear-gradient(112deg, transparent 38%, rgba(255, 255, 228, 0.9) 48%, transparent 58%);
+  transform: translateX(-75%);
+  animation: hyrule-triforce-sunbeam 13s ease-in-out infinite;
+}
+
+.hyrule-navi-orbit {
+  position: fixed;
+  z-index: 0;
+  right: calc(clamp(24px, 4vw, 72px) - 28px);
+  bottom: calc(clamp(58px, 8vh, 104px) - 24px);
+  width: 188px;
+  height: 162px;
+}
+
+.hyrule-navi {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 14px;
+  height: 14px;
+  opacity: 0;
+  filter: drop-shadow(0 0 6px rgba(114, 220, 255, 0.95));
+  will-change: left, top, opacity;
+}
+
+.hyrule-navi.is-visiting {
+  animation: hyrule-navi-orbit 12s ease-in-out both;
+}
+
+.hyrule-navi-core {
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: #efffff;
+  box-shadow:
+    0 0 5px 2px rgba(218, 255, 255, 0.95),
+    0 0 14px 5px rgba(77, 198, 255, 0.72),
+    0 0 26px 8px rgba(77, 198, 255, 0.26);
+}
+
+.hyrule-navi-wing {
+  position: absolute;
+  top: 0;
+  width: 10px;
+  height: 7px;
+  border-radius: 75% 15% 70% 25%;
+  background: rgba(225, 255, 255, 0.8);
+  box-shadow: 0 0 7px rgba(126, 225, 255, 0.8);
+  transform-origin: center right;
+  animation: hyrule-navi-wing 180ms ease-in-out infinite alternate;
+}
+
+.hyrule-navi-wing-left { right: 9px; transform: rotate(24deg); }
+.hyrule-navi-wing-right { left: 9px; transform: scaleX(-1) rotate(24deg); }
+
+@keyframes hyrule-triforce-breathe {
+  0%, 24%, 100% { opacity: 0.055; transform: translateY(2px) scale(0.98); }
+  48%, 64% { opacity: 0.16; transform: translateY(-2px) scale(1.02); }
+}
+
+@keyframes hyrule-triforce-sunbeam {
+  0%, 28% { transform: translateX(-75%); opacity: 0; }
+  44% { opacity: 0.8; }
+  66%, 100% { transform: translateX(75%); opacity: 0; }
+}
+
+@keyframes hyrule-navi-orbit {
+  0% { left: 50%; top: 2%; opacity: 0; transform: translate(-50%, -50%) scale(0.72); }
+  8% { opacity: 0.9; }
+  12.5% { left: 82%; top: 14%; transform: translate(-50%, -50%) scale(0.95); }
+  25% { left: 98%; top: 50%; transform: translate(-50%, -50%) scale(1.04); }
+  37.5% { left: 82%; top: 86%; transform: translate(-50%, -50%) scale(0.96); }
+  50% { left: 50%; top: 98%; transform: translate(-50%, -50%) scale(0.88); }
+  62.5% { left: 18%; top: 86%; transform: translate(-50%, -50%) scale(0.96); }
+  75% { left: 2%; top: 50%; transform: translate(-50%, -50%) scale(1.04); }
+  87.5% { left: 18%; top: 14%; transform: translate(-50%, -50%) scale(0.95); }
+  92% { opacity: 0.9; }
+  100% { left: 50%; top: 2%; opacity: 0; transform: translate(-50%, -50%) scale(0.72); }
+}
+
+@keyframes hyrule-navi-wing {
+  from { margin-top: -1px; height: 6px; opacity: 0.6; }
+  to { margin-top: 3px; height: 9px; opacity: 0.95; }
+}

@@ -13,6 +13,7 @@ function getSavedTheme() {
 function applyTheme(theme) {
   const next = THEMES.includes(theme) ? theme : 'light';
   document.body.setAttribute('data-theme', next);
+  syncHyruleEasterEggs(next);
   const trigger = document.getElementById('themeTrigger');
   if (trigger) {
     trigger.title = `Einstellungen - Theme: ${THEME_LABELS[next] || next}`;
@@ -117,8 +118,76 @@ function closeThemeMenu() {
 }
 
 function initTheme() {
+  initHyruleEasterEggs();
   renderThemeMenu();
   applyTheme(getSavedTheme());
+}
+
+// ============================================================
+// HYRULE EASTER EGGS
+// ============================================================
+let hyruleNaviTimer = null;
+let hyruleNaviHideTimer = null;
+let hyruleEasterEggsReady = false;
+
+function hyruleThemeActive() {
+  return document.body.getAttribute('data-theme') === 'hyrule';
+}
+
+function initHyruleEasterEggs() {
+  if (hyruleEasterEggsReady) return;
+  hyruleEasterEggsReady = true;
+
+  const layer = document.createElement('div');
+  layer.className = 'hyrule-easter-eggs';
+  layer.id = 'hyruleEasterEggs';
+  layer.setAttribute('aria-hidden', 'true');
+  layer.innerHTML = `
+    <div class="hyrule-triforce" aria-hidden="true">
+      <span></span><span></span><span></span>
+    </div>
+    <div class="hyrule-navi-orbit" aria-hidden="true">
+      <div class="hyrule-navi" id="hyruleNavi">
+        <span class="hyrule-navi-core"></span>
+        <span class="hyrule-navi-wing hyrule-navi-wing-left"></span>
+        <span class="hyrule-navi-wing hyrule-navi-wing-right"></span>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(layer);
+}
+
+function syncHyruleEasterEggs(theme) {
+  clearTimeout(hyruleNaviTimer);
+  clearTimeout(hyruleNaviHideTimer);
+  hyruleNaviTimer = null;
+  hyruleNaviHideTimer = null;
+
+  const navi = document.getElementById('hyruleNavi');
+  navi?.classList.remove('is-visiting');
+
+  if (theme !== 'hyrule') return;
+  scheduleHyruleNavi(16000);
+}
+
+function scheduleHyruleNavi(delay = 60000 + Math.random() * 60000) {
+  clearTimeout(hyruleNaviTimer);
+  if (!hyruleThemeActive()) return;
+  hyruleNaviTimer = setTimeout(flyHyruleNavi, delay);
+}
+
+function flyHyruleNavi() {
+  const navi = document.getElementById('hyruleNavi');
+  if (!navi || !hyruleThemeActive()) return;
+
+  navi.classList.remove('is-visiting');
+  void navi.offsetWidth;
+  navi.classList.add('is-visiting');
+  clearTimeout(hyruleNaviHideTimer);
+  hyruleNaviHideTimer = setTimeout(() => {
+    navi.classList.remove('is-visiting');
+    scheduleHyruleNavi();
+  }, 12000);
 }
 
 // ============================================================
