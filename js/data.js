@@ -1,7 +1,7 @@
 // ============================================================
 // DATA LAYER — File System Access API
 // ============================================================
-const APP_VERSION = '1.0.14';
+const APP_VERSION = '1.0.15';
 const DATA_FILENAME = 'tktool-data.json';
 const IDB_NAME = 'tktool-fs';
 const IDB_STORE = 'handles';
@@ -22,6 +22,7 @@ const THEMES = [
   'naboo',
   'bridges',
   'hyrule',
+  'starfox',
   'nord',
   'switch',
   'matrix',
@@ -36,6 +37,7 @@ const THEME_LABELS = {
   naboo: 'naboo',
   bridges: 'bridges',
   hyrule: 'hyrule',
+  starfox: 'starfox',
   nord: 'nord',
   switch: 'switch',
   matrix: 'matrix',
@@ -50,6 +52,7 @@ const THEME_COLORS = {
   naboo: ['#f3f5f0', '#2f6f82'],
   bridges: ['#eef2f3', '#b94d1c'],
   hyrule: ['#f4f0df', '#3f7752'],
+  starfox: ['#07111d', '#2a7ba2'],
   nord: ['#2e3440', '#88c0d0'],
   switch: ['#ebebeb', '#e60012'],
   matrix: ['#030703', '#38b84a'],
@@ -361,6 +364,9 @@ function stampChangedFields(record, previousRecord) {
     if (previousRecord && stableJson(record[field]) === stableJson(previousRecord[field])) continue;
     record._syncFields[field] = nextVersion(record._syncFields[field]);
   }
+  // mergeRecords omits an empty _syncFields; keep the shapes identical so the
+  // external-change comparison doesn't fire on legacy records without stamps.
+  if (!Object.keys(record._syncFields).length) delete record._syncFields;
 }
 
 // Diff the UI state against the last synced snapshot and produce the full

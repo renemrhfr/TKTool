@@ -118,7 +118,7 @@ function closeThemeMenu() {
 }
 
 function initTheme() {
-  initHyruleEasterEggs();
+  initThemeEasterEggs();
   renderThemeMenu();
   applyTheme(getSavedTheme());
 }
@@ -128,15 +128,16 @@ function initTheme() {
 // ============================================================
 let hyruleNaviTimer = null;
 let hyruleNaviHideTimer = null;
-let hyruleEasterEggsReady = false;
+let starfoxShotTimer = null;
+let themeEasterEggsReady = false;
 
 function hyruleThemeActive() {
   return document.body.getAttribute('data-theme') === 'hyrule';
 }
 
-function initHyruleEasterEggs() {
-  if (hyruleEasterEggsReady) return;
-  hyruleEasterEggsReady = true;
+function initThemeEasterEggs() {
+  if (themeEasterEggsReady) return;
+  themeEasterEggsReady = true;
 
   const layer = document.createElement('div');
   layer.className = 'hyrule-easter-eggs';
@@ -155,6 +156,22 @@ function initHyruleEasterEggs() {
     </div>
   `;
   document.body.appendChild(layer);
+
+  const popLayer = document.createElement('div');
+  popLayer.className = 'pop-theme-easter-eggs';
+  popLayer.setAttribute('aria-hidden', 'true');
+  popLayer.innerHTML = `
+    <div class="starfox-space">
+      <span class="starfox-stars starfox-stars-far"></span>
+      <span class="starfox-stars starfox-stars-near"></span>
+    </div>
+    <div class="starfox-target-burst" id="starfoxTargetBurst">
+      <span class="starfox-target-ring"></span>
+    </div>
+  `;
+  document.body.appendChild(popLayer);
+
+  document.addEventListener('click', triggerStarfoxTargetShot, true);
 }
 
 function syncHyruleEasterEggs(theme) {
@@ -188,6 +205,24 @@ function flyHyruleNavi() {
     navi.classList.remove('is-visiting');
     scheduleHyruleNavi();
   }, 12000);
+}
+
+function triggerStarfoxTargetShot(event) {
+  if (document.body.getAttribute('data-theme') !== 'starfox') return;
+  const button = event.target.closest('button');
+  const burst = document.getElementById('starfoxTargetBurst');
+  if (!button || button.disabled || !burst) return;
+
+  const rect = button.getBoundingClientRect();
+  const x = Number.isFinite(event.clientX) && event.clientX > 0 ? event.clientX : rect.left + rect.width / 2;
+  const y = Number.isFinite(event.clientY) && event.clientY > 0 ? event.clientY : rect.top + rect.height / 2;
+  burst.style.left = `${x}px`;
+  burst.style.top = `${y}px`;
+  burst.classList.remove('is-firing');
+  void burst.offsetWidth;
+  burst.classList.add('is-firing');
+  clearTimeout(starfoxShotTimer);
+  starfoxShotTimer = setTimeout(() => burst.classList.remove('is-firing'), 720);
 }
 
 // ============================================================

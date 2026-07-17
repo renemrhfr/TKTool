@@ -76,4 +76,3 @@ function render() {
   restoreOverviewSearchFocus();
   restoreMeetingSearchFocus();
 }
-
