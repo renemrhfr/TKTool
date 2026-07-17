@@ -71,7 +71,7 @@ Terminal brutalism, more or less: system monospace everywhere, amber accent,
 near-zero border radius, lowercase labels, dense layouts. The reasoning is
 function over decoration — the tool should feel like an instrument you
 operate, not a SaaS landing page that happens to store data. There are
-eleven themes (gruvbox, mocha, tokyo night, matrix, …) because theming a
+twelve themes (dawn, daylight, naboo, matrix, …) because theming a
 CSS-variable-based design is cheap and occasionally fun.
 
 ## Running it

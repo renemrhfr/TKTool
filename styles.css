@@ -207,6 +207,8 @@ textarea,
   top: calc(100% + 6px);
   right: 0;
   width: min(240px, calc(100vw - 24px));
+  max-height: calc(100vh - var(--header-height) - 18px);
+  overflow-y: auto;
   z-index: 130;
   display: none;
   grid-template-columns: 1fr;

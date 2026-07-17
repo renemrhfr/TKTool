@@ -1,7 +1,7 @@
 // ============================================================
 // DATA LAYER — File System Access API
 // ============================================================
-const APP_VERSION = '1.0.12';
+const APP_VERSION = '1.0.13';
 const DATA_FILENAME = 'tktool-data.json';
 const IDB_NAME = 'tktool-fs';
 const IDB_STORE = 'handles';
@@ -16,12 +16,12 @@ const PLANUNG_WEEKENDS_KEY = 'tktool-planung-weekends';
 const THEMES = [
   'light',
   'dark',
-  'gruvbox-dark',
-  'catppuccin-mocha',
   'tokyo-night',
   'rose-pine-dawn',
   'daylight',
-  'paper',
+  'naboo',
+  'bridges',
+  'hyrule',
   'nord',
   'switch',
   'matrix',
@@ -30,12 +30,12 @@ const THEMES = [
 const THEME_LABELS = {
   light: 'light',
   dark: 'dark',
-  'gruvbox-dark': 'gruvbox',
-  'catppuccin-mocha': 'mocha',
   'tokyo-night': 'tokyo',
   'rose-pine-dawn': 'dawn',
   daylight: 'daylight',
-  paper: 'paper',
+  naboo: 'naboo',
+  bridges: 'bridges',
+  hyrule: 'hyrule',
   nord: 'nord',
   switch: 'switch',
   matrix: 'matrix',
@@ -44,12 +44,12 @@ const THEME_LABELS = {
 const THEME_COLORS = {
   light: ['#fdf6e3', '#f57d26'],
   dark: ['#232a2e', '#e69875'],
-  'gruvbox-dark': ['#282828', '#fe8019'],
-  'catppuccin-mocha': ['#1e1e2e', '#cba6f7'],
   'tokyo-night': ['#1a1b26', '#7aa2f7'],
   'rose-pine-dawn': ['#faf4ed', '#d7827e'],
   daylight: ['#f4f8fc', '#2563a6'],
-  paper: ['#f7f7f4', '#111111'],
+  naboo: ['#f3f5f0', '#2f6f82'],
+  bridges: ['#eef2f3', '#b94d1c'],
+  hyrule: ['#f4f0df', '#3f7752'],
   nord: ['#2e3440', '#88c0d0'],
   switch: ['#ebebeb', '#e60012'],
   matrix: ['#030703', '#38b84a'],
