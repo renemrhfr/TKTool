@@ -209,6 +209,7 @@ function flyHyruleNavi() {
 
 function triggerStarfoxTargetShot(event) {
   if (document.body.getAttribute('data-theme') !== 'starfox') return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const button = event.target.closest('button');
   const burst = document.getElementById('starfoxTargetBurst');
   if (!button || button.disabled || !burst) return;

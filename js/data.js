@@ -1,7 +1,7 @@
 // ============================================================
 // DATA LAYER — File System Access API
 // ============================================================
-const APP_VERSION = '1.0.15';
+const APP_VERSION = '1.0.16';
 const DATA_FILENAME = 'tktool-data.json';
 const IDB_NAME = 'tktool-fs';
 const IDB_STORE = 'handles';
@@ -105,6 +105,7 @@ const defaultData = () => ({
   items: [],
   persons: [],
   meetings: [],
+  notes: [],
   focuses: [],
   dashboardLinks: [],
   monthReviews: [],
@@ -285,6 +286,13 @@ function normalizeData(raw) {
   merged.meetings = merged.meetings.map(meeting => ({
     ...meeting,
     participants: Array.isArray(meeting.participants) ? meeting.participants.filter(Boolean) : [],
+  }));
+  merged.notes = merged.notes.map(note => ({
+    ...note,
+    title: note.title || 'Unbenannte Notiz',
+    text: note.text || '',
+    createdAt: note.createdAt || todayStr(),
+    updatedAt: note.updatedAt || note.createdAt || todayStr(),
   }));
   merged.monthReviews = merged.monthReviews.map(review => ({
     ...review,

@@ -460,5 +460,3 @@ function nextMonth(m) {
   if (mo === 12) return (y + 1) + '-01';
   return y + '-' + String(mo + 1).padStart(2, '0');
 }
-
-

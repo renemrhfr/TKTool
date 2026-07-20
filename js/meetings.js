@@ -55,6 +55,30 @@ function serializePrepBullets(bullets) {
   }).join('\n');
 }
 
+function meetingSeriesKey(meeting) {
+  if (!meeting) return '';
+  if (meeting.type === 'oneOnOne') return meeting.personId ? `oneOnOne:${meeting.personId}` : '';
+  const title = String(meeting.title || '').trim().toLocaleLowerCase('de-AT');
+  return title ? `meeting:${title}` : '';
+}
+
+function earlierMeetingsInSeries(meeting) {
+  const key = meetingSeriesKey(meeting);
+  if (!key) return [];
+  const referenceDate = meeting.date || todayStr();
+  return data.meetings
+    .filter(candidate => candidate.id !== meeting.id && candidate.date && candidate.date < referenceDate && meetingSeriesKey(candidate) === key)
+    .sort((a, b) => b.date.localeCompare(a.date));
+}
+
+function openPrepCarryovers(meeting) {
+  return earlierMeetingsInSeries(meeting).flatMap(sourceMeeting =>
+    parsePrepBullets(sourceMeeting.prep)
+      .map((bullet, index) => ({ ...bullet, index, sourceMeeting }))
+      .filter(bullet => !bullet.done && bullet.text.trim())
+  );
+}
+
 function meetingRelativeDate(d) {
   if (!d) return '';
   const today = todayStr();
@@ -468,6 +492,7 @@ function renderMeetingDetailBody(m) {
 
     <div class="meeting-detail-section meeting-detail-section-emphasis">
       <h3>Vorbereitung</h3>
+      ${renderPrepCarryovers(m)}
       <div id="prepBullets" class="prep-bullets">${renderPrepBullets(m.id)}</div>
       <button class="btn btn-sm btn-secondary" onclick="addPrepBullet('${m.id}')">+ punkt</button>
     </div>
@@ -604,6 +629,8 @@ function toggleMeetingTeamFlag(meetingId, checked) {
 }
 
 // ---- Prep bullet editor ----
+let draggedPrepBulletIndex = null;
+
 function autoResizePrepBullet(el) {
   el.style.height = 'auto';
   el.style.height = (el.scrollHeight + 2) + 'px';
@@ -612,7 +639,15 @@ function autoResizePrepBullet(el) {
 function renderPrepBulletList(meetingId, bullets) {
   if (!bullets.length) return `<div class="prep-empty">Noch keine Punkte</div>`;
   return bullets.map((b, idx) => `
-    <div class="prep-bullet ${b.done ? 'prep-bullet-done' : ''}">
+    <div class="prep-bullet ${b.done ? 'prep-bullet-done' : ''}" data-prep-index="${idx}"
+      ondragover="prepBulletDragOver(event)" ondragleave="prepBulletDragLeave(event)"
+      ondrop="dropPrepBullet(event, '${meetingId}', ${idx})">
+      <button class="prep-bullet-drag" draggable="true"
+        title="Ziehen zum Verschieben · Alt+Pfeiltasten"
+        aria-label="Punkt ${idx + 1} verschieben"
+        ondragstart="startPrepBulletDrag(event, ${idx})"
+        ondragend="endPrepBulletDrag(event)"
+        onkeydown="prepBulletMoveKey(event, '${meetingId}', ${idx})">&#8942;&#8942;</button>
       <input type="checkbox" ${b.done ? 'checked' : ''} onchange="togglePrepBullet('${meetingId}', ${idx})">
       <textarea class="prep-bullet-input" rows="1"
         placeholder="Gedanke, Frage, Info... (Shift+Enter für Zeilenumbruch)"
@@ -622,6 +657,23 @@ function renderPrepBulletList(meetingId, bullets) {
       <button class="prep-bullet-delete" onclick="deletePrepBullet('${meetingId}', ${idx})" title="Löschen">&#x2715;</button>
     </div>
   `).join('');
+}
+
+function renderPrepCarryovers(meeting) {
+  const carryovers = openPrepCarryovers(meeting);
+  if (!carryovers.length) return '';
+  return `
+    <div class="prep-carryover">
+      <div class="prep-carryover-head">offen aus früheren meetings <span>${carryovers.length}</span></div>
+      ${carryovers.map(item => `
+        <div class="prep-carryover-row">
+          <input type="checkbox" onchange="toggleCarriedPrepBullet('${item.sourceMeeting.id}', ${item.index})">
+          <span class="prep-carryover-text">${esc(item.text)}</span>
+          <button class="prep-carryover-source" onclick="openMeetingDetail('${item.sourceMeeting.id}')">${formatDate(item.sourceMeeting.date)}</button>
+        </div>
+      `).join('')}
+    </div>
+  `;
 }
 
 function renderPrepBullets(meetingId) {
@@ -644,6 +696,70 @@ function commitPrepBullets(meetingId, bullets) {
   if (!m) return;
   m.prep = serializePrepBullets(bullets);
   saveData(data);
+}
+
+function toggleCarriedPrepBullet(sourceMeetingId, idx) {
+  const source = data.meetings.find(meeting => meeting.id === sourceMeetingId);
+  if (!source) return;
+  const bullets = parsePrepBullets(source.prep);
+  if (!bullets[idx]) return;
+  bullets[idx].done = !bullets[idx].done;
+  source.prep = serializePrepBullets(bullets);
+  saveData(data);
+  render();
+}
+
+function startPrepBulletDrag(event, idx) {
+  draggedPrepBulletIndex = idx;
+  event.dataTransfer.effectAllowed = 'move';
+  event.dataTransfer.setData('text/plain', String(idx));
+  event.currentTarget.closest('.prep-bullet')?.classList.add('prep-bullet-dragging');
+}
+
+function endPrepBulletDrag() {
+  draggedPrepBulletIndex = null;
+  document.querySelectorAll('.prep-bullet').forEach(row => row.classList.remove('prep-bullet-dragging', 'prep-bullet-drop-before', 'prep-bullet-drop-after'));
+}
+
+function prepBulletDragOver(event) {
+  event.preventDefault();
+  event.dataTransfer.dropEffect = 'move';
+  const row = event.currentTarget;
+  const after = event.clientY > row.getBoundingClientRect().top + row.offsetHeight / 2;
+  row.classList.toggle('prep-bullet-drop-before', !after);
+  row.classList.toggle('prep-bullet-drop-after', after);
+}
+
+function prepBulletDragLeave(event) {
+  event.currentTarget.classList.remove('prep-bullet-drop-before', 'prep-bullet-drop-after');
+}
+
+function movePrepBullet(meetingId, fromIdx, toIdx) {
+  const bullets = readPrepBulletsFromDOM();
+  if (!bullets[fromIdx] || fromIdx === toIdx) return;
+  const [moved] = bullets.splice(fromIdx, 1);
+  bullets.splice(toIdx, 0, moved);
+  commitPrepBullets(meetingId, bullets);
+  renderPrepBulletsWith(meetingId, bullets, toIdx);
+}
+
+function dropPrepBullet(event, meetingId, targetIdx) {
+  event.preventDefault();
+  const fromIdx = Number(event.dataTransfer.getData('text/plain') || draggedPrepBulletIndex);
+  const after = event.clientY > event.currentTarget.getBoundingClientRect().top + event.currentTarget.offsetHeight / 2;
+  let toIdx = targetIdx + (after ? 1 : 0);
+  if (fromIdx < toIdx) toIdx--;
+  movePrepBullet(meetingId, fromIdx, toIdx);
+  endPrepBulletDrag();
+}
+
+function prepBulletMoveKey(event, meetingId, idx) {
+  if (!event.altKey || !['ArrowUp', 'ArrowDown'].includes(event.key)) return;
+  event.preventDefault();
+  const target = idx + (event.key === 'ArrowUp' ? -1 : 1);
+  const bullets = readPrepBulletsFromDOM();
+  if (target < 0 || target >= bullets.length) return;
+  movePrepBullet(meetingId, idx, target);
 }
 
 function renderPrepBulletsWith(meetingId, bullets, focusIdx) {
@@ -812,4 +928,3 @@ function teamFocusStatusReason(entry) {
   if (entry.openItems.length) return 'Unterstützen';
   return '';
 }
-

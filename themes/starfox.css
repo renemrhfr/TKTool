@@ -140,8 +140,8 @@ body[data-theme="starfox"] .main { position: relative; z-index: 1; }
   z-index: 280;
   left: 50%;
   top: 50%;
-  width: 72px;
-  height: 72px;
+  width: 58px;
+  height: 58px;
   visibility: hidden;
   pointer-events: none;
   transform: translate(-50%, -50%);
@@ -151,11 +151,11 @@ body[data-theme="starfox"] .starfox-target-burst.is-firing { visibility: visible
 
 .starfox-target-ring {
   position: absolute;
-  inset: 8px;
-  border: 2px solid #83e98f;
+  inset: 7px;
+  border: 1px solid #83e98f;
   box-shadow:
     inset 0 0 0 1px rgba(7, 17, 29, 0.8),
-    0 0 10px rgba(105, 173, 117, 0.88);
+    0 0 7px rgba(105, 173, 117, 0.72);
 }
 
 .starfox-target-burst.is-firing .starfox-target-ring {
@@ -169,23 +169,23 @@ body[data-theme="starfox"] .starfox-target-burst.is-firing { visibility: visible
   left: 50%;
   top: 50%;
   background: #83e98f;
-  box-shadow: 0 0 7px rgba(105, 173, 117, 0.95);
+  box-shadow: 0 0 5px rgba(105, 173, 117, 0.8);
   transform: translate(-50%, -50%);
 }
 
-.starfox-target-ring::before { width: 72px; height: 1px; }
-.starfox-target-ring::after { width: 1px; height: 72px; }
+.starfox-target-ring::before { width: 58px; height: 1px; }
+.starfox-target-ring::after { width: 1px; height: 58px; }
 
 .starfox-target-burst::after {
   content: "";
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 10px;
-  height: 10px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: #fff5bf;
-  box-shadow: 0 0 10px 4px #ffc263, 0 0 25px 10px rgba(223, 98, 88, 0.5);
+  box-shadow: 0 0 7px 3px #ffc263, 0 0 17px 7px rgba(223, 98, 88, 0.4);
 }
 
 .starfox-target-burst.is-firing::after {
@@ -209,7 +209,7 @@ body[data-theme="starfox"] .header {
 }
 
 @keyframes starfox-target-lock {
-  0% { opacity: 0; transform: scale(1.75) rotate(18deg); border-color: #69ad75; }
+  0% { opacity: 0; transform: scale(1.5) rotate(14deg); border-color: #69ad75; }
   28% { opacity: 1; transform: scale(1) rotate(0); border-color: #83e98f; }
   58% { opacity: 1; transform: scale(0.82); border-color: #b8ffc0; }
   100% { opacity: 0; transform: scale(0.38); border-color: #69ad75; }
@@ -217,6 +217,21 @@ body[data-theme="starfox"] .header {
 
 @keyframes starfox-target-shot {
   0%, 48% { opacity: 0; transform: translate(-50%, -50%) scale(0.2); }
-  55% { opacity: 1; transform: translate(-50%, -50%) scale(1.35); }
-  100% { opacity: 0; transform: translate(-50%, -50%) scale(3.2); }
+  55% { opacity: 0.9; transform: translate(-50%, -50%) scale(1.15); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(2.5); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-theme="starfox"] {
+    background-attachment: scroll;
+  }
+
+  body[data-theme="starfox"] .starfox-stars {
+    animation: none;
+    will-change: auto;
+  }
+
+  body[data-theme="starfox"] .starfox-target-burst {
+    display: none;
+  }
 }

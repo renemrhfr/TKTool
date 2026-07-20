@@ -5,6 +5,8 @@ let currentView = 'reviews';
 let viewState = {};
 let pendingOverviewSearchSelection = null;
 let pendingMeetingSearchSelection = null;
+let pendingPlanungSearchSelection = null;
+let pendingNotesSearchSelection = null;
 let sudoMode = false;
 
 function isSudoMode() {
@@ -70,9 +72,12 @@ function render() {
     case 'meetings:detail': app.innerHTML = renderMeetings(); setTimeout(initPrepBulletsAutoResize, 0); break;
     case 'reviews': app.innerHTML = renderReviews(); break;
     case 'planung': app.innerHTML = renderPlanung(); break;
+    case 'notizen': app.innerHTML = renderNotes(); setTimeout(initNotesView, 0); break;
     case 'search': app.innerHTML = renderSearch(); break;
     default: app.innerHTML = renderOverview();
   }
   restoreOverviewSearchFocus();
   restoreMeetingSearchFocus();
+  restorePlanungSearchFocus();
+  restoreNotesSearchFocus();
 }

@@ -149,6 +149,7 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
     supportAnchorMonth = null,
     insertLane = false,
     showCapacity = true,
+    blockQuery = '',
   } = options;
   const start = parseISO(startDate);
   const end = parseISO(endDate);
@@ -230,7 +231,7 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
 
     // Blocks
     const personBlocks = data.blocks
-      .filter(b => b.personId === pid && !isBlockParked(b) && b.end >= startDate && b.start <= endDate)
+      .filter(b => b.personId === pid && !isBlockParked(b) && b.end >= startDate && b.start <= endDate && blockMatchesPlanungQuery(b, blockQuery))
       .map(b => {
         const sISO = b.start < startDate ? startDate : b.start;
         const eISO = b.end > endDate ? endDate : b.end;
@@ -428,8 +429,12 @@ function renderPlanung() {
   const { start, end } = planungWindow();
   const month = planungSupportMonth();
   const sort = viewState.planungSort || 'name';
+  const rawQuery = viewState.planungQuery || '';
+  const blockQuery = rawQuery.trim().toLocaleLowerCase('de-AT');
+  const matchingBlocks = blockQuery ? data.blocks.filter(block => blockMatchesPlanungQuery(block, blockQuery)) : data.blocks;
+  const matchingPersonIds = new Set(matchingBlocks.map(block => block.personId));
 
-  const team = data.persons.filter(p => p.type !== 'kontakt');
+  const team = data.persons.filter(p => p.type !== 'kontakt' && (!blockQuery || matchingPersonIds.has(p.id)));
   const withCap = team.map(p => {
     const isSupport = personSupportInMonth(p, month);
     const cap = personCapacity(p.id, start, end);
@@ -458,7 +463,7 @@ function renderPlanung() {
     return p ? p.name : '(unbekannt)';
   };
 
-  const overdue = data.blocks.filter(isBlockOverdue).sort((a, b) => a.end.localeCompare(b.end));
+  const overdue = matchingBlocks.filter(isBlockOverdue).sort((a, b) => a.end.localeCompare(b.end));
   const overdueChip = overdue.length ? `
     <button class="filter-btn planung-overdue-btn ${viewState.planungShowOverdue ? 'active' : ''}"
       onclick="togglePlanungOverdue()"
@@ -482,7 +487,7 @@ function renderPlanung() {
     </div>
   ` : '';
 
-  const parked = data.blocks.filter(isBlockParked);
+  const parked = matchingBlocks.filter(isBlockParked);
   const parkedRow = parked.length ? `
     <div class="planung-parked">
       <span class="planung-parked-head">geparkt</span>
@@ -491,6 +496,24 @@ function renderPlanung() {
           <span class="planung-parked-person">${esc(personName(b.personId))}</span>${esc(b.label || b.typ)}
         </button>
       `).join('')}
+    </div>
+  ` : '';
+  const searchResults = blockQuery ? `
+    <div class="planung-search-results">
+      <div class="planung-search-results-head">${matchingBlocks.length} treffer</div>
+      ${matchingBlocks.length ? matchingBlocks
+        .slice()
+        .sort((a, b) => (a.start || '9999').localeCompare(b.start || '9999'))
+        .map(block => `
+          <button class="planung-search-result" onclick="openBlockForm('${block.id}')">
+            <span class="tl-block-swatch tl-block-${block.typ}"></span>
+            <strong>${esc(block.label || block.typ)}</strong>
+            <span>${esc(personName(block.personId))}</span>
+            <span>${isBlockParked(block) ? 'geparkt' : `${formatDate(block.start)} – ${formatDate(block.end)}`}</span>
+            ${block.jiraRef ? `<span>${esc(block.jiraRef)}</span>` : ''}
+          </button>
+        `).join('')
+        : '<span class="planung-search-results-empty">Keine Blöcke entsprechen der Suche.</span>'}
     </div>
   ` : '';
 
@@ -512,6 +535,11 @@ function renderPlanung() {
             <button class="filter-btn ${planungShowWeekends() ? 'active' : ''}" onclick="togglePlanungWeekends()" title="Samstag/Sonntag ein-/ausblenden">sa/so</button>
             ${overdueChip}
           </div>
+          <div class="view-search planung-search">
+            <input id="planungSearchInput" type="search"
+              placeholder="grep: label, jira-ref, notiz..."
+              value="${esc(rawQuery)}" oninput="setPlanungQuery(this.value)">
+          </div>
           <div class="overview-actions planung-actions">
             <button class="btn btn-primary btn-sm" onclick="openBlockForm(null)">+ Block</button>
             <button class="btn btn-secondary btn-sm" onclick="openMarkerForm(null)">+ Marker</button>
@@ -522,9 +550,10 @@ function renderPlanung() {
 
     ${overduePanel}
     ${parkedRow}
+    ${searchResults}
 
-    ${personIds.length ? renderTimeline({ personIds, startDate: start, endDate: end, options: { idPrefix: 'planung', supportAnchorMonth: month, insertLane: true, showCapacity: sort === 'frei', showWeekends: planungShowWeekends() } })
-      : '<div class="empty-state"><div class="empty-state-icon">&#128197;</div><div class="empty-state-text">Keine Teammitglieder</div></div>'}
+    ${personIds.length ? renderTimeline({ personIds, startDate: start, endDate: end, options: { idPrefix: 'planung', supportAnchorMonth: month, insertLane: true, showCapacity: sort === 'frei', showWeekends: planungShowWeekends(), blockQuery } })
+      : `<div class="empty-state"><div class="empty-state-icon">&#128269;</div><div class="empty-state-text">${blockQuery ? 'Keine passenden Blöcke' : 'Keine Teammitglieder'}</div></div>`}
 
     <div class="tl-legend">
       ${BLOCK_TYPES.map(t => `<span class="tl-legend-item"><span class="tl-block-swatch tl-block-${t.val}"></span>${t.label}</span>`).join('')}
@@ -533,6 +562,32 @@ function renderPlanung() {
       <span class="tl-legend-item"><span class="tl-block-swatch tl-block-swatch-overdue"></span>überfällig</span>
     </div>
   `;
+}
+
+function blockMatchesPlanungQuery(block, query) {
+  if (!query) return true;
+  return [block.label, block.jiraRef, block.notiz]
+    .filter(Boolean)
+    .some(value => String(value).toLocaleLowerCase('de-AT').includes(query));
+}
+
+function setPlanungQuery(value) {
+  const input = document.getElementById('planungSearchInput');
+  pendingPlanungSearchSelection = input
+    ? { start: input.selectionStart, end: input.selectionEnd }
+    : { start: value.length, end: value.length };
+  viewState.planungQuery = value;
+  render();
+}
+
+function restorePlanungSearchFocus() {
+  if (!pendingPlanungSearchSelection) return;
+  const input = document.getElementById('planungSearchInput');
+  if (!input) { pendingPlanungSearchSelection = null; return; }
+  const selection = pendingPlanungSearchSelection;
+  pendingPlanungSearchSelection = null;
+  input.focus();
+  input.setSelectionRange(selection.start, selection.end);
 }
 
 function extendPlanungPastWeek() {
@@ -1193,4 +1248,3 @@ function exportPersonBlocks(personId) {
   }
   return md;
 }
-

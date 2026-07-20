@@ -230,8 +230,11 @@ function renderSearch() {
   const focusResults = data.focuses
     .filter(focus => focusMatchesQuery(focus, query))
     .sort((a, b) => (b.month || '').localeCompare(a.month || ''));
+  const noteResults = (data.notes || [])
+    .filter(note => [note.title, note.text].some(value => includesQuery(value, query)))
+    .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
 
-  const resultCount = itemResults.length + personResults.length + meetingResults.length + focusResults.length;
+  const resultCount = itemResults.length + personResults.length + meetingResults.length + focusResults.length + noteResults.length;
 
   return `
     <div class="section-header">
@@ -280,6 +283,17 @@ function renderSearch() {
         </div>
         <div class="search-result-title">${esc(focus.title)}</div>
         ${focus.description ? `<div class="search-result-body">${esc(focus.description)}</div>` : ''}
+      </button>
+    `)}
+
+    ${renderSearchSection('Notizen', noteResults, note => `
+      <button class="search-result-card" onclick="navigate('notizen', {focusNoteId:'${note.id}'})">
+        <div class="search-result-head">
+          <span class="badge badge-note">notiz</span>
+          <span class="search-result-date">${formatNoteUpdatedAt(note.updatedAt)}</span>
+        </div>
+        <div class="search-result-title">${esc(note.title)}</div>
+        ${note.text ? `<div class="search-result-body">${esc(previewText(note.text, 180))}</div>` : ''}
       </button>
     `)}
 
