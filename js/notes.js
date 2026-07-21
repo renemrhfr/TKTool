@@ -14,12 +14,25 @@ function noteMatches(note, query) {
 }
 
 function renderNotes() {
+  const sudo = isSudoMode();
   const rawQuery = viewState.notesQuery || '';
   const query = rawQuery.trim().toLocaleLowerCase('de-AT');
   const allNotes = (data.notes || []).slice().sort((a, b) =>
     (b.updatedAt || b.createdAt || '').localeCompare(a.updatedAt || a.createdAt || '')
   );
   const notes = allNotes.filter(note => noteMatches(note, query));
+
+  if (!sudo) {
+    return `
+      <div class="section-header notes-page-head">
+        <div class="overview-toolbar">
+          <span class="section-title">Notizen</span>
+        </div>
+      </div>
+      <p class="notes-page-intro">Langfristige Pläne, Beobachtungen und Dokumentationen, die keinem einzelnen Todo oder Meeting gehören.</p>
+      ${sudoLockedPlaceholder('Notizen')}
+    `;
+  }
 
   return `
     <div class="section-header notes-page-head">
