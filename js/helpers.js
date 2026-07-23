@@ -402,6 +402,56 @@ function personActivitySummary(personId) {
   };
 }
 
+// --- Jira sync snapshot helpers ---
+// null = kein Mapping möglich (kein Sync-File oder kein jira-user am Profil),
+// [] = Mapping vorhanden, aber keine Tickets assigned.
+function jiraTicketsForPerson(person) {
+  if (!jiraSyncData || !person || !person.jiraUser) return null;
+  const wanted = person.jiraUser.trim().toLowerCase();
+  const assignees = jiraSyncData.assignees || {};
+  const key = Object.keys(assignees).find(k => k.trim().toLowerCase() === wanted);
+  return key ? (Array.isArray(assignees[key]) ? assignees[key] : []) : [];
+}
+
+// Drift zwischen Jira und Planung, über jiraRef-Key-Matching (nicht Anzahl):
+// unplanned = assigned Tickets ohne laufenden/zukünftigen Block,
+// stale = Blöcke, deren Ticket laut Sync erledigt oder umassigned ist.
+// Blöcke ohne jiraRef bleiben bewusst außen vor.
+function jiraDriftForPerson(person) {
+  const tickets = jiraTicketsForPerson(person);
+  if (tickets === null) return null;
+  const today = todayStr();
+  const activeBlocks = (data.blocks || []).filter(b =>
+    b.personId === person.id && !b.done && b.jiraRef && (b.end || b.start || '') >= today);
+  const plannedKeys = new Set(activeBlocks.map(b => b.jiraRef.trim().toUpperCase()));
+  const openKeys = new Set(tickets.map(t => String(t.key || '').toUpperCase()));
+  const unplanned = tickets.filter(t => !plannedKeys.has(String(t.key || '').toUpperCase()));
+  const refs = (jiraSyncData && jiraSyncData.refs) || {};
+  const refByKey = {};
+  for (const k of Object.keys(refs)) refByKey[k.trim().toUpperCase()] = refs[k];
+  const stale = activeBlocks.filter(b => {
+    const key = b.jiraRef.trim().toUpperCase();
+    if (openKeys.has(key)) return false;
+    const ref = refByKey[key];
+    if (!ref) return false; // unbekannter Key (Epic, fremdes Projekt) -> kein Urteil
+    if (ref.statusCategory === 'done') return true;
+    return !!(ref.assignee && person.jiraUser
+      && ref.assignee.trim().toLowerCase() !== person.jiraUser.trim().toLowerCase());
+  });
+  return { unplanned, stale, hasDrift: unplanned.length > 0 || stale.length > 0 };
+}
+
+function jiraSyncAgeLabel() {
+  if (!jiraSyncData || !jiraSyncData.generatedAt) return '';
+  const ts = new Date(jiraSyncData.generatedAt).getTime();
+  if (Number.isNaN(ts)) return '';
+  const mins = Math.max(0, Math.round((Date.now() - ts) / 60000));
+  if (mins < 60) return `vor ${mins} min`;
+  const hours = Math.round(mins / 60);
+  if (hours < 48) return `vor ${hours} h`;
+  return `vor ${Math.round(hours / 24)} Tagen`;
+}
+
 function includesQuery(value, query) {
   return String(value || '').toLocaleLowerCase('de-AT').includes(query);
 }
@@ -426,6 +476,7 @@ function personMatchesQuery(person, query) {
     person.pushDirection,
     person.type === 'kontakt' ? '' : person.notes,
     person.jiraUrl,
+    person.jiraUser,
     person.gitlabMrUrl,
   ].some(value => includesQuery(value, query));
 }

@@ -1,8 +1,9 @@
 // ============================================================
 // DATA LAYER — File System Access API
 // ============================================================
-const APP_VERSION = '1.0.17';
+const APP_VERSION = '1.0.18';
 const DATA_FILENAME = 'tktool-data.json';
+const JIRA_SYNC_FILENAME = 'jira-tickets.json';
 const IDB_NAME = 'tktool-fs';
 const IDB_STORE = 'handles';
 const IDB_KEY = 'dataDir';
@@ -540,6 +541,39 @@ function writeDataFile(snapshot) {
   return writeChain;
 }
 
+// --- Jira sync snapshot (written by external sync script, read-only) ---
+// Format: { generatedAt: ISO string, source: base url, assignees: { email: [ticket] } }
+// Wird beim Laden gelesen und danach nur auf Anforderung (Klick auf den
+// Stand-Stempel) — das externe Skript laeuft ohnehin nur stuendlich.
+let jiraSyncData = null;
+
+async function loadJiraSync() {
+  try {
+    const dir = await ensureDirHandle();
+    const fh = await dir.getFileHandle(JIRA_SYNC_FILENAME);
+    const file = await fh.getFile();
+    const parsed = JSON.parse(await file.text());
+    jiraSyncData = parsed && typeof parsed.assignees === 'object' ? parsed : null;
+  } catch {
+    jiraSyncData = null;
+  }
+  return jiraSyncData;
+}
+
+// Liest jira-tickets.json neu ein, nachdem das Sync-Skript gelaufen ist.
+// Der Browser kann das Skript selbst nicht starten (file://), daher nur
+// Neueinlesen des Snapshots.
+async function refreshJiraSync() {
+  const before = jiraSyncData && jiraSyncData.generatedAt;
+  await loadJiraSync();
+  if (typeof render === 'function') { try { render(); } catch {} }
+  if (typeof uiToast === 'function') {
+    if (!jiraSyncData) uiToast('Keine jira-tickets.json im Datenordner gefunden');
+    else if (jiraSyncData.generatedAt === before) uiToast('Jira-Stand unverändert (' + (jiraSyncAgeLabel() || 'unbekannt') + ')');
+    else uiToast('Jira-Tickets aktualisiert');
+  }
+}
+
 // --- Public API (same interface as before) ---
 let data = defaultData();
 
@@ -576,6 +610,7 @@ async function loadData() {
   } else {
     await cacheData(store);
   }
+  await loadJiraSync();
   return data;
 }
 

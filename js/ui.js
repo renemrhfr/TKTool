@@ -83,7 +83,8 @@ function configureJiraBase() {
   const current = getJiraBaseUrl();
   const input = prompt('Jira Base-URL (z.B. https://jira.firma.at)\nLeer lassen zum Entfernen.', current);
   if (input === null) return;
-  const val = input.trim().replace(/\/+$/, '');
+  let val = input.trim().replace(/\/+$/, '');
+  if (val && !/^https?:\/\//i.test(val)) val = 'https://' + val;
   try {
     if (val) localStorage.setItem(JIRA_BASE_KEY, val);
     else localStorage.removeItem(JIRA_BASE_KEY);

@@ -5421,6 +5421,96 @@ button.tf-metric {
 }
 .meetings-empty-card-new { border-style: dashed; }
 
+/* --- Jira tickets (Sync-Snapshot) --- */
+button.jira-sync-stamp {
+  padding: 1px 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: lowercase;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+}
+button.jira-sync-stamp:hover {
+  color: var(--text);
+  border-color: var(--border);
+}
+.jira-ticket-list {
+  display: flex;
+  flex-direction: column;
+}
+.jira-ticket-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--border-light, var(--border));
+  font-size: 13px;
+  min-width: 0;
+}
+.jira-ticket-row:last-child { border-bottom: none; }
+.jira-ticket-key {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  color: var(--accent);
+  text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+a.jira-ticket-key:hover { text-decoration: underline; }
+.jira-ticket-summary {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+}
+.jira-status-chip {
+  flex-shrink: 0;
+  font-size: 10px;
+  letter-spacing: .05em;
+  text-transform: lowercase;
+  padding: 1px 6px;
+  border-radius: 999px;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  background: var(--surface-hover, var(--border));
+  border: 1px solid var(--border);
+}
+.jira-status-chip.jira-status-indeterminate {
+  color: color-mix(in srgb, var(--warning) 78%, var(--text));
+  background: var(--warning-light);
+  border-color: color-mix(in srgb, var(--warning) 40%, transparent);
+}
+.tl-jira-drift {
+  flex-shrink: 0;
+  font-size: 10px;
+  letter-spacing: .05em;
+  text-transform: lowercase;
+  padding: 0 5px;
+  border-radius: 999px;
+  white-space: nowrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: color-mix(in srgb, var(--warning) 78%, var(--text));
+  background: var(--warning-light);
+  border: 1px solid color-mix(in srgb, var(--warning) 40%, transparent);
+  cursor: help;
+}
+.tl-block-jira-stale {
+  opacity: .55;
+  background-image: repeating-linear-gradient(45deg, transparent 0 6px, color-mix(in srgb, var(--text) 18%, transparent) 6px 8px);
+}
+.tl-block-jira-stale .tl-block-label { text-decoration: line-through; }
+
+.jira-status-chip.jira-status-done {
+  color: color-mix(in srgb, var(--success) 72%, var(--text));
+  background: var(--success-light);
+  border-color: color-mix(in srgb, var(--success) 40%, transparent);
+}
+
 @media (max-width: 980px) {
   .overview-board { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .review-grid { grid-template-columns: 1fr; }
@@ -7251,8 +7341,9 @@ body[data-theme="serum"] .card {
 // ============================================================
 // DATA LAYER — File System Access API
 // ============================================================
-const APP_VERSION = '1.0.17';
+const APP_VERSION = '1.0.18';
 const DATA_FILENAME = 'tktool-data.json';
+const JIRA_SYNC_FILENAME = 'jira-tickets.json';
 const IDB_NAME = 'tktool-fs';
 const IDB_STORE = 'handles';
 const IDB_KEY = 'dataDir';
@@ -7790,6 +7881,39 @@ function writeDataFile(snapshot) {
   return writeChain;
 }
 
+// --- Jira sync snapshot (written by external sync script, read-only) ---
+// Format: { generatedAt: ISO string, source: base url, assignees: { email: [ticket] } }
+// Wird beim Laden gelesen und danach nur auf Anforderung (Klick auf den
+// Stand-Stempel) — das externe Skript laeuft ohnehin nur stuendlich.
+let jiraSyncData = null;
+
+async function loadJiraSync() {
+  try {
+    const dir = await ensureDirHandle();
+    const fh = await dir.getFileHandle(JIRA_SYNC_FILENAME);
+    const file = await fh.getFile();
+    const parsed = JSON.parse(await file.text());
+    jiraSyncData = parsed && typeof parsed.assignees === 'object' ? parsed : null;
+  } catch {
+    jiraSyncData = null;
+  }
+  return jiraSyncData;
+}
+
+// Liest jira-tickets.json neu ein, nachdem das Sync-Skript gelaufen ist.
+// Der Browser kann das Skript selbst nicht starten (file://), daher nur
+// Neueinlesen des Snapshots.
+async function refreshJiraSync() {
+  const before = jiraSyncData && jiraSyncData.generatedAt;
+  await loadJiraSync();
+  if (typeof render === 'function') { try { render(); } catch {} }
+  if (typeof uiToast === 'function') {
+    if (!jiraSyncData) uiToast('Keine jira-tickets.json im Datenordner gefunden');
+    else if (jiraSyncData.generatedAt === before) uiToast('Jira-Stand unverändert (' + (jiraSyncAgeLabel() || 'unbekannt') + ')');
+    else uiToast('Jira-Tickets aktualisiert');
+  }
+}
+
 // --- Public API (same interface as before) ---
 let data = defaultData();
 
@@ -7826,6 +7950,7 @@ async function loadData() {
   } else {
     await cacheData(store);
   }
+  await loadJiraSync();
   return data;
 }
 
@@ -8260,6 +8385,56 @@ function personActivitySummary(personId) {
   };
 }
 
+// --- Jira sync snapshot helpers ---
+// null = kein Mapping möglich (kein Sync-File oder kein jira-user am Profil),
+// [] = Mapping vorhanden, aber keine Tickets assigned.
+function jiraTicketsForPerson(person) {
+  if (!jiraSyncData || !person || !person.jiraUser) return null;
+  const wanted = person.jiraUser.trim().toLowerCase();
+  const assignees = jiraSyncData.assignees || {};
+  const key = Object.keys(assignees).find(k => k.trim().toLowerCase() === wanted);
+  return key ? (Array.isArray(assignees[key]) ? assignees[key] : []) : [];
+}
+
+// Drift zwischen Jira und Planung, über jiraRef-Key-Matching (nicht Anzahl):
+// unplanned = assigned Tickets ohne laufenden/zukünftigen Block,
+// stale = Blöcke, deren Ticket laut Sync erledigt oder umassigned ist.
+// Blöcke ohne jiraRef bleiben bewusst außen vor.
+function jiraDriftForPerson(person) {
+  const tickets = jiraTicketsForPerson(person);
+  if (tickets === null) return null;
+  const today = todayStr();
+  const activeBlocks = (data.blocks || []).filter(b =>
+    b.personId === person.id && !b.done && b.jiraRef && (b.end || b.start || '') >= today);
+  const plannedKeys = new Set(activeBlocks.map(b => b.jiraRef.trim().toUpperCase()));
+  const openKeys = new Set(tickets.map(t => String(t.key || '').toUpperCase()));
+  const unplanned = tickets.filter(t => !plannedKeys.has(String(t.key || '').toUpperCase()));
+  const refs = (jiraSyncData && jiraSyncData.refs) || {};
+  const refByKey = {};
+  for (const k of Object.keys(refs)) refByKey[k.trim().toUpperCase()] = refs[k];
+  const stale = activeBlocks.filter(b => {
+    const key = b.jiraRef.trim().toUpperCase();
+    if (openKeys.has(key)) return false;
+    const ref = refByKey[key];
+    if (!ref) return false; // unbekannter Key (Epic, fremdes Projekt) -> kein Urteil
+    if (ref.statusCategory === 'done') return true;
+    return !!(ref.assignee && person.jiraUser
+      && ref.assignee.trim().toLowerCase() !== person.jiraUser.trim().toLowerCase());
+  });
+  return { unplanned, stale, hasDrift: unplanned.length > 0 || stale.length > 0 };
+}
+
+function jiraSyncAgeLabel() {
+  if (!jiraSyncData || !jiraSyncData.generatedAt) return '';
+  const ts = new Date(jiraSyncData.generatedAt).getTime();
+  if (Number.isNaN(ts)) return '';
+  const mins = Math.max(0, Math.round((Date.now() - ts) / 60000));
+  if (mins < 60) return `vor ${mins} min`;
+  const hours = Math.round(mins / 60);
+  if (hours < 48) return `vor ${hours} h`;
+  return `vor ${Math.round(hours / 24)} Tagen`;
+}
+
 function includesQuery(value, query) {
   return String(value || '').toLocaleLowerCase('de-AT').includes(query);
 }
@@ -8284,6 +8459,7 @@ function personMatchesQuery(person, query) {
     person.pushDirection,
     person.type === 'kontakt' ? '' : person.notes,
     person.jiraUrl,
+    person.jiraUser,
     person.gitlabMrUrl,
   ].some(value => includesQuery(value, query));
 }
@@ -8924,6 +9100,57 @@ function overviewLayout() {
 </script>
 <script data-source="./js/team.js">
 // ============================================================
+// JIRA TICKETS (aus Sync-Snapshot jira-tickets.json)
+// ============================================================
+// Der Stempel ist zugleich der Sync-Button: Klick liest die vom externen
+// Skript geschriebene jira-tickets.json neu ein.
+function jiraSyncStamp() {
+  const age = jiraSyncAgeLabel();
+  return `<button class="jira-sync-stamp" type="button" onclick="event.stopPropagation(); refreshJiraSync()" title="Snapshot neu einlesen (das Sync-Skript selbst läuft per Aufgabenplanung)">stand: ${age || 'unbekannt'} &#8635;</button>`;
+}
+
+function renderPersonJiraBlock(person) {
+  if (!jiraSyncData) return '';
+  const tickets = jiraTicketsForPerson(person);
+  if (tickets === null) {
+    return `
+      <div class="team-section-block">
+        <div class="card-header">
+          <span class="card-title">jira tickets</span>
+          ${jiraSyncStamp()}
+        </div>
+        <div class="team-empty-copy">Kein jira-user hinterlegt &mdash; im Profil unter &bdquo;Bearbeiten&ldquo; ergänzen.</div>
+      </div>
+    `;
+  }
+  return `
+    <div class="team-section-block">
+      <div class="card-header">
+        <span class="card-title">jira tickets (${tickets.length})</span>
+        ${jiraSyncStamp()}
+      </div>
+      ${tickets.length ? `
+        <div class="jira-ticket-list">
+          ${tickets.map(t => {
+            const url = jiraUrl(t.key);
+            const keyEl = url
+              ? `<a class="jira-ticket-key" href="${esc(url)}" target="_blank" rel="noopener">${esc(t.key)}</a>`
+              : `<span class="jira-ticket-key">${esc(t.key)}</span>`;
+            return `
+              <div class="jira-ticket-row">
+                ${keyEl}
+                <span class="jira-ticket-summary" title="${esc(t.summary || '')}">${esc(t.summary || '')}</span>
+                <span class="jira-status-chip jira-status-${esc(t.statusCategory || 'new')}">${esc((t.status || '').toLowerCase())}</span>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      ` : '<div class="team-empty-copy">Keine offenen Tickets assigned</div>'}
+    </div>
+  `;
+}
+
+// ============================================================
 // TEAM VIEW
 // ============================================================
 function renderTeam() {
@@ -8964,6 +9191,7 @@ function renderTeam() {
           </div>
         ${teamPersons.map(p => {
           const itemCount = data.items.filter(i => i.personId === p.id && i.status !== 'done').length;
+          const personJiraTickets = jiraTicketsForPerson(p);
           const isActive = p.id === selectedId;
           return `
             <div class="team-list-row ${isActive ? 'active' : ''}" onclick="navigate('team', {personId:'${p.id}'})" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();navigate('team', {personId:'${p.id}'})}">
@@ -8978,6 +9206,7 @@ function renderTeam() {
 	                  ${sudo ? `<div class="team-list-push">${p.pushDirection ? esc(p.pushDirection) : '&nbsp;'}</div>` : ''}
 	                  <div class="team-list-meta">
 	                    <span>${itemCount} offen</span>
+	                    ${personJiraTickets !== null ? `<span>&middot; ${personJiraTickets.length} tickets</span>` : ''}
                   </div>
                 </div>
               </div>
@@ -9014,6 +9243,8 @@ function renderTeam() {
             <div class="team-section-block team-section-planung">
               ${renderPersonPlanungCard(selectedPerson)}
             </div>
+
+            ${renderPersonJiraBlock(selectedPerson)}
 
             <div class="team-detail-grid">
               <div class="team-section-block">
@@ -9122,6 +9353,8 @@ function renderPersonDetail() {
     </div>
 
     ${renderPersonPlanungCard(p)}
+
+    ${jiraSyncData ? `<div class="card">${renderPersonJiraBlock(p)}</div>` : ''}
 
     <div class="card">
       <div class="card-header"><span class="card-title">Offene Items (${openItems.length})</span></div>
@@ -10750,20 +10983,6 @@ function renderReviews() {
               ? `${entry.openItems.length} offen`
               : 'keine offenen Items';
           const supportItems = entry.openItems.filter(item => item.status !== 'waiting');
-          const supportLabel = supportItems.length
-            ? `${supportItems.length} offen`
-            : 'nichts offen';
-          const supportNote = supportItems.length
-            ? 'unterstützen'
-            : 'alles erledigt';
-          const waitingLabel = entry.dueWaiting.length
-            ? `${entry.waitingItems.length} wartet · ${entry.dueWaiting.length} fällig`
-            : entry.waitingItems.length
-              ? `${entry.waitingItems.length} wartet`
-              : 'nichts wartet';
-          const waitingNote = entry.dueWaiting.length
-            ? 'nachfassen'
-            : entry.waitingItems.length ? 'warten auf' : 'alles erledigt';
           const supportThisMonth = personSupportInMonth(entry.person, currentMonthLabel);
           const detailTitle = `${attentionLabel} | ${itemLabel} | ${entry.workloadHint} | 1:1 ${oneOnOneLabel}${supportThisMonth ? ` | Support ${formatMonth(currentMonthLabel)}` : ''}${absenceLabel ? ' | heute: ' + absenceLabel : ''}`;
           return `
@@ -10791,6 +11010,32 @@ function renderReviews() {
               <span class="tf-expand" aria-hidden="true"></span>
             </summary>
             <div class="tf-mini-dashboard">
+              ${jiraSyncData ? (() => {
+                const personJiraTickets = jiraTicketsForPerson(entry.person);
+                if (personJiraTickets === null) {
+                  return `
+                    <button class="tf-metric tf-metric-action" type="button" onclick="event.preventDefault(); event.stopPropagation(); openPersonForm('${entry.person.id}')" title="jira-user im Profil ergänzen">
+                      <span class="tf-metric-label">Jira</span>
+                      <span class="tf-metric-value">&ndash;</span>
+                      <span class="tf-metric-note">kein jira-user</span>
+                    </button>`;
+                }
+                const drift = jiraDriftForPerson(entry.person);
+                const driftParts = [];
+                if (drift.unplanned.length) driftParts.push(`${drift.unplanned.length} nicht eingeplant`);
+                if (drift.stale.length) driftParts.push(`${drift.stale.length} ${drift.stale.length === 1 ? 'block' : 'blocks'} veraltet`);
+                const driftDetail = [
+                  drift.unplanned.length ? `Ohne Block: ${drift.unplanned.map(t => t.key).join(', ')}` : '',
+                  drift.stale.length ? `Veraltet: ${drift.stale.map(b => `${b.label || b.jiraRef} (${b.jiraRef})`).join(', ')}` : '',
+                ].filter(Boolean).join('\n');
+                const jiraSig = driftParts.length ? 'tf-sig-warn' : 'tf-sig-ok';
+                return `
+                  <button class="tf-metric tf-metric-action ${jiraSig}" type="button" onclick="event.preventDefault(); event.stopPropagation(); openPersonById('${entry.person.id}')" title="${esc(`Jira-Tickets von ${entry.person.name} ansehen (Stand: ${jiraSyncAgeLabel() || 'unbekannt'})${driftDetail ? '\n' + driftDetail : ''}`)}">
+                    <span class="tf-metric-label">Jira</span>
+                    <span class="tf-metric-value">${personJiraTickets.length ? `${personJiraTickets.length} tickets` : 'keine tickets'}</span>
+                    ${driftParts.length ? `<span class="tf-metric-note">${driftParts.join(' · ')}</span>` : ''}
+                  </button>`;
+              })() : ''}
               <button class="tf-metric tf-metric-action ${entry.overPlanned ? 'tf-sig-bad' : entry.underPlanned ? 'tf-sig-warn' : 'tf-sig-ok'}" type="button" onclick="event.preventDefault(); event.stopPropagation(); openPersonById('${entry.person.id}')" title="Teammitglied öffnen">
                 <span class="tf-metric-label">Workload</span>
                 <span class="tf-metric-value">${entry.workloadHint}</span>
@@ -10800,13 +11045,10 @@ function renderReviews() {
                 <span class="tf-metric-label">Letztes 1:1</span>
                 <span class="tf-metric-value">${entry.lastOneOnOne ? oneOnOneLabel : 'noch keines'}</span>
               </button>
-              <button class="tf-metric tf-metric-action ${supportItems.length ? 'tf-sig-warn' : 'tf-sig-ok'}" type="button" onclick="event.preventDefault(); event.stopPropagation(); openPersonTodos('${entry.person.id}')" title="Todo-Liste nach ${esc(entry.person.name)} filtern">
-                <span class="tf-metric-label">Unterstützen</span>
-                <span class="tf-metric-value">${supportLabel}</span>
-              </button>
-              <button class="tf-metric tf-metric-action ${entry.dueWaiting.length ? 'tf-sig-bad' : entry.waitingItems.length ? 'tf-sig-warn' : 'tf-sig-ok'}" type="button" onclick="event.preventDefault(); event.stopPropagation(); openPersonTodos('${entry.person.id}')" title="Todo-Liste nach ${esc(entry.person.name)} filtern">
-                <span class="tf-metric-label">Warten auf</span>
-                <span class="tf-metric-value">${waitingLabel}</span>
+              <button class="tf-metric tf-metric-action ${entry.dueWaiting.length ? 'tf-sig-bad' : (supportItems.length || entry.waitingItems.length) ? 'tf-sig-warn' : 'tf-sig-ok'}" type="button" onclick="event.preventDefault(); event.stopPropagation(); openPersonTodos('${entry.person.id}')" title="Todo-Liste nach ${esc(entry.person.name)} filtern">
+                <span class="tf-metric-label">Items</span>
+                <span class="tf-metric-value">${itemLabel}</span>
+                <span class="tf-metric-note">${entry.dueWaiting.length ? 'nachfassen' : supportItems.length ? 'unterstützen' : entry.waitingItems.length ? 'warten auf' : 'alles erledigt'}</span>
               </button>
             </div>
           </details>`;
@@ -11528,6 +11770,10 @@ function openPersonForm(id, personType) {
           <input class="form-input" id="personJiraUrl" placeholder="https://..." value="${p ? esc(p.jiraUrl || '') : ''}">
         </div>
         <div class="form-group">
+          <label class="form-label">Jira User (E-Mail)</label>
+          <input class="form-input" id="personJiraUser" placeholder="vorname.nachname@firma.at" value="${p ? esc(p.jiraUser || '') : ''}">
+        </div>
+        <div class="form-group">
           <label class="form-label">GitLab MR URL</label>
           <input class="form-input" id="personGitlabUrl" placeholder="https://..." value="${p ? esc(p.gitlabMrUrl || '') : ''}">
         </div>
@@ -11554,6 +11800,7 @@ function savePerson(id) {
       if (!isKontakt) {
         p.pushDirection = document.getElementById('personPush').value.trim();
         p.jiraUrl = normalizeExternalUrl(document.getElementById('personJiraUrl').value);
+        p.jiraUser = document.getElementById('personJiraUser').value.trim();
         p.gitlabMrUrl = normalizeExternalUrl(document.getElementById('personGitlabUrl').value);
       }
     }
@@ -11564,6 +11811,7 @@ function savePerson(id) {
     } else {
       person.pushDirection = document.getElementById('personPush').value.trim();
       person.jiraUrl = normalizeExternalUrl(document.getElementById('personJiraUrl').value);
+      person.jiraUser = document.getElementById('personJiraUser').value.trim();
       person.gitlabMrUrl = normalizeExternalUrl(document.getElementById('personGitlabUrl').value);
     }
     data.persons.push(person);
@@ -12577,6 +12825,9 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
       .filter(Boolean)
       .sort((a, b) => (a.sIdx - b.sIdx) || ((b.eIdx - b.sIdx) - (a.eIdx - a.sIdx)));
 
+    const jiraDrift = jiraDriftForPerson(person);
+    const staleBlockIds = jiraDrift ? new Set(jiraDrift.stale.map(sb => sb.id)) : new Set();
+
     const laneEnds = [];
     const laidOutBlocks = personBlocks.map(entry => {
       let lane = laneEnds.findIndex(endIdx => entry.sIdx > endIdx);
@@ -12604,11 +12855,13 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
       if (isSingleDay) classes.push('tl-block-single');
       if (b.done) classes.push('tl-block-done');
       else if (isBlockOverdue(b)) classes.push('tl-block-overdue');
+      if (staleBlockIds.has(b.id)) classes.push('tl-block-jira-stale');
       const title = [
         b.label || '(ohne Label)',
         `${formatDate(b.start)}–${formatDate(b.end)}`,
         b.done ? 'erledigt' : (isBlockOverdue(b) ? 'überfällig — noch nicht erledigt' : ''),
         b.jiraRef ? 'Jira: ' + b.jiraRef + (jiraUrl(b.jiraRef) ? ' (Cmd/Strg-Klick öffnet)' : '') : '',
+        staleBlockIds.has(b.id) ? '⚠ Jira-Ticket nicht mehr offen (erledigt oder umassigned)' : '',
       ].filter(Boolean).join('\n');
       const leftPct = (sIdx / cols) * 100;
       const widthPct = ((eIdx - sIdx + 1) / cols) * 100;
@@ -12659,6 +12912,10 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
             <div class="tl-person-top">
               ${showSupBadge ? '<span class="tl-sup-badge" title="Support-Rotation">SUP</span>' : ''}
               <span class="tl-person-name">${esc(person.name)}</span>
+              ${jiraDrift && jiraDrift.hasDrift ? `<span class="tl-jira-drift" title="${esc([
+                jiraDrift.unplanned.length ? `${jiraDrift.unplanned.length} Ticket${jiraDrift.unplanned.length === 1 ? '' : 's'} ohne Block: ${jiraDrift.unplanned.map(t => t.key).join(', ')}` : '',
+                jiraDrift.stale.length ? `${jiraDrift.stale.length} Block${jiraDrift.stale.length === 1 ? '' : 's'} veraltet: ${jiraDrift.stale.map(sb => sb.jiraRef).join(', ')}` : '',
+              ].filter(Boolean).join('\n'))}">jira ±${jiraDrift.unplanned.length + jiraDrift.stale.length}</span>` : ''}
             </div>
           </div>
           ${capInline}
@@ -13662,7 +13919,8 @@ function configureJiraBase() {
   const current = getJiraBaseUrl();
   const input = prompt('Jira Base-URL (z.B. https://jira.firma.at)\nLeer lassen zum Entfernen.', current);
   if (input === null) return;
-  const val = input.trim().replace(/\/+$/, '');
+  let val = input.trim().replace(/\/+$/, '');
+  if (val && !/^https?:\/\//i.test(val)) val = 'https://' + val;
   try {
     if (val) localStorage.setItem(JIRA_BASE_KEY, val);
     else localStorage.removeItem(JIRA_BASE_KEY);

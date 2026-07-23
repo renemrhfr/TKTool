@@ -251,6 +251,9 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
       .filter(Boolean)
       .sort((a, b) => (a.sIdx - b.sIdx) || ((b.eIdx - b.sIdx) - (a.eIdx - a.sIdx)));
 
+    const jiraDrift = jiraDriftForPerson(person);
+    const staleBlockIds = jiraDrift ? new Set(jiraDrift.stale.map(sb => sb.id)) : new Set();
+
     const laneEnds = [];
     const laidOutBlocks = personBlocks.map(entry => {
       let lane = laneEnds.findIndex(endIdx => entry.sIdx > endIdx);
@@ -278,11 +281,13 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
       if (isSingleDay) classes.push('tl-block-single');
       if (b.done) classes.push('tl-block-done');
       else if (isBlockOverdue(b)) classes.push('tl-block-overdue');
+      if (staleBlockIds.has(b.id)) classes.push('tl-block-jira-stale');
       const title = [
         b.label || '(ohne Label)',
         `${formatDate(b.start)}–${formatDate(b.end)}`,
         b.done ? 'erledigt' : (isBlockOverdue(b) ? 'überfällig — noch nicht erledigt' : ''),
         b.jiraRef ? 'Jira: ' + b.jiraRef + (jiraUrl(b.jiraRef) ? ' (Cmd/Strg-Klick öffnet)' : '') : '',
+        staleBlockIds.has(b.id) ? '⚠ Jira-Ticket nicht mehr offen (erledigt oder umassigned)' : '',
       ].filter(Boolean).join('\n');
       const leftPct = (sIdx / cols) * 100;
       const widthPct = ((eIdx - sIdx + 1) / cols) * 100;
@@ -333,6 +338,10 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
             <div class="tl-person-top">
               ${showSupBadge ? '<span class="tl-sup-badge" title="Support-Rotation">SUP</span>' : ''}
               <span class="tl-person-name">${esc(person.name)}</span>
+              ${jiraDrift && jiraDrift.hasDrift ? `<span class="tl-jira-drift" title="${esc([
+                jiraDrift.unplanned.length ? `${jiraDrift.unplanned.length} Ticket${jiraDrift.unplanned.length === 1 ? '' : 's'} ohne Block: ${jiraDrift.unplanned.map(t => t.key).join(', ')}` : '',
+                jiraDrift.stale.length ? `${jiraDrift.stale.length} Block${jiraDrift.stale.length === 1 ? '' : 's'} veraltet: ${jiraDrift.stale.map(sb => sb.jiraRef).join(', ')}` : '',
+              ].filter(Boolean).join('\n'))}">jira ±${jiraDrift.unplanned.length + jiraDrift.stale.length}</span>` : ''}
             </div>
           </div>
           ${capInline}

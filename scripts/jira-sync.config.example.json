@@ -1,0 +1,8 @@
+{
+  "baseUrl": "https://firma.atlassian.net",
+  "email": "mein.login@firma.at",
+  "apiToken": "NUR-LESE-TOKEN-HIER-EINFUEGEN",
+  "dataDir": "C:\\Users\\ich\\Documents\\TKTool",
+  "jql": "assignee = \"{user}\" AND resolution = Unresolved ORDER BY updated DESC",
+  "maxResults": 50
+}

@@ -1,4 +1,55 @@
 // ============================================================
+// JIRA TICKETS (aus Sync-Snapshot jira-tickets.json)
+// ============================================================
+// Der Stempel ist zugleich der Sync-Button: Klick liest die vom externen
+// Skript geschriebene jira-tickets.json neu ein.
+function jiraSyncStamp() {
+  const age = jiraSyncAgeLabel();
+  return `<button class="jira-sync-stamp" type="button" onclick="event.stopPropagation(); refreshJiraSync()" title="Snapshot neu einlesen (das Sync-Skript selbst läuft per Aufgabenplanung)">stand: ${age || 'unbekannt'} &#8635;</button>`;
+}
+
+function renderPersonJiraBlock(person) {
+  if (!jiraSyncData) return '';
+  const tickets = jiraTicketsForPerson(person);
+  if (tickets === null) {
+    return `
+      <div class="team-section-block">
+        <div class="card-header">
+          <span class="card-title">jira tickets</span>
+          ${jiraSyncStamp()}
+        </div>
+        <div class="team-empty-copy">Kein jira-user hinterlegt &mdash; im Profil unter &bdquo;Bearbeiten&ldquo; ergänzen.</div>
+      </div>
+    `;
+  }
+  return `
+    <div class="team-section-block">
+      <div class="card-header">
+        <span class="card-title">jira tickets (${tickets.length})</span>
+        ${jiraSyncStamp()}
+      </div>
+      ${tickets.length ? `
+        <div class="jira-ticket-list">
+          ${tickets.map(t => {
+            const url = jiraUrl(t.key);
+            const keyEl = url
+              ? `<a class="jira-ticket-key" href="${esc(url)}" target="_blank" rel="noopener">${esc(t.key)}</a>`
+              : `<span class="jira-ticket-key">${esc(t.key)}</span>`;
+            return `
+              <div class="jira-ticket-row">
+                ${keyEl}
+                <span class="jira-ticket-summary" title="${esc(t.summary || '')}">${esc(t.summary || '')}</span>
+                <span class="jira-status-chip jira-status-${esc(t.statusCategory || 'new')}">${esc((t.status || '').toLowerCase())}</span>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      ` : '<div class="team-empty-copy">Keine offenen Tickets assigned</div>'}
+    </div>
+  `;
+}
+
+// ============================================================
 // TEAM VIEW
 // ============================================================
 function renderTeam() {
@@ -39,6 +90,7 @@ function renderTeam() {
           </div>
         ${teamPersons.map(p => {
           const itemCount = data.items.filter(i => i.personId === p.id && i.status !== 'done').length;
+          const personJiraTickets = jiraTicketsForPerson(p);
           const isActive = p.id === selectedId;
           return `
             <div class="team-list-row ${isActive ? 'active' : ''}" onclick="navigate('team', {personId:'${p.id}'})" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();navigate('team', {personId:'${p.id}'})}">
@@ -53,6 +105,7 @@ function renderTeam() {
 	                  ${sudo ? `<div class="team-list-push">${p.pushDirection ? esc(p.pushDirection) : '&nbsp;'}</div>` : ''}
 	                  <div class="team-list-meta">
 	                    <span>${itemCount} offen</span>
+	                    ${personJiraTickets !== null ? `<span>&middot; ${personJiraTickets.length} tickets</span>` : ''}
                   </div>
                 </div>
               </div>
@@ -89,6 +142,8 @@ function renderTeam() {
             <div class="team-section-block team-section-planung">
               ${renderPersonPlanungCard(selectedPerson)}
             </div>
+
+            ${renderPersonJiraBlock(selectedPerson)}
 
             <div class="team-detail-grid">
               <div class="team-section-block">
@@ -197,6 +252,8 @@ function renderPersonDetail() {
     </div>
 
     ${renderPersonPlanungCard(p)}
+
+    ${jiraSyncData ? `<div class="card">${renderPersonJiraBlock(p)}</div>` : ''}
 
     <div class="card">
       <div class="card-header"><span class="card-title">Offene Items (${openItems.length})</span></div>

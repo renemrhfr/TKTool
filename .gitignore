@@ -1,3 +1,5 @@
 .idea/
 .claude/
 tktool-data.json
+jira-tickets.json
+scripts/jira-sync.config.json
