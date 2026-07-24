@@ -320,7 +320,7 @@ function renderMeetings() {
             <div class="meetings-detail-header">
               <div class="meetings-detail-title-row">
                 <span class="section-title">${meetingDisplayTitle(selected)}</span>
-                <span class="meetings-detail-date">${selected.date ? meetingRelativeDate(selected.date) : 'ohne Datum'}</span>
+                <button class="meetings-detail-date" title="Datum ändern" onclick="openScheduleMeetingDate('${selected.id}')">${selected.date ? meetingRelativeDate(selected.date) : 'ohne Datum'}</button>
               </div>
               <div class="meetings-detail-actions">
                 ${selected.personId ? `<button class="btn btn-secondary btn-sm" onclick="openPersonById('${selected.personId}')">@${esc(personName(selected.personId))}</button>` : ''}
@@ -577,17 +577,19 @@ function saveMeetingTitle(id) {
 function openScheduleMeetingDate(id) {
   const meeting = data.meetings.find(m => m.id === id);
   if (!meeting) return;
+  const isReschedule = !!meeting.date;
   document.getElementById('modal').innerHTML = `
     <div class="modal-header">
-      <span class="modal-title">1:1 einplanen</span>
+      <span class="modal-title">${isReschedule ? 'Datum ändern' : (meeting.type === 'oneOnOne' ? '1:1 einplanen' : 'Meeting einplanen')}</span>
       <button class="modal-close" onclick="closeOverlay()">&#x2715;</button>
     </div>
     <div class="modal-body">
       <div class="form-group">
         <label class="form-label">Datum</label>
-        <input type="date" class="form-input" id="scheduleMeetingDate" value="${meeting.date || todayStr()}" autofocus>
+        <input type="date" class="form-input" id="scheduleMeetingDate" value="${meeting.date || todayStr()}" autofocus
+          onkeydown="if(event.key==='Enter'){saveScheduledMeetingDate('${meeting.id}')}">
       </div>
-      <button class="btn btn-primary" style="width:100%" onclick="saveScheduledMeetingDate('${meeting.id}')">Einplanen</button>
+      <button class="btn btn-primary" style="width:100%" onclick="saveScheduledMeetingDate('${meeting.id}')">${isReschedule ? 'Speichern' : 'Einplanen'}</button>
     </div>
   `;
   openOverlay();
@@ -599,10 +601,11 @@ function saveScheduledMeetingDate(id) {
   const date = document.getElementById('scheduleMeetingDate')?.value || '';
   if (!meeting) return;
   if (!date) { toast('Datum nötig'); return; }
+  const wasScheduled = !!meeting.date;
   meeting.date = date;
   saveData(data);
   closeOverlay();
-  toast('1:1 eingeplant');
+  toast(wasScheduled ? 'Datum aktualisiert' : (meeting.type === 'oneOnOne' ? '1:1 eingeplant' : 'Meeting eingeplant'));
   render();
 }
 

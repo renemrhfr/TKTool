@@ -5240,6 +5240,15 @@ button.person-blocks-toggle:hover { color: var(--accent); }
   color: var(--text-muted);
   font-size: 13px;
   font-family: ui-monospace, monospace;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 1px 5px;
+  cursor: pointer;
+}
+.meetings-detail-date:hover {
+  color: var(--text);
+  border-color: var(--border);
 }
 .meetings-detail-actions {
   display: flex;
