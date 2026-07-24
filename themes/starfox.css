@@ -198,6 +198,20 @@ body[data-theme="starfox"] .header {
   -webkit-backdrop-filter: blur(7px);
 }
 
+body[data-theme="starfox"] .participant-pill.active {
+  color: #f4fbff;
+  background: linear-gradient(180deg, #286f91 0%, #1d526e 100%);
+  border-color: #74c5e8;
+  box-shadow:
+    inset 0 0 0 1px rgba(227, 242, 247, 0.14),
+    0 0 0 1px rgba(86, 180, 220, 0.18),
+    0 0 12px rgba(86, 180, 220, 0.2);
+}
+
+body[data-theme="starfox"] .participant-pill.active .person-avatar-badge {
+  box-shadow: 0 0 0 2px #a8ddf2;
+}
+
 @keyframes starfox-stars-drift-far {
   from { transform: translate3d(0, -3%, 0); }
   to { transform: translate3d(-4%, 8%, 0); }

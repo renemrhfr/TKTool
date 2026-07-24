@@ -4767,16 +4767,24 @@ button.tf-metric {
   text-transform: lowercase;
   margin: 8px 0 4px;
 }
-.person-blocks-more {
+button.person-blocks-toggle {
+  width: 100%;
   border: none;
   background: transparent;
   padding: 0;
+  font: inherit;
   font-size: 10px;
-  color: var(--accent);
+  color: var(--text-muted);
   cursor: pointer;
-  text-transform: lowercase;
+  text-align: left;
 }
-.person-blocks-more:hover { text-decoration: underline; }
+button.person-blocks-toggle:hover { color: var(--accent); }
+.person-blocks-toggle-icon {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  width: 10px;
+  display: inline-block;
+  text-align: center;
+}
 .person-block-row {
   display: flex;
   align-items: center;
@@ -5393,8 +5401,50 @@ a.jira-ticket-key:hover { text-decoration: underline; }
   color: color-mix(in srgb, var(--warning) 78%, var(--text));
   background: var(--warning-light);
   border: 1px solid color-mix(in srgb, var(--warning) 40%, transparent);
-  cursor: help;
+  cursor: pointer;
+  line-height: 1.5;
 }
+.tl-jira-drift:hover {
+  background: color-mix(in srgb, var(--warning) 22%, transparent);
+  border-color: var(--warning);
+}
+
+/* Drift-Menue: eine Zeile pro Abweichung, rechts genau eine Aktion */
+.jira-drift-group { margin-bottom: 14px; }
+.jira-drift-group:last-child { margin-bottom: 0; }
+.jira-drift-head {
+  font-size: 10px;
+  letter-spacing: .05em;
+  text-transform: lowercase;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.jira-drift-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border-light, var(--border));
+  font-size: 13px;
+  min-width: 0;
+}
+.jira-drift-row:last-child { border-bottom: none; }
+.jira-drift-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+}
+.jira-drift-rename s { color: var(--text-muted); }
+.jira-drift-note {
+  flex-shrink: 0;
+  font-size: 10px;
+  text-transform: lowercase;
+  color: var(--text-muted);
+}
+.jira-drift-row .btn { flex-shrink: 0; }
 .tl-block-jira-stale {
   opacity: .55;
   background-image: repeating-linear-gradient(45deg, transparent 0 6px, color-mix(in srgb, var(--text) 18%, transparent) 6px 8px);

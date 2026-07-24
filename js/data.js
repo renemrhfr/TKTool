@@ -1,7 +1,7 @@
 // ============================================================
 // DATA LAYER — File System Access API
 // ============================================================
-const APP_VERSION = '1.0.22';
+const APP_VERSION = '1.0.23';
 const DATA_FILENAME = 'tktool-data.json';
 const JIRA_SYNC_FILENAME = 'jira-tickets.json';
 const JIRA_QUERY_MAX_RESULTS = 100;
@@ -610,7 +610,13 @@ function jiraSnapshotFromResponse(parsed) {
       });
     }
     if (refKeys.has(key.toUpperCase())) {
-      refs[key.toUpperCase()] = { status, statusCategory, assignee: accountId };
+      // summary wird fuer den Titel-Abgleich geplanter Bloecke gebraucht
+      refs[key.toUpperCase()] = {
+        status,
+        statusCategory,
+        assignee: accountId,
+        summary: String(f.summary || ''),
+      };
     }
   }
 

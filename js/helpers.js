@@ -488,6 +488,35 @@ function jiraTicketsForPerson(person) {
   return Array.isArray(tickets) ? tickets.filter(t => !isJiraStatusExcluded(t.status)) : [];
 }
 
+// Alle Tickets aus dem Snapshot als flache Liste (key + summary), fuer die
+// Vorschlagsliste im Block-Formular. Dedupliziert, weil ein Ticket sowohl in
+// assignees als auch in refs stecken kann.
+function jiraTicketPool() {
+  if (!jiraSyncData) return [];
+  const byKey = {};
+  for (const list of Object.values(jiraSyncData.assignees || {})) {
+    if (!Array.isArray(list)) continue;
+    for (const t of list) {
+      const key = String(t.key || '').trim().toUpperCase();
+      if (key && !byKey[key]) byKey[key] = { key, summary: String(t.summary || '') };
+    }
+  }
+  const refs = jiraSyncData.refs || {};
+  for (const raw of Object.keys(refs)) {
+    const key = raw.trim().toUpperCase();
+    if (key && !byKey[key]) byKey[key] = { key, summary: String(refs[raw].summary || '') };
+  }
+  return Object.values(byKey).sort((a, b) => a.key.localeCompare(b.key));
+}
+
+// Titel eines Keys, egal aus welcher Ecke des Snapshots er kommt.
+function jiraSummaryForKey(ref) {
+  const key = String(ref || '').trim().toUpperCase();
+  if (!key) return '';
+  const hit = jiraTicketPool().find(t => t.key === key);
+  return hit ? hit.summary : '';
+}
+
 // Die Abfrage, die der Browser für uns ausführt: alle offenen Tickets des
 // Teams plus der Status jedes in der Planung referenzierten Keys. Beides in
 // einem Request, damit es bei einem Copy-Paste bleibt.
@@ -555,7 +584,35 @@ function jiraDriftForPerson(person) {
     return !!(ref.assignee && person.jiraAccountId
       && ref.assignee.trim() !== person.jiraAccountId.trim());
   });
-  return { unplanned, stale, hasDrift: unplanned.length > 0 || stale.length > 0 };
+  // Titel-Drift nur fuer Bloecke, deren Label aus Jira stammt und seither
+  // nicht von Hand geaendert wurde (label === jiraSummary). Handgeschriebene
+  // Labels sollen nicht dauerhaft als "veraltet" gemeldet werden.
+  const staleIds = new Set(stale.map(b => b.id));
+  const ticketByKey = {};
+  for (const t of tickets) ticketByKey[String(t.key || '').toUpperCase()] = t;
+  const renamed = activeBlocks.filter(b => {
+    if (staleIds.has(b.id)) return false;
+    if (!b.jiraSummary || b.label !== b.jiraSummary) return false;
+    const current = jiraCurrentSummary(b.jiraRef, ticketByKey, refByKey);
+    return !!current && current !== b.jiraSummary;
+  });
+  return {
+    unplanned,
+    stale,
+    renamed,
+    hasDrift: unplanned.length > 0 || stale.length > 0 || renamed.length > 0,
+  };
+}
+
+// Aktueller Ticket-Titel aus dem Snapshot: erst die offene Ticketliste der
+// Person, sonst der mitgelieferte Status geplanter Keys (refs).
+function jiraCurrentSummary(ref, ticketByKey, refByKey) {
+  const key = String(ref || '').trim().toUpperCase();
+  if (!key) return '';
+  const fromTicket = ticketByKey && ticketByKey[key];
+  if (fromTicket && fromTicket.summary) return fromTicket.summary;
+  const fromRef = refByKey && refByKey[key];
+  return (fromRef && fromRef.summary) || '';
 }
 
 function jiraSyncAgeLabel() {

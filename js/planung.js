@@ -338,10 +338,14 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
             <div class="tl-person-top">
               ${showSupBadge ? '<span class="tl-sup-badge" title="Support-Rotation">SUP</span>' : ''}
               <span class="tl-person-name">${esc(person.name)}</span>
-              ${jiraDrift && jiraDrift.hasDrift ? `<span class="tl-jira-drift" title="${esc([
-                jiraDrift.unplanned.length ? `${jiraDrift.unplanned.length} Ticket${jiraDrift.unplanned.length === 1 ? '' : 's'} ohne Block: ${jiraDrift.unplanned.map(t => t.key).join(', ')}` : '',
-                jiraDrift.stale.length ? `${jiraDrift.stale.length} Block${jiraDrift.stale.length === 1 ? '' : 's'} veraltet: ${jiraDrift.stale.map(sb => sb.jiraRef).join(', ')}` : '',
-              ].filter(Boolean).join('\n'))}">jira ±${jiraDrift.unplanned.length + jiraDrift.stale.length}</span>` : ''}
+              ${jiraDrift && jiraDrift.hasDrift ? `<button class="tl-jira-drift" type="button"
+                onclick="event.preventDefault();event.stopPropagation();openJiraDriftMenu('${pid}')"
+                title="${esc([
+                  jiraDrift.unplanned.length ? `${jiraDrift.unplanned.length} Ticket${jiraDrift.unplanned.length === 1 ? '' : 's'} ohne Block: ${jiraDrift.unplanned.map(t => t.key).join(', ')}` : '',
+                  jiraDrift.stale.length ? `${jiraDrift.stale.length} Block${jiraDrift.stale.length === 1 ? '' : 's'} veraltet: ${jiraDrift.stale.map(sb => sb.jiraRef).join(', ')}` : '',
+                  jiraDrift.renamed.length ? `${jiraDrift.renamed.length} Titel geändert: ${jiraDrift.renamed.map(sb => sb.jiraRef).join(', ')}` : '',
+                  '— klicken zum Übernehmen',
+                ].filter(Boolean).join('\n'))}">jira ±${jiraDrift.unplanned.length + jiraDrift.stale.length + jiraDrift.renamed.length}</button>` : ''}
             </div>
           </div>
           ${capInline}
@@ -675,8 +679,9 @@ function renderPersonPlanungCard(person) {
   const openBlocks = pBlocks.filter(b => !isBlockParked(b) && !b.done).sort((a, b) => a.start.localeCompare(b.start));
   const parkedList = pBlocks.filter(isBlockParked);
   const allDone = pBlocks.filter(b => !isBlockParked(b) && b.done).sort((a, b) => b.start.localeCompare(a.start));
-  const showAllDone = !!viewState.personBlocksShowAll;
-  const doneBlocks = showAllDone ? allDone : allDone.slice(0, 8);
+  // Erledigtes ist Archiv, nicht Arbeitsvorrat: eingeklappt, bis jemand fragt.
+  const showDone = !!viewState.personBlocksShowDone;
+  const doneBlocks = showDone ? allDone : [];
   const blockRow = (b) => `
     <div class="person-block-row ${b.done ? 'person-block-done' : ''}" onclick="openBlockForm('${b.id}')">
       <span class="tl-block-swatch tl-block-${b.typ}"></span>
@@ -687,16 +692,18 @@ function renderPersonPlanungCard(person) {
         ? '<span class="person-block-checked">&#x2713;</span>'
         : `<button class="person-block-check" onclick="event.stopPropagation();markBlockDone('${b.id}')" title="Als erledigt markieren">&#x2713;</button>`}
     </div>`;
-  const blocksSection = (openBlocks.length || parkedList.length || doneBlocks.length) ? `
+  const blocksSection = (openBlocks.length || parkedList.length || allDone.length) ? `
     <div class="person-blocks">
       <div class="person-blocks-head">Blöcke</div>
       ${openBlocks.map(blockRow).join('')}
       ${parkedList.map(blockRow).join('')}
-      ${doneBlocks.length ? `
-        <div class="person-blocks-sub">
-          erledigt · ${allDone.length}
-          ${allDone.length > 8 ? `<button class="person-blocks-more" onclick="togglePersonBlocksShowAll()">${showAllDone ? 'weniger' : 'alle anzeigen'}</button>` : ''}
-        </div>
+      ${allDone.length ? `
+        <button class="person-blocks-sub person-blocks-toggle" type="button"
+          onclick="togglePersonBlocksShowDone()"
+          title="${showDone ? 'Erledigte ausblenden' : 'Erledigte anzeigen'}">
+          <span class="person-blocks-toggle-icon">${showDone ? '&minus;' : '+'}</span>
+          erledigt &middot; ${allDone.length}
+        </button>
         ${doneBlocks.map(blockRow).join('')}` : ''}
     </div>
   ` : '';
@@ -740,8 +747,8 @@ function renderPersonPlanungCard(person) {
   `;
 }
 
-function togglePersonBlocksShowAll() {
-  viewState.personBlocksShowAll = !viewState.personBlocksShowAll;
+function togglePersonBlocksShowDone() {
+  viewState.personBlocksShowDone = !viewState.personBlocksShowDone;
   render();
 }
 
@@ -890,7 +897,13 @@ function openBlockForm(blockId, prefillPersonId, prefillStart, prefillEnd) {
           Jira-Ref (optional)
           <a id="blockJiraLink" class="jira-link" target="_blank" rel="noopener" href="${b && jiraUrl(b.jiraRef) ? esc(jiraUrl(b.jiraRef)) : '#'}" ${b && jiraUrl(b.jiraRef) ? '' : 'hidden'}>öffnen ↗</a>
         </label>
-        <input class="form-input" id="blockJira" value="${b ? esc(b.jiraRef || '') : ''}" placeholder="TK-1234" oninput="updateBlockJiraLink(this.value)">
+        <input class="form-input" id="blockJira" list="blockJiraSuggest" autocomplete="off"
+          value="${b ? esc(b.jiraRef || '') : ''}" placeholder="TK-1234 oder Stichwort aus dem Titel"
+          oninput="onBlockJiraInput(this.value)">
+        <datalist id="blockJiraSuggest">
+          ${jiraTicketPool().map(t => `<option value="${esc(t.key)}" label="${esc(t.summary)}">${esc(t.summary)}</option>`).join('')}
+        </datalist>
+        <input type="hidden" id="blockJiraSummary" value="${b ? esc(b.jiraSummary || '') : ''}">
       </div>
       <div class="form-group">
         <label class="form-label">Notiz</label>
@@ -923,6 +936,23 @@ function updateBlockJiraLink(val) {
   if (href) a.href = href;
 }
 
+// Auswahl aus der Vorschlagsliste: Link nachziehen und das Label mit dem
+// Ticket-Titel fuellen — aber nur, solange das Label leer ist oder noch
+// unveraendert aus Jira stammt. Handgeschriebenes wird nicht ueberschrieben.
+function onBlockJiraInput(val) {
+  updateBlockJiraLink(val);
+  const summary = jiraSummaryForKey(val);
+  if (!summary) return;
+  const labelEl = document.getElementById('blockLabel');
+  const summaryEl = document.getElementById('blockJiraSummary');
+  if (!labelEl) return;
+  const current = labelEl.value.trim();
+  const fromJira = summaryEl ? summaryEl.value : '';
+  if (current && current !== fromJira) return;
+  labelEl.value = summary;
+  if (summaryEl) summaryEl.value = summary;
+}
+
 // Opens the block's Jira ticket in a new tab. Returns false when there is
 // nothing to open (no ref or no base URL configured) so the caller can
 // fall back to the edit form.
@@ -934,6 +964,131 @@ function openBlockJira(blockId) {
   return true;
 }
 
+// ============================================================
+// JIRA-DRIFT: Tickets in einem Klick verplanen / Bloecke nachziehen
+// ============================================================
+// Haengt am "jira ±N"-Chip der Timeline. Drei Sorten Abweichung, jede mit
+// genau einer Aktion: Ticket ohne Block anlegen, veralteten Block erledigen,
+// geaenderten Ticket-Titel uebernehmen.
+function openJiraDriftMenu(personId) {
+  const person = data.persons.find(p => p.id === personId);
+  if (!person) return;
+  const drift = jiraDriftForPerson(person);
+  if (!drift || !drift.hasDrift) { closeOverlay(); return; }
+
+  const section = (title, rows) => rows.length ? `
+    <div class="jira-drift-group">
+      <div class="jira-drift-head">${title} &middot; ${rows.length}</div>
+      ${rows.join('')}
+    </div>` : '';
+
+  const unplanned = drift.unplanned.map(t => {
+    const url = jiraUrl(t.key);
+    const key = url
+      ? `<a class="jira-ticket-key" href="${esc(url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${esc(t.key)}</a>`
+      : `<span class="jira-ticket-key">${esc(t.key)}</span>`;
+    return `
+      <div class="jira-drift-row">
+        ${key}
+        <span class="jira-drift-text" title="${esc(t.summary || '')}">${esc(t.summary || '')}</span>
+        <span class="jira-status-chip jira-status-${esc(t.statusCategory || 'new')}">${esc((t.status || '').toLowerCase())}</span>
+        <button class="btn btn-sm btn-primary" type="button"
+          onclick="quickPlanJiraTicket('${person.id}','${esc(t.key)}')"
+          title="Block ab heute anlegen">+ block</button>
+      </div>`;
+  });
+
+  const stale = drift.stale.map(b => `
+    <div class="jira-drift-row">
+      <span class="jira-ticket-key">${esc(b.jiraRef)}</span>
+      <span class="jira-drift-text" title="${esc(b.label || '')}">${esc(b.label || '(ohne Label)')}</span>
+      <span class="jira-drift-note">ticket nicht mehr offen</span>
+      <button class="btn btn-sm btn-secondary" type="button"
+        onclick="resolveStaleJiraBlock('${b.id}')"
+        title="Block als erledigt markieren">&#x2713; erledigt</button>
+    </div>`);
+
+  const renamed = drift.renamed.map(b => {
+    const current = jiraSummaryForKey(b.jiraRef);
+    return `
+      <div class="jira-drift-row">
+        <span class="jira-ticket-key">${esc(b.jiraRef)}</span>
+        <span class="jira-drift-text jira-drift-rename" title="${esc(b.label || '')} → ${esc(current)}">
+          <s>${esc(b.label || '')}</s> ${esc(current)}
+        </span>
+        <button class="btn btn-sm btn-secondary" type="button"
+          onclick="applyJiraLabel('${b.id}')"
+          title="Ticket-Titel als Block-Label übernehmen">titel übernehmen</button>
+      </div>`;
+  });
+
+  document.getElementById('modal').innerHTML = `
+    <div class="modal-header">
+      <span class="modal-title">Jira &mdash; ${esc(person.name)}</span>
+      <button class="modal-close" onclick="closeOverlay()">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-hint" style="margin-bottom:10px">Stand: ${esc(jiraSyncAgeLabel() || 'unbekannt')}</div>
+      ${section('ohne block', unplanned)}
+      ${section('block veraltet', stale)}
+      ${section('titel geändert', renamed)}
+    </div>
+  `;
+  openOverlay();
+}
+
+// Nach jeder Aktion neu aufbauen, damit mehrere Tickets hintereinander
+// abgearbeitet werden koennen. Ist nichts mehr offen, schliesst das Menue.
+function refreshJiraDriftMenu(personId) {
+  saveData(data);
+  render();
+  const person = data.persons.find(p => p.id === personId);
+  const drift = person ? jiraDriftForPerson(person) : null;
+  if (drift && drift.hasDrift) openJiraDriftMenu(personId);
+  else closeOverlay();
+}
+
+function quickPlanJiraTicket(personId, key) {
+  const person = data.persons.find(p => p.id === personId);
+  if (!person) return;
+  const ref = String(key || '').trim().toUpperCase();
+  const summary = jiraSummaryForKey(ref);
+  const today = todayStr();
+  data.blocks.push({
+    id: uid(),
+    personId,
+    label: summary || ref,
+    start: today,
+    end: today,
+    typ: 'ticket',
+    done: false,
+    jiraRef: ref,
+    jiraSummary: summary || null,
+    notiz: null,
+  });
+  toast(`${ref} verplant — ab heute`);
+  refreshJiraDriftMenu(personId);
+}
+
+function resolveStaleJiraBlock(blockId) {
+  const b = data.blocks.find(x => x.id === blockId);
+  if (!b) return;
+  b.done = true;
+  toast(`${b.jiraRef || 'Block'} erledigt`);
+  refreshJiraDriftMenu(b.personId);
+}
+
+function applyJiraLabel(blockId) {
+  const b = data.blocks.find(x => x.id === blockId);
+  if (!b) return;
+  const summary = jiraSummaryForKey(b.jiraRef);
+  if (!summary) return;
+  b.label = summary;
+  b.jiraSummary = summary;
+  toast('Titel übernommen');
+  refreshJiraDriftMenu(b.personId);
+}
+
 function saveBlock(id) {
   const personId = document.getElementById('blockPerson').value;
   const label = document.getElementById('blockLabel').value.trim();
@@ -941,6 +1096,8 @@ function saveBlock(id) {
   let end = document.getElementById('blockEnd').value;
   const typ = document.getElementById('blockTyp').value;
   const jiraRef = document.getElementById('blockJira').value.trim();
+  const summaryEl = document.getElementById('blockJiraSummary');
+  const jiraSummary = summaryEl ? summaryEl.value.trim() : '';
   const notiz = document.getElementById('blockNotiz').value.trim();
   const doneEl = document.getElementById('blockDone');
   const done = typ !== 'abwesenheit' && !!(doneEl && doneEl.checked);
@@ -962,9 +1119,9 @@ function saveBlock(id) {
   if (id) {
     const b = data.blocks.find(x => x.id === id);
     if (!b) return;
-    Object.assign(b, { personId, label, start, end, typ, done, jiraRef: jiraRef || null, notiz: notiz || null });
+    Object.assign(b, { personId, label, start, end, typ, done, jiraRef: jiraRef || null, jiraSummary: jiraSummary || null, notiz: notiz || null });
   } else {
-    data.blocks.push({ id: uid(), personId, label, start, end, typ, done, jiraRef: jiraRef || null, notiz: notiz || null });
+    data.blocks.push({ id: uid(), personId, label, start, end, typ, done, jiraRef: jiraRef || null, jiraSummary: jiraSummary || null, notiz: notiz || null });
   }
   saveData(data);
   closeOverlay();
