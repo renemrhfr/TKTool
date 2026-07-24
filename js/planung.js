@@ -282,11 +282,17 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
       if (b.done) classes.push('tl-block-done');
       else if (isBlockOverdue(b)) classes.push('tl-block-overdue');
       if (staleBlockIds.has(b.id)) classes.push('tl-block-jira-stale');
+      const jiraState = b.jiraRef && !b.done ? jiraStatusForBlock(b) : null;
+      const handover = jiraState && isJiraHandoverStatus(jiraState.status) ? jiraState.status : '';
+      if (handover) classes.push('tl-block-handover-on');
       const title = [
         b.label || '(ohne Label)',
         `${formatDate(b.start)}–${formatDate(b.end)}`,
         b.done ? 'erledigt' : (isBlockOverdue(b) ? 'überfällig — noch nicht erledigt' : ''),
         b.jiraRef ? 'Jira: ' + b.jiraRef + (jiraUrl(b.jiraRef) ? ' (Cmd/Strg-Klick öffnet)' : '') : '',
+        // Status ist ein Standbild vom letzten Sync — das Alter gehoert dazu.
+        jiraState && jiraState.status ? `Status: ${jiraState.status} (Stand: ${jiraSyncAgeLabel() || 'unbekannt'})` : '',
+        handover ? '→ wartet woanders — Person ist hier faktisch frei, Puffer für Rückläufer lassen' : '',
         staleBlockIds.has(b.id) ? '⚠ Jira-Ticket nicht mehr offen (erledigt oder umassigned)' : '',
       ].filter(Boolean).join('\n');
       const leftPct = (sIdx / cols) * 100;
@@ -298,7 +304,7 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
         title="${esc(title)}"
         onclick="event.stopPropagation();if(_suppressNextBlockClick)return;if((event.metaKey||event.ctrlKey)&&openBlockJira('${b.id}'))return;openBlockForm('${b.id}')"
         onpointerdown="onBlockPointerDown(event,'${b.id}')">
-        ${b.done ? '<span class="tl-block-check">&#x2713;</span>' : ''}<span class="tl-block-label">${esc(b.label || b.typ)}</span>
+        ${b.done ? '<span class="tl-block-check">&#x2713;</span>' : ''}${handover ? `<span class="tl-block-handover">${esc(handover.toLowerCase())}</span>` : ''}<span class="tl-block-label">${esc(b.label || b.typ)}</span>
       </div>`;
     }).join('');
 
@@ -482,6 +488,36 @@ function renderPlanung() {
       onclick="togglePlanungOverdue()"
       title="Abgelaufene Blöcke, die noch nicht erledigt sind">${overdue.length} offen</button>
   ` : '';
+  // Bottleneck-Blick: alles, was gerade bei QA/Review haengt — quer ueber das
+  // Team, weil sich genau da der Stau zeigt, den die Einzelansicht verbirgt.
+  const waiting = jiraHandoverBlocks(null).sort((a, b) => (a.end || '').localeCompare(b.end || ''));
+  const waitingByStatus = {};
+  for (const b of waiting) {
+    const st = (jiraStatusForBlock(b) || {}).status || '';
+    (waitingByStatus[st] = waitingByStatus[st] || []).push(b);
+  }
+  const handoverChip = waiting.length ? `
+    <button class="filter-btn planung-handover-btn ${viewState.planungShowHandover ? 'active' : ''}"
+      onclick="togglePlanungHandover()"
+      title="${esc(['Blöcke, deren Ticket nicht mehr beim Entwickler liegt:',
+        ...Object.keys(waitingByStatus).sort().map(st => `${st.toLowerCase()}: ${waitingByStatus[st].length}`),
+        `Stand: ${jiraSyncAgeLabel() || 'unbekannt'}`].join('\n'))}">${waiting.length} wartet</button>
+  ` : '';
+  const handoverPanel = (waiting.length && viewState.planungShowHandover) ? `
+    <div class="planung-overdue-panel">
+      ${waiting.map(b => {
+        const st = (jiraStatusForBlock(b) || {}).status || '';
+        return `
+        <div class="planung-overdue-row">
+          <span class="planung-overdue-info" onclick="openBlockForm('${b.id}')" title="Block öffnen">
+            <span class="planung-overdue-person">${esc(personName(b.personId))}</span>
+            <span class="planung-overdue-label">${esc(b.label || b.typ)}</span>
+            <span class="jira-status-chip jira-status-handover">${esc(st.toLowerCase())}</span>
+          </span>
+        </div>`;
+      }).join('')}
+    </div>
+  ` : '';
   const overduePanel = (overdue.length && viewState.planungShowOverdue) ? `
     <div class="planung-overdue-panel">
       ${overdue.map(b => `
@@ -547,6 +583,7 @@ function renderPlanung() {
             <button class="filter-btn ${sort === 'name' ? 'active' : ''}" onclick="setPlanungSort('name')">name</button>
             <button class="filter-btn ${planungShowWeekends() ? 'active' : ''}" onclick="togglePlanungWeekends()" title="Samstag/Sonntag ein-/ausblenden">sa/so</button>
             ${overdueChip}
+            ${handoverChip}
           </div>
           <div class="view-search planung-search">
             <input id="planungSearchInput" type="search"
@@ -563,6 +600,7 @@ function renderPlanung() {
     </div>
 
     ${overduePanel}
+    ${handoverPanel}
     ${parkedRow}
     ${searchResults}
 
@@ -636,6 +674,11 @@ function togglePlanungOverdue() {
   render();
 }
 
+function togglePlanungHandover() {
+  viewState.planungShowHandover = !viewState.planungShowHandover;
+  render();
+}
+
 function extendBlockToThisWeek(id) {
   const b = data.blocks.find(x => x.id === id);
   if (!b || isBlockParked(b)) return;
@@ -688,6 +731,13 @@ function renderPersonPlanungCard(person) {
       <span class="person-block-label">${esc(b.label || b.typ)}</span>
       <span class="person-block-range">${isBlockParked(b) ? 'geparkt' : formatDate(b.start) + '–' + formatDate(b.end)}</span>
       ${isBlockOverdue(b) ? '<span class="person-block-overdue">überfällig</span>' : ''}
+      ${(() => {
+        if (b.done || !b.jiraRef) return '';
+        const state = jiraStatusForBlock(b);
+        return state && isJiraHandoverStatus(state.status)
+          ? `<span class="jira-status-chip jira-status-handover" title="Wartet woanders (Stand: ${esc(jiraSyncAgeLabel() || 'unbekannt')})">${esc(state.status.toLowerCase())}</span>`
+          : '';
+      })()}
       ${b.done
         ? '<span class="person-block-checked">&#x2713;</span>'
         : `<button class="person-block-check" onclick="event.stopPropagation();markBlockDone('${b.id}')" title="Als erledigt markieren">&#x2713;</button>`}

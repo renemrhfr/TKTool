@@ -5588,6 +5588,42 @@ a.jira-ticket-key:hover { text-decoration: underline; }
 }
 .tl-block-jira-stale .tl-block-label { text-decoration: line-through; }
 
+/* Uebergabe (QA/Review): Ticket laeuft, aber nicht beim Entwickler.
+   Bewusst kuehl statt Ampelfarbe — kein Problem, nur eine Info fuer die
+   Kapazitaet. */
+.jira-status-chip.jira-status-handover {
+  color: color-mix(in srgb, var(--accent) 80%, var(--text));
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 38%, transparent);
+}
+.jira-status-chip.handover {
+  color: color-mix(in srgb, var(--accent) 80%, var(--text));
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border-color: var(--accent);
+}
+.tl-block-handover {
+  flex-shrink: 0;
+  font-size: 9px;
+  letter-spacing: .04em;
+  padding: 0 3px;
+  margin-right: 3px;
+  border-radius: 3px;
+  max-width: 46px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--bg, #fff);
+  background: color-mix(in srgb, var(--accent) 82%, var(--text));
+}
+/* Der Block gehoert der Person noch, ist aber kein aktiver Aufwand mehr:
+   gestrichelte Kante statt voller Flaeche. */
+.tl-block-handover-on {
+  border: 1px dashed color-mix(in srgb, var(--accent) 65%, transparent);
+}
+.planung-handover-btn.active,
+.planung-handover-btn:hover { border-color: var(--accent); color: var(--accent); }
+
 .jira-status-chip.jira-status-done {
   color: color-mix(in srgb, var(--success) 72%, var(--text));
   background: var(--success-light);
@@ -7438,7 +7474,7 @@ body[data-theme="serum"] .card {
 // ============================================================
 // DATA LAYER — File System Access API
 // ============================================================
-const APP_VERSION = '1.0.23';
+const APP_VERSION = '1.0.24';
 const DATA_FILENAME = 'tktool-data.json';
 const JIRA_SYNC_FILENAME = 'jira-tickets.json';
 const JIRA_QUERY_MAX_RESULTS = 100;
@@ -8246,6 +8282,9 @@ function updateJiraStatusSetting(patch) {
     id: JIRA_STATUS_SETTING_ID,
     excluded: normalizeStatusList(patch.excluded ?? (current && current.excluded)),
     seen: normalizeStatusList(patch.seen ?? (current && current.seen)),
+    // Status, bei denen das Ticket nicht mehr beim Entwickler liegt (QA,
+    // Review, Abnahme). Kapazitaets-Signal, kein Ausschluss.
+    handover: normalizeStatusList(patch.handover ?? (current && current.handover)),
   };
   if (current) Object.assign(current, next);
   else (data.settings = data.settings || []).push(next);
@@ -8271,6 +8310,60 @@ function toggleJiraStatusExcluded(status) {
     excluded: isJiraStatusExcluded(name)
       ? current.filter(s => s.toLowerCase() !== name.toLowerCase())
       : current.concat(name),
+  });
+}
+
+// --- Uebergabe-Status (QA/Review): Ticket laeuft, aber nicht mehr beim
+// Entwickler. Fuer die Planung heisst das: fast frei, Puffer lassen, falls
+// es zurueckkommt.
+function jiraHandoverStatuses() {
+  const setting = jiraStatusSetting();
+  return normalizeStatusList(setting && setting.handover);
+}
+
+function isJiraHandoverStatus(status) {
+  const name = String(status || '').trim().toLowerCase();
+  if (!name) return false;
+  return jiraHandoverStatuses().some(s => s.toLowerCase() === name);
+}
+
+function toggleJiraHandoverStatus(status) {
+  const name = String(status || '').trim();
+  if (!name) return;
+  const current = jiraHandoverStatuses();
+  updateJiraStatusSetting({
+    handover: isJiraHandoverStatus(name)
+      ? current.filter(s => s.toLowerCase() !== name.toLowerCase())
+      : current.concat(name),
+  });
+}
+
+// Aktueller Status des Tickets hinter einem Block — aus refs (dort stehen
+// genau die geplanten Keys) mit Rueckfall auf die Ticketliste der Person.
+function jiraStatusForBlock(block) {
+  if (!jiraSyncData || !block || !block.jiraRef) return null;
+  const key = block.jiraRef.trim().toUpperCase();
+  const refs = jiraSyncData.refs || {};
+  for (const raw of Object.keys(refs)) {
+    if (raw.trim().toUpperCase() === key) return refs[raw];
+  }
+  const person = data.persons.find(p => p.id === block.personId);
+  const tickets = person ? jiraTicketsForPerson(person) : null;
+  const hit = (tickets || []).find(t => String(t.key || '').toUpperCase() === key);
+  return hit ? { status: hit.status, statusCategory: hit.statusCategory } : null;
+}
+
+// Blockiert der Block noch den Entwickler? Offene Bloecke, deren Ticket in
+// einem Uebergabe-Status haengt, zaehlen als "wartet woanders".
+function jiraHandoverBlocks(personId) {
+  if (!jiraSyncData) return [];
+  const today = todayStr();
+  return (data.blocks || []).filter(b => {
+    if (personId && b.personId !== personId) return false;
+    if (b.done || !b.jiraRef) return false;
+    if ((b.end || b.start || '') < today) return false;
+    const ref = jiraStatusForBlock(b);
+    return !!(ref && isJiraHandoverStatus(ref.status));
   });
 }
 
@@ -9504,6 +9597,7 @@ function openJiraImport() {
     <div class="modal-body">
       <div class="form-group">${intro}</div>
       ${renderJiraStatusFilter()}
+      ${renderJiraHandoverFilter()}
       <div class="form-group">
         <label class="form-label">2 &middot; Antwort hier einfügen</label>
         <textarea class="form-textarea" id="jiraImportText" rows="8" placeholder='{"issues":[...]}' autofocus></textarea>
@@ -9550,6 +9644,42 @@ function renderJiraStatusFilter() {
 
 function toggleJiraStatusFilter(status) {
   toggleJiraStatusExcluded(status);
+  reopenJiraImportKeepingDraft();
+}
+
+// Welche Status bedeuten "liegt nicht mehr beim Entwickler" (QA, Review,
+// Abnahme). Solche Bloecke bekommen in der Planung einen Marker: die Person
+// ist fast frei, aber noch nicht ganz.
+function renderJiraHandoverFilter() {
+  const known = jiraKnownStatuses().filter(s => !isJiraStatusExcluded(s));
+  if (!known.length) return '';
+  const picked = jiraHandoverStatuses().length;
+  return `
+    <div class="form-group">
+      <label class="form-label">Status &mdash; wartet woanders</label>
+      <div class="jira-status-filter">
+        ${known.map(status => `
+          <button type="button" class="jira-status-chip ${isJiraHandoverStatus(status) ? 'handover' : ''}"
+            onclick="toggleJiraHandoverFilter(${JSON.stringify(status).replace(/"/g, '&quot;')})">${esc(status)}</button>
+        `).join('')}
+      </div>
+      <div class="form-hint">
+        ${picked
+          ? `${picked} Status ${picked === 1 ? 'gilt' : 'gelten'} als Übergabe — Blöcke dazu werden in der Planung markiert.`
+          : 'Keiner gewählt. Markiere die Status, bei denen das Ticket beim Entwickler weg ist (z.B. QA, Review) — dann zeigt die Planung, wer eigentlich frei ist.'}
+      </div>
+    </div>
+  `;
+}
+
+function toggleJiraHandoverFilter(status) {
+  toggleJiraHandoverStatus(status);
+  reopenJiraImportKeepingDraft();
+}
+
+// Nach einer Status-Auswahl das Menue neu bauen, ohne den eingefuegten
+// JSON-Text zu verlieren.
+function reopenJiraImportKeepingDraft() {
   const field = document.getElementById('jiraImportText');
   const draft = field ? field.value : '';
   render();
@@ -13335,11 +13465,17 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
       if (b.done) classes.push('tl-block-done');
       else if (isBlockOverdue(b)) classes.push('tl-block-overdue');
       if (staleBlockIds.has(b.id)) classes.push('tl-block-jira-stale');
+      const jiraState = b.jiraRef && !b.done ? jiraStatusForBlock(b) : null;
+      const handover = jiraState && isJiraHandoverStatus(jiraState.status) ? jiraState.status : '';
+      if (handover) classes.push('tl-block-handover-on');
       const title = [
         b.label || '(ohne Label)',
         `${formatDate(b.start)}–${formatDate(b.end)}`,
         b.done ? 'erledigt' : (isBlockOverdue(b) ? 'überfällig — noch nicht erledigt' : ''),
         b.jiraRef ? 'Jira: ' + b.jiraRef + (jiraUrl(b.jiraRef) ? ' (Cmd/Strg-Klick öffnet)' : '') : '',
+        // Status ist ein Standbild vom letzten Sync — das Alter gehoert dazu.
+        jiraState && jiraState.status ? `Status: ${jiraState.status} (Stand: ${jiraSyncAgeLabel() || 'unbekannt'})` : '',
+        handover ? '→ wartet woanders — Person ist hier faktisch frei, Puffer für Rückläufer lassen' : '',
         staleBlockIds.has(b.id) ? '⚠ Jira-Ticket nicht mehr offen (erledigt oder umassigned)' : '',
       ].filter(Boolean).join('\n');
       const leftPct = (sIdx / cols) * 100;
@@ -13351,7 +13487,7 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
         title="${esc(title)}"
         onclick="event.stopPropagation();if(_suppressNextBlockClick)return;if((event.metaKey||event.ctrlKey)&&openBlockJira('${b.id}'))return;openBlockForm('${b.id}')"
         onpointerdown="onBlockPointerDown(event,'${b.id}')">
-        ${b.done ? '<span class="tl-block-check">&#x2713;</span>' : ''}<span class="tl-block-label">${esc(b.label || b.typ)}</span>
+        ${b.done ? '<span class="tl-block-check">&#x2713;</span>' : ''}${handover ? `<span class="tl-block-handover">${esc(handover.toLowerCase())}</span>` : ''}<span class="tl-block-label">${esc(b.label || b.typ)}</span>
       </div>`;
     }).join('');
 
@@ -13535,6 +13671,36 @@ function renderPlanung() {
       onclick="togglePlanungOverdue()"
       title="Abgelaufene Blöcke, die noch nicht erledigt sind">${overdue.length} offen</button>
   ` : '';
+  // Bottleneck-Blick: alles, was gerade bei QA/Review haengt — quer ueber das
+  // Team, weil sich genau da der Stau zeigt, den die Einzelansicht verbirgt.
+  const waiting = jiraHandoverBlocks(null).sort((a, b) => (a.end || '').localeCompare(b.end || ''));
+  const waitingByStatus = {};
+  for (const b of waiting) {
+    const st = (jiraStatusForBlock(b) || {}).status || '';
+    (waitingByStatus[st] = waitingByStatus[st] || []).push(b);
+  }
+  const handoverChip = waiting.length ? `
+    <button class="filter-btn planung-handover-btn ${viewState.planungShowHandover ? 'active' : ''}"
+      onclick="togglePlanungHandover()"
+      title="${esc(['Blöcke, deren Ticket nicht mehr beim Entwickler liegt:',
+        ...Object.keys(waitingByStatus).sort().map(st => `${st.toLowerCase()}: ${waitingByStatus[st].length}`),
+        `Stand: ${jiraSyncAgeLabel() || 'unbekannt'}`].join('\n'))}">${waiting.length} wartet</button>
+  ` : '';
+  const handoverPanel = (waiting.length && viewState.planungShowHandover) ? `
+    <div class="planung-overdue-panel">
+      ${waiting.map(b => {
+        const st = (jiraStatusForBlock(b) || {}).status || '';
+        return `
+        <div class="planung-overdue-row">
+          <span class="planung-overdue-info" onclick="openBlockForm('${b.id}')" title="Block öffnen">
+            <span class="planung-overdue-person">${esc(personName(b.personId))}</span>
+            <span class="planung-overdue-label">${esc(b.label || b.typ)}</span>
+            <span class="jira-status-chip jira-status-handover">${esc(st.toLowerCase())}</span>
+          </span>
+        </div>`;
+      }).join('')}
+    </div>
+  ` : '';
   const overduePanel = (overdue.length && viewState.planungShowOverdue) ? `
     <div class="planung-overdue-panel">
       ${overdue.map(b => `
@@ -13600,6 +13766,7 @@ function renderPlanung() {
             <button class="filter-btn ${sort === 'name' ? 'active' : ''}" onclick="setPlanungSort('name')">name</button>
             <button class="filter-btn ${planungShowWeekends() ? 'active' : ''}" onclick="togglePlanungWeekends()" title="Samstag/Sonntag ein-/ausblenden">sa/so</button>
             ${overdueChip}
+            ${handoverChip}
           </div>
           <div class="view-search planung-search">
             <input id="planungSearchInput" type="search"
@@ -13616,6 +13783,7 @@ function renderPlanung() {
     </div>
 
     ${overduePanel}
+    ${handoverPanel}
     ${parkedRow}
     ${searchResults}
 
@@ -13689,6 +13857,11 @@ function togglePlanungOverdue() {
   render();
 }
 
+function togglePlanungHandover() {
+  viewState.planungShowHandover = !viewState.planungShowHandover;
+  render();
+}
+
 function extendBlockToThisWeek(id) {
   const b = data.blocks.find(x => x.id === id);
   if (!b || isBlockParked(b)) return;
@@ -13741,6 +13914,13 @@ function renderPersonPlanungCard(person) {
       <span class="person-block-label">${esc(b.label || b.typ)}</span>
       <span class="person-block-range">${isBlockParked(b) ? 'geparkt' : formatDate(b.start) + '–' + formatDate(b.end)}</span>
       ${isBlockOverdue(b) ? '<span class="person-block-overdue">überfällig</span>' : ''}
+      ${(() => {
+        if (b.done || !b.jiraRef) return '';
+        const state = jiraStatusForBlock(b);
+        return state && isJiraHandoverStatus(state.status)
+          ? `<span class="jira-status-chip jira-status-handover" title="Wartet woanders (Stand: ${esc(jiraSyncAgeLabel() || 'unbekannt')})">${esc(state.status.toLowerCase())}</span>`
+          : '';
+      })()}
       ${b.done
         ? '<span class="person-block-checked">&#x2713;</span>'
         : `<button class="person-block-check" onclick="event.stopPropagation();markBlockDone('${b.id}')" title="Als erledigt markieren">&#x2713;</button>`}

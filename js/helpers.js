@@ -71,6 +71,9 @@ function updateJiraStatusSetting(patch) {
     id: JIRA_STATUS_SETTING_ID,
     excluded: normalizeStatusList(patch.excluded ?? (current && current.excluded)),
     seen: normalizeStatusList(patch.seen ?? (current && current.seen)),
+    // Status, bei denen das Ticket nicht mehr beim Entwickler liegt (QA,
+    // Review, Abnahme). Kapazitaets-Signal, kein Ausschluss.
+    handover: normalizeStatusList(patch.handover ?? (current && current.handover)),
   };
   if (current) Object.assign(current, next);
   else (data.settings = data.settings || []).push(next);
@@ -96,6 +99,60 @@ function toggleJiraStatusExcluded(status) {
     excluded: isJiraStatusExcluded(name)
       ? current.filter(s => s.toLowerCase() !== name.toLowerCase())
       : current.concat(name),
+  });
+}
+
+// --- Uebergabe-Status (QA/Review): Ticket laeuft, aber nicht mehr beim
+// Entwickler. Fuer die Planung heisst das: fast frei, Puffer lassen, falls
+// es zurueckkommt.
+function jiraHandoverStatuses() {
+  const setting = jiraStatusSetting();
+  return normalizeStatusList(setting && setting.handover);
+}
+
+function isJiraHandoverStatus(status) {
+  const name = String(status || '').trim().toLowerCase();
+  if (!name) return false;
+  return jiraHandoverStatuses().some(s => s.toLowerCase() === name);
+}
+
+function toggleJiraHandoverStatus(status) {
+  const name = String(status || '').trim();
+  if (!name) return;
+  const current = jiraHandoverStatuses();
+  updateJiraStatusSetting({
+    handover: isJiraHandoverStatus(name)
+      ? current.filter(s => s.toLowerCase() !== name.toLowerCase())
+      : current.concat(name),
+  });
+}
+
+// Aktueller Status des Tickets hinter einem Block — aus refs (dort stehen
+// genau die geplanten Keys) mit Rueckfall auf die Ticketliste der Person.
+function jiraStatusForBlock(block) {
+  if (!jiraSyncData || !block || !block.jiraRef) return null;
+  const key = block.jiraRef.trim().toUpperCase();
+  const refs = jiraSyncData.refs || {};
+  for (const raw of Object.keys(refs)) {
+    if (raw.trim().toUpperCase() === key) return refs[raw];
+  }
+  const person = data.persons.find(p => p.id === block.personId);
+  const tickets = person ? jiraTicketsForPerson(person) : null;
+  const hit = (tickets || []).find(t => String(t.key || '').toUpperCase() === key);
+  return hit ? { status: hit.status, statusCategory: hit.statusCategory } : null;
+}
+
+// Blockiert der Block noch den Entwickler? Offene Bloecke, deren Ticket in
+// einem Uebergabe-Status haengt, zaehlen als "wartet woanders".
+function jiraHandoverBlocks(personId) {
+  if (!jiraSyncData) return [];
+  const today = todayStr();
+  return (data.blocks || []).filter(b => {
+    if (personId && b.personId !== personId) return false;
+    if (b.done || !b.jiraRef) return false;
+    if ((b.end || b.start || '') < today) return false;
+    const ref = jiraStatusForBlock(b);
+    return !!(ref && isJiraHandoverStatus(ref.status));
   });
 }
 

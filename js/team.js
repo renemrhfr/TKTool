@@ -37,6 +37,7 @@ function openJiraImport() {
     <div class="modal-body">
       <div class="form-group">${intro}</div>
       ${renderJiraStatusFilter()}
+      ${renderJiraHandoverFilter()}
       <div class="form-group">
         <label class="form-label">2 &middot; Antwort hier einfügen</label>
         <textarea class="form-textarea" id="jiraImportText" rows="8" placeholder='{"issues":[...]}' autofocus></textarea>
@@ -83,6 +84,42 @@ function renderJiraStatusFilter() {
 
 function toggleJiraStatusFilter(status) {
   toggleJiraStatusExcluded(status);
+  reopenJiraImportKeepingDraft();
+}
+
+// Welche Status bedeuten "liegt nicht mehr beim Entwickler" (QA, Review,
+// Abnahme). Solche Bloecke bekommen in der Planung einen Marker: die Person
+// ist fast frei, aber noch nicht ganz.
+function renderJiraHandoverFilter() {
+  const known = jiraKnownStatuses().filter(s => !isJiraStatusExcluded(s));
+  if (!known.length) return '';
+  const picked = jiraHandoverStatuses().length;
+  return `
+    <div class="form-group">
+      <label class="form-label">Status &mdash; wartet woanders</label>
+      <div class="jira-status-filter">
+        ${known.map(status => `
+          <button type="button" class="jira-status-chip ${isJiraHandoverStatus(status) ? 'handover' : ''}"
+            onclick="toggleJiraHandoverFilter(${JSON.stringify(status).replace(/"/g, '&quot;')})">${esc(status)}</button>
+        `).join('')}
+      </div>
+      <div class="form-hint">
+        ${picked
+          ? `${picked} Status ${picked === 1 ? 'gilt' : 'gelten'} als Übergabe — Blöcke dazu werden in der Planung markiert.`
+          : 'Keiner gewählt. Markiere die Status, bei denen das Ticket beim Entwickler weg ist (z.B. QA, Review) — dann zeigt die Planung, wer eigentlich frei ist.'}
+      </div>
+    </div>
+  `;
+}
+
+function toggleJiraHandoverFilter(status) {
+  toggleJiraHandoverStatus(status);
+  reopenJiraImportKeepingDraft();
+}
+
+// Nach einer Status-Auswahl das Menue neu bauen, ohne den eingefuegten
+// JSON-Text zu verlieren.
+function reopenJiraImportKeepingDraft() {
   const field = document.getElementById('jiraImportText');
   const draft = field ? field.value : '';
   render();

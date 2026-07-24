@@ -5451,6 +5451,42 @@ a.jira-ticket-key:hover { text-decoration: underline; }
 }
 .tl-block-jira-stale .tl-block-label { text-decoration: line-through; }
 
+/* Uebergabe (QA/Review): Ticket laeuft, aber nicht beim Entwickler.
+   Bewusst kuehl statt Ampelfarbe — kein Problem, nur eine Info fuer die
+   Kapazitaet. */
+.jira-status-chip.jira-status-handover {
+  color: color-mix(in srgb, var(--accent) 80%, var(--text));
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 38%, transparent);
+}
+.jira-status-chip.handover {
+  color: color-mix(in srgb, var(--accent) 80%, var(--text));
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border-color: var(--accent);
+}
+.tl-block-handover {
+  flex-shrink: 0;
+  font-size: 9px;
+  letter-spacing: .04em;
+  padding: 0 3px;
+  margin-right: 3px;
+  border-radius: 3px;
+  max-width: 46px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--bg, #fff);
+  background: color-mix(in srgb, var(--accent) 82%, var(--text));
+}
+/* Der Block gehoert der Person noch, ist aber kein aktiver Aufwand mehr:
+   gestrichelte Kante statt voller Flaeche. */
+.tl-block-handover-on {
+  border: 1px dashed color-mix(in srgb, var(--accent) 65%, transparent);
+}
+.planung-handover-btn.active,
+.planung-handover-btn:hover { border-color: var(--accent); color: var(--accent); }
+
 .jira-status-chip.jira-status-done {
   color: color-mix(in srgb, var(--success) 72%, var(--text));
   background: var(--success-light);
