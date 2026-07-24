@@ -1,8 +1,10 @@
 // ============================================================
 // DATA LAYER — File System Access API
 // ============================================================
-const APP_VERSION = '1.0.17';
+const APP_VERSION = '1.0.22';
 const DATA_FILENAME = 'tktool-data.json';
+const JIRA_SYNC_FILENAME = 'jira-tickets.json';
+const JIRA_QUERY_MAX_RESULTS = 100;
 const IDB_NAME = 'tktool-fs';
 const IDB_STORE = 'handles';
 const IDB_KEY = 'dataDir';
@@ -12,6 +14,7 @@ const THEME_KEY = 'tktool-theme';
 const OVERVIEW_LAYOUT_KEY = 'tktool-overview-layout';
 const REVIEW_PERIOD_KEY = 'tktool-review-period';
 const JIRA_BASE_KEY = 'tktool-jira-base';
+const JIRA_STATUS_SETTING_ID = 'jira-status';
 const PLANUNG_WEEKENDS_KEY = 'tktool-planung-weekends';
 const THEMES = [
   'light',
@@ -111,6 +114,9 @@ const defaultData = () => ({
   monthReviews: [],
   blocks: [],
   markers: [],
+  // Geteilte Einstellungen (im Datenordner, nicht pro Gerät). Jede Einstellung
+  // ist ein Record mit fester id, damit sie durch denselben Merge läuft.
+  settings: [],
 });
 
 // --- IndexedDB helpers (persist directory handle across sessions) ---
@@ -540,6 +546,123 @@ function writeDataFile(snapshot) {
   return writeChain;
 }
 
+// --- Jira snapshot (per Copy-Paste-Import geschrieben, siehe unten) ---
+// Format: { generatedAt: ISO string, source: base url,
+//           assignees: { accountId: [ticket] }, refs: { KEY: {...} } }
+// Wird beim Laden gelesen und danach nur auf Anforderung.
+let jiraSyncData = null;
+
+async function loadJiraSync() {
+  try {
+    const dir = await ensureDirHandle();
+    const fh = await dir.getFileHandle(JIRA_SYNC_FILENAME);
+    const file = await fh.getFile();
+    const parsed = JSON.parse(await file.text());
+    jiraSyncData = parsed && typeof parsed.assignees === 'object' ? parsed : null;
+  } catch {
+    jiraSyncData = null;
+  }
+  return jiraSyncData;
+}
+
+// --- Jira-Antwort einspielen ---------------------------------------
+// Die rohe Antwort von /rest/api/3/search/jql ins Snapshot-Format bringen.
+// Zwei Dinge stecken in derselben Antwort und werden hier getrennt:
+// offene Tickets pro Teammitglied (assignees) und der Status der in der
+// Planung referenzierten Keys (refs) — letztere koennen erledigt oder
+// umassigned sein und duerfen deshalb nicht als offene Tickets zaehlen.
+function jiraSnapshotFromResponse(parsed) {
+  if (!parsed || !Array.isArray(parsed.issues)) {
+    throw new Error('Das sieht nicht nach einer Jira-Antwort aus (kein "issues"-Array).');
+  }
+  const teamIds = data.persons
+    .filter(p => p.type !== 'kontakt' && p.jiraAccountId)
+    .map(p => p.jiraAccountId.trim());
+  const today = todayStr();
+  const refKeys = new Set((data.blocks || [])
+    .filter(b => !b.done && b.jiraRef && (b.end || b.start || '') >= today)
+    .map(b => b.jiraRef.trim().toUpperCase()));
+
+  // Vorbelegen, damit ein Teammitglied ohne Treffer als "keine Tickets"
+  // erkannt wird und nicht als "nicht verknuepft".
+  const assignees = {};
+  for (const id of teamIds) assignees[id] = [];
+  const refs = {};
+  const seenStatuses = [];
+
+  for (const issue of parsed.issues) {
+    const f = issue.fields || {};
+    const key = String(issue.key || '');
+    const accountId = f.assignee && f.assignee.accountId ? String(f.assignee.accountId) : null;
+    const status = String((f.status && f.status.name) || '');
+    const statusCategory = String((f.status && f.status.statusCategory && f.status.statusCategory.key) || '');
+
+    if (!f.resolution && accountId && assignees[accountId]) {
+      if (status) seenStatuses.push(status);
+      assignees[accountId].push({
+        key,
+        summary: String(f.summary || ''),
+        status,
+        statusCategory,
+        priority: f.priority ? String(f.priority.name || '') : '',
+        type: f.issuetype ? String(f.issuetype.name || '') : '',
+        updated: String(f.updated || ''),
+      });
+    }
+    if (refKeys.has(key.toUpperCase())) {
+      refs[key.toUpperCase()] = { status, statusCategory, assignee: accountId };
+    }
+  }
+
+  rememberJiraStatuses(seenStatuses);
+
+  return {
+    generatedAt: new Date().toISOString(),
+    source: getJiraBaseUrl(),
+    assignees,
+    refs,
+    truncated: !!parsed.nextPageToken,
+  };
+}
+
+async function writeJiraSync(snapshot) {
+  const dir = await ensureDirHandle();
+  const fh = await dir.getFileHandle(JIRA_SYNC_FILENAME, { create: true });
+  const writable = await fh.createWritable();
+  await writable.write(JSON.stringify(snapshot, null, 2));
+  await writable.close();
+}
+
+// Nimmt den kopierten JSON-Text, schreibt den Snapshot in den Datenordner
+// und laedt ihn direkt wieder ein. Wirft mit lesbarer Meldung, der Aufrufer
+// zeigt sie an.
+async function importJiraJson(text) {
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new Error('Das ist kein gültiges JSON — beim Kopieren etwas abgeschnitten?');
+  }
+  const snapshot = jiraSnapshotFromResponse(parsed);
+  await writeJiraSync(snapshot);
+  jiraSyncData = snapshot;
+  return snapshot;
+}
+
+// Liest jira-tickets.json neu ein (z.B. nachdem ein anderes Geraet den
+// Snapshot geschrieben hat). Der Browser holt die Daten nicht selbst von
+// Jira — das erledigt der Import ueber Copy-Paste.
+async function refreshJiraSync() {
+  const before = jiraSyncData && jiraSyncData.generatedAt;
+  await loadJiraSync();
+  if (typeof render === 'function') { try { render(); } catch {} }
+  if (typeof uiToast === 'function') {
+    if (!jiraSyncData) uiToast('Keine jira-tickets.json im Datenordner gefunden');
+    else if (jiraSyncData.generatedAt === before) uiToast('Jira-Stand unverändert (' + (jiraSyncAgeLabel() || 'unbekannt') + ')');
+    else uiToast('Jira-Tickets aktualisiert');
+  }
+}
+
 // --- Public API (same interface as before) ---
 let data = defaultData();
 
@@ -576,6 +699,7 @@ async function loadData() {
   } else {
     await cacheData(store);
   }
+  await loadJiraSync();
   return data;
 }
 

@@ -363,20 +363,6 @@ function renderReviews() {
               ? `${entry.openItems.length} offen`
               : 'keine offenen Items';
           const supportItems = entry.openItems.filter(item => item.status !== 'waiting');
-          const supportLabel = supportItems.length
-            ? `${supportItems.length} offen`
-            : 'nichts offen';
-          const supportNote = supportItems.length
-            ? 'unterstützen'
-            : 'alles erledigt';
-          const waitingLabel = entry.dueWaiting.length
-            ? `${entry.waitingItems.length} wartet · ${entry.dueWaiting.length} fällig`
-            : entry.waitingItems.length
-              ? `${entry.waitingItems.length} wartet`
-              : 'nichts wartet';
-          const waitingNote = entry.dueWaiting.length
-            ? 'nachfassen'
-            : entry.waitingItems.length ? 'warten auf' : 'alles erledigt';
           const supportThisMonth = personSupportInMonth(entry.person, currentMonthLabel);
           const detailTitle = `${attentionLabel} | ${itemLabel} | ${entry.workloadHint} | 1:1 ${oneOnOneLabel}${supportThisMonth ? ` | Support ${formatMonth(currentMonthLabel)}` : ''}${absenceLabel ? ' | heute: ' + absenceLabel : ''}`;
           return `
@@ -404,6 +390,32 @@ function renderReviews() {
               <span class="tf-expand" aria-hidden="true"></span>
             </summary>
             <div class="tf-mini-dashboard">
+              ${jiraSyncData ? (() => {
+                const personJiraTickets = jiraTicketsForPerson(entry.person);
+                if (personJiraTickets === null) {
+                  return `
+                    <button class="tf-metric tf-metric-action" type="button" onclick="event.preventDefault(); event.stopPropagation(); openPersonForm('${entry.person.id}')" title="jira-user im Profil ergänzen">
+                      <span class="tf-metric-label">Jira</span>
+                      <span class="tf-metric-value">&ndash;</span>
+                      <span class="tf-metric-note">kein jira-user</span>
+                    </button>`;
+                }
+                const drift = jiraDriftForPerson(entry.person);
+                const driftParts = [];
+                if (drift.unplanned.length) driftParts.push(`${drift.unplanned.length} nicht eingeplant`);
+                if (drift.stale.length) driftParts.push(`${drift.stale.length} ${drift.stale.length === 1 ? 'block' : 'blocks'} veraltet`);
+                const driftDetail = [
+                  drift.unplanned.length ? `Ohne Block: ${drift.unplanned.map(t => t.key).join(', ')}` : '',
+                  drift.stale.length ? `Veraltet: ${drift.stale.map(b => `${b.label || b.jiraRef} (${b.jiraRef})`).join(', ')}` : '',
+                ].filter(Boolean).join('\n');
+                const jiraSig = driftParts.length ? 'tf-sig-warn' : 'tf-sig-ok';
+                return `
+                  <button class="tf-metric tf-metric-action ${jiraSig}" type="button" onclick="event.preventDefault(); event.stopPropagation(); openPersonById('${entry.person.id}')" title="${esc(`Jira-Tickets von ${entry.person.name} ansehen (Stand: ${jiraSyncAgeLabel() || 'unbekannt'})${driftDetail ? '\n' + driftDetail : ''}`)}">
+                    <span class="tf-metric-label">Jira</span>
+                    <span class="tf-metric-value">${personJiraTickets.length ? `${personJiraTickets.length} tickets` : 'keine tickets'}</span>
+                    ${driftParts.length ? `<span class="tf-metric-note">${driftParts.join(' · ')}</span>` : ''}
+                  </button>`;
+              })() : ''}
               <button class="tf-metric tf-metric-action ${entry.overPlanned ? 'tf-sig-bad' : entry.underPlanned ? 'tf-sig-warn' : 'tf-sig-ok'}" type="button" onclick="event.preventDefault(); event.stopPropagation(); openPersonById('${entry.person.id}')" title="Teammitglied öffnen">
                 <span class="tf-metric-label">Workload</span>
                 <span class="tf-metric-value">${entry.workloadHint}</span>
@@ -413,13 +425,10 @@ function renderReviews() {
                 <span class="tf-metric-label">Letztes 1:1</span>
                 <span class="tf-metric-value">${entry.lastOneOnOne ? oneOnOneLabel : 'noch keines'}</span>
               </button>
-              <button class="tf-metric tf-metric-action ${supportItems.length ? 'tf-sig-warn' : 'tf-sig-ok'}" type="button" onclick="event.preventDefault(); event.stopPropagation(); openPersonTodos('${entry.person.id}')" title="Todo-Liste nach ${esc(entry.person.name)} filtern">
-                <span class="tf-metric-label">Unterstützen</span>
-                <span class="tf-metric-value">${supportLabel}</span>
-              </button>
-              <button class="tf-metric tf-metric-action ${entry.dueWaiting.length ? 'tf-sig-bad' : entry.waitingItems.length ? 'tf-sig-warn' : 'tf-sig-ok'}" type="button" onclick="event.preventDefault(); event.stopPropagation(); openPersonTodos('${entry.person.id}')" title="Todo-Liste nach ${esc(entry.person.name)} filtern">
-                <span class="tf-metric-label">Warten auf</span>
-                <span class="tf-metric-value">${waitingLabel}</span>
+              <button class="tf-metric tf-metric-action ${entry.dueWaiting.length ? 'tf-sig-bad' : (supportItems.length || entry.waitingItems.length) ? 'tf-sig-warn' : 'tf-sig-ok'}" type="button" onclick="event.preventDefault(); event.stopPropagation(); openPersonTodos('${entry.person.id}')" title="Todo-Liste nach ${esc(entry.person.name)} filtern">
+                <span class="tf-metric-label">Items</span>
+                <span class="tf-metric-value">${itemLabel}</span>
+                <span class="tf-metric-note">${entry.dueWaiting.length ? 'nachfassen' : supportItems.length ? 'unterstützen' : entry.waitingItems.length ? 'warten auf' : 'alles erledigt'}</span>
               </button>
             </div>
           </details>`;

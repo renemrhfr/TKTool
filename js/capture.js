@@ -609,6 +609,11 @@ function openPersonForm(id, personType) {
           <input class="form-input" id="personJiraUrl" placeholder="https://..." value="${p ? esc(p.jiraUrl || '') : ''}">
         </div>
         <div class="form-group">
+          <label class="form-label">Jira Account-ID</label>
+          <input class="form-input" id="personJiraAccountId" placeholder="5b10a2844c20165700ede21g" value="${p ? esc(p.jiraAccountId || '') : ''}">
+          <div class="form-hint">findest du über <span class="form-hint-code">/rest/api/3/user/search?query=mail@firma.at</span> im Browser</div>
+        </div>
+        <div class="form-group">
           <label class="form-label">GitLab MR URL</label>
           <input class="form-input" id="personGitlabUrl" placeholder="https://..." value="${p ? esc(p.gitlabMrUrl || '') : ''}">
         </div>
@@ -635,6 +640,7 @@ function savePerson(id) {
       if (!isKontakt) {
         p.pushDirection = document.getElementById('personPush').value.trim();
         p.jiraUrl = normalizeExternalUrl(document.getElementById('personJiraUrl').value);
+        p.jiraAccountId = document.getElementById('personJiraAccountId').value.trim();
         p.gitlabMrUrl = normalizeExternalUrl(document.getElementById('personGitlabUrl').value);
       }
     }
@@ -645,6 +651,7 @@ function savePerson(id) {
     } else {
       person.pushDirection = document.getElementById('personPush').value.trim();
       person.jiraUrl = normalizeExternalUrl(document.getElementById('personJiraUrl').value);
+      person.jiraAccountId = document.getElementById('personJiraAccountId').value.trim();
       person.gitlabMrUrl = normalizeExternalUrl(document.getElementById('personGitlabUrl').value);
     }
     data.persons.push(person);

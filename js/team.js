@@ -1,4 +1,167 @@
 // ============================================================
+// JIRA TICKETS (Snapshot jira-tickets.json)
+// ============================================================
+// Der Stempel ist zugleich der Sync-Button: Klick oeffnet das Import-Menue.
+// Der Browser kann die Tickets unter file:// nicht selbst holen (CORS), also
+// oeffnet man die Jira-Abfrage in einem Tab und fuegt die Antwort hier ein.
+function jiraSyncStamp() {
+  const age = jiraSyncAgeLabel();
+  return `<button class="jira-sync-stamp" type="button" onclick="event.stopPropagation(); openJiraImport()" title="Jira-Abfrage öffnen und Antwort einspielen">stand: ${age || 'unbekannt'} &#8635;</button>`;
+}
+
+// ============================================================
+// JIRA IMPORT (Copy-Paste aus dem angemeldeten Browser)
+// ============================================================
+function openJiraImport() {
+  const url = jiraQueryUrl();
+  const base = getJiraBaseUrl();
+  const mapped = data.persons.filter(p => p.type !== 'kontakt' && p.jiraAccountId).length;
+
+  let intro;
+  if (!base) {
+    intro = `<div class="team-empty-copy">Keine Jira Base-URL gesetzt &mdash; im Theme-Menü unter &bdquo;Jira-URL&ldquo; nachtragen.</div>`;
+  } else if (!url) {
+    intro = `<div class="team-empty-copy">Noch keine Person mit Jira Account-ID und kein geplanter Block mit Ticket-Referenz &mdash; es gäbe nichts abzufragen.</div>`;
+  } else {
+    intro = `
+      <a class="btn btn-primary" style="display:block;text-align:center" href="${esc(url)}" target="_blank" rel="noopener">1 &middot; Abfrage in Jira öffnen</a>
+      <div class="form-hint">Öffnet einen Tab mit der JSON-Antwort (${mapped} ${mapped === 1 ? 'Person' : 'Personen'} verknüpft). Dort alles markieren und kopieren.</div>
+    `;
+  }
+
+  document.getElementById('modal').innerHTML = `
+    <div class="modal-header">
+      <span class="modal-title">Jira-Tickets einspielen</span>
+      <button class="modal-close" onclick="closeOverlay()">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">${intro}</div>
+      ${renderJiraStatusFilter()}
+      <div class="form-group">
+        <label class="form-label">2 &middot; Antwort hier einfügen</label>
+        <textarea class="form-textarea" id="jiraImportText" rows="8" placeholder='{"issues":[...]}' autofocus></textarea>
+      </div>
+      <button class="btn btn-primary" style="width:100%" onclick="submitJiraImport()">3 &middot; Einspielen</button>
+      <div class="form-hint" style="margin-top:10px;text-align:center">
+        Von einem anderen Gerät eingespielt?
+        <a href="#" onclick="event.preventDefault(); closeOverlay(); refreshJiraSync()">Datei neu einlesen</a>
+      </div>
+    </div>
+  `;
+  openOverlay();
+}
+
+// Welche Status zaehlen. Aktive Chips = zaehlt, durchgestrichen = ignoriert.
+// Die Liste sind alle je gesehenen Status, damit ein ausgeschlossener nicht
+// verschwindet, sobald ihn die JQL nicht mehr mitliefert.
+function renderJiraStatusFilter() {
+  const known = jiraKnownStatuses();
+  if (!known.length) {
+    return `
+      <div class="form-group">
+        <label class="form-label">Status</label>
+        <div class="form-hint">Nach dem ersten Einspielen lässt sich hier wählen, welche Status zählen.</div>
+      </div>
+    `;
+  }
+  const excluded = jiraExcludedStatuses().length;
+  return `
+    <div class="form-group">
+      <label class="form-label">Status &mdash; welche zählen</label>
+      <div class="jira-status-filter">
+        ${known.map(status => `
+          <button type="button" class="jira-status-chip ${isJiraStatusExcluded(status) ? 'off' : 'on'}"
+            onclick="toggleJiraStatusFilter(${JSON.stringify(status).replace(/"/g, '&quot;')})">${esc(status)}</button>
+        `).join('')}
+      </div>
+      <div class="form-hint">
+        ${excluded ? `${excluded} Status ${excluded === 1 ? 'wird' : 'werden'} ignoriert — wirkt sofort, auch auf den aktuellen Stand.` : 'Alle Status zählen. Klick blendet einen Status aus (z.B. Storniert, Geschlossen).'}
+      </div>
+    </div>
+  `;
+}
+
+function toggleJiraStatusFilter(status) {
+  toggleJiraStatusExcluded(status);
+  const field = document.getElementById('jiraImportText');
+  const draft = field ? field.value : '';
+  render();
+  openJiraImport();
+  const restored = document.getElementById('jiraImportText');
+  if (restored && draft) restored.value = draft;
+}
+
+async function submitJiraImport() {
+  const field = document.getElementById('jiraImportText');
+  const text = (field ? field.value : '').trim();
+  if (!text) return;
+  try {
+    const snapshot = await importJiraJson(text);
+    const count = Object.values(snapshot.assignees || {}).reduce((sum, list) => sum + list.length, 0);
+    closeOverlay();
+    render();
+    if (snapshot.truncated) {
+      toast(`${count} Tickets eingespielt — Jira hat mehr, als in eine Antwort passt`);
+    } else {
+      toast(`${count} Tickets eingespielt`);
+    }
+  } catch (error) {
+    toast(error.message || 'Einspielen fehlgeschlagen');
+  }
+}
+
+function renderPersonJiraBlock(person) {
+  if (!jiraSyncData) {
+    return `
+      <div class="team-section-block">
+        <div class="card-header">
+          <span class="card-title">jira tickets</span>
+          <button class="jira-sync-stamp" type="button" onclick="event.stopPropagation(); openJiraImport()">einspielen &#8635;</button>
+        </div>
+        <div class="team-empty-copy">Noch keine Tickets eingespielt.</div>
+      </div>
+    `;
+  }
+  const tickets = jiraTicketsForPerson(person);
+  if (tickets === null) {
+    return `
+      <div class="team-section-block">
+        <div class="card-header">
+          <span class="card-title">jira tickets</span>
+          ${jiraSyncStamp()}
+        </div>
+        <div class="team-empty-copy">Keine Jira Account-ID hinterlegt &mdash; im Profil unter &bdquo;Bearbeiten&ldquo; ergänzen.</div>
+      </div>
+    `;
+  }
+  return `
+    <div class="team-section-block">
+      <div class="card-header">
+        <span class="card-title">jira tickets (${tickets.length})</span>
+        ${jiraSyncStamp()}
+      </div>
+      ${tickets.length ? `
+        <div class="jira-ticket-list">
+          ${tickets.map(t => {
+            const url = jiraUrl(t.key);
+            const keyEl = url
+              ? `<a class="jira-ticket-key" href="${esc(url)}" target="_blank" rel="noopener">${esc(t.key)}</a>`
+              : `<span class="jira-ticket-key">${esc(t.key)}</span>`;
+            return `
+              <div class="jira-ticket-row">
+                ${keyEl}
+                <span class="jira-ticket-summary" title="${esc(t.summary || '')}">${esc(t.summary || '')}</span>
+                <span class="jira-status-chip jira-status-${esc(t.statusCategory || 'new')}">${esc((t.status || '').toLowerCase())}</span>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      ` : '<div class="team-empty-copy">Keine offenen Tickets assigned</div>'}
+    </div>
+  `;
+}
+
+// ============================================================
 // TEAM VIEW
 // ============================================================
 function renderTeam() {
@@ -39,6 +202,7 @@ function renderTeam() {
           </div>
         ${teamPersons.map(p => {
           const itemCount = data.items.filter(i => i.personId === p.id && i.status !== 'done').length;
+          const personJiraTickets = jiraTicketsForPerson(p);
           const isActive = p.id === selectedId;
           return `
             <div class="team-list-row ${isActive ? 'active' : ''}" onclick="navigate('team', {personId:'${p.id}'})" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();navigate('team', {personId:'${p.id}'})}">
@@ -53,6 +217,7 @@ function renderTeam() {
 	                  ${sudo ? `<div class="team-list-push">${p.pushDirection ? esc(p.pushDirection) : '&nbsp;'}</div>` : ''}
 	                  <div class="team-list-meta">
 	                    <span>${itemCount} offen</span>
+	                    ${personJiraTickets !== null ? `<span>&middot; ${personJiraTickets.length} tickets</span>` : ''}
                   </div>
                 </div>
               </div>
@@ -89,6 +254,8 @@ function renderTeam() {
             <div class="team-section-block team-section-planung">
               ${renderPersonPlanungCard(selectedPerson)}
             </div>
+
+            ${renderPersonJiraBlock(selectedPerson)}
 
             <div class="team-detail-grid">
               <div class="team-section-block">
@@ -197,6 +364,8 @@ function renderPersonDetail() {
     </div>
 
     ${renderPersonPlanungCard(p)}
+
+    ${jiraSyncData ? `<div class="card">${renderPersonJiraBlock(p)}</div>` : ''}
 
     <div class="card">
       <div class="card-header"><span class="card-title">Offene Items (${openItems.length})</span></div>

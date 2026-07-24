@@ -48,6 +48,77 @@ function jiraMd(ref) {
   return url ? `[${ref}](${url})` : ref;
 }
 
+// --- Status-Filter -------------------------------------------------
+// Jira meldet auch Tickets, die zwar unresolved sind, aber niemanden mehr
+// beschaeftigen ("Storniert", "Geschlossen"). Welche Status nicht zaehlen,
+// steht als Setting-Record in der Datendatei — also fuer alle gleich, die
+// denselben Datenordner nutzen, nicht pro Geraet.
+function jiraStatusSetting() {
+  return (data.settings || []).find(s => s.id === JIRA_STATUS_SETTING_ID) || null;
+}
+
+function normalizeStatusList(list) {
+  return (Array.isArray(list) ? list : [])
+    .map(s => String(s || '').trim()).filter(Boolean)
+    .filter((s, i, all) => all.findIndex(o => o.toLowerCase() === s.toLowerCase()) === i)
+    .sort((a, b) => a.localeCompare(b, 'de-AT'));
+}
+
+// Schreibt excluded/seen und speichert. Fehlt der Record, wird er angelegt.
+function updateJiraStatusSetting(patch) {
+  const current = jiraStatusSetting();
+  const next = {
+    id: JIRA_STATUS_SETTING_ID,
+    excluded: normalizeStatusList(patch.excluded ?? (current && current.excluded)),
+    seen: normalizeStatusList(patch.seen ?? (current && current.seen)),
+  };
+  if (current) Object.assign(current, next);
+  else (data.settings = data.settings || []).push(next);
+  saveData(data);
+}
+
+function jiraExcludedStatuses() {
+  const setting = jiraStatusSetting();
+  return normalizeStatusList(setting && setting.excluded);
+}
+
+function isJiraStatusExcluded(status) {
+  const name = String(status || '').trim().toLowerCase();
+  if (!name) return false;
+  return jiraExcludedStatuses().some(s => s.toLowerCase() === name);
+}
+
+function toggleJiraStatusExcluded(status) {
+  const name = String(status || '').trim();
+  if (!name) return;
+  const current = jiraExcludedStatuses();
+  updateJiraStatusSetting({
+    excluded: isJiraStatusExcluded(name)
+      ? current.filter(s => s.toLowerCase() !== name.toLowerCase())
+      : current.concat(name),
+  });
+}
+
+// Alle je gesehenen Status, damit ausgeschlossene weiterhin waehlbar bleiben —
+// die kommen wegen des JQL-Filters in spaeteren Antworten nicht mehr vor.
+function jiraKnownStatuses() {
+  const setting = jiraStatusSetting();
+  const inSnapshot = [];
+  for (const list of Object.values((jiraSyncData && jiraSyncData.assignees) || {})) {
+    for (const t of list || []) if (t.status) inSnapshot.push(t.status);
+  }
+  return normalizeStatusList([...(setting ? setting.seen || [] : []), ...jiraExcludedStatuses(), ...inSnapshot]);
+}
+
+// Beim Import gesehene Status merken — aber nur speichern, wenn wirklich ein
+// neuer dabei ist, sonst schreibt jeder Sync die Datei ohne Aenderung.
+function rememberJiraStatuses(names) {
+  const known = jiraKnownStatuses();
+  const merged = normalizeStatusList([...known, ...names]);
+  if (merged.length === known.length) return;
+  updateJiraStatusSetting({ seen: merged });
+}
+
 function comparePersonsByName(a, b) {
   return (a?.name || '').localeCompare(b?.name || '', 'de-AT', { sensitivity: 'base' });
 }
@@ -402,6 +473,102 @@ function personActivitySummary(personId) {
   };
 }
 
+// --- Jira sync snapshot helpers ---
+// Gematcht wird über die Jira Account-ID, nicht über die E-Mail: Jira Cloud
+// akzeptiert in JQL keine Adressen mehr, und der Snapshot ist damit direkt
+// nach accountId aufgeschlüsselt.
+// null = kein Mapping möglich (kein Sync-File oder keine Account-ID am Profil),
+// [] = Mapping vorhanden, aber keine Tickets assigned.
+function jiraTicketsForPerson(person) {
+  if (!jiraSyncData || !person || !person.jiraAccountId) return null;
+  const assignees = jiraSyncData.assignees || {};
+  const tickets = assignees[person.jiraAccountId.trim()];
+  // Der Filter greift beim Lesen, nicht beim Import: so wirkt eine geaenderte
+  // Status-Auswahl sofort, auch auf einen alten Snapshot.
+  return Array.isArray(tickets) ? tickets.filter(t => !isJiraStatusExcluded(t.status)) : [];
+}
+
+// Die Abfrage, die der Browser für uns ausführt: alle offenen Tickets des
+// Teams plus der Status jedes in der Planung referenzierten Keys. Beides in
+// einem Request, damit es bei einem Copy-Paste bleibt.
+function jiraQueryUrl() {
+  const base = getJiraBaseUrl();
+  if (!base) return '';
+  const accountIds = data.persons
+    .filter(p => p.type !== 'kontakt' && p.jiraAccountId)
+    .map(p => p.jiraAccountId.trim())
+    .filter((id, i, all) => all.indexOf(id) === i);
+  const today = todayStr();
+  const refKeys = (data.blocks || [])
+    .filter(b => !b.done && b.jiraRef && (b.end || b.start || '') >= today)
+    .map(b => b.jiraRef.trim().toUpperCase())
+    .filter((key, i, all) => all.indexOf(key) === i);
+  if (!accountIds.length && !refKeys.length) return '';
+
+  const quoted = values => values.map(v => `"${v}"`).join(',');
+  const excluded = jiraExcludedStatuses();
+  let jql = '';
+  if (accountIds.length) {
+    jql = `assignee in (${quoted(accountIds)}) AND resolution = Unresolved`;
+    // Ausgeschlossene Status gar nicht erst holen — sonst gehen sie vom
+    // maxResults-Budget ab. Der refs-Teil unten bleibt bewusst ungefiltert,
+    // dort brauchen wir den Status auch von erledigten Tickets.
+    if (excluded.length) jql += ` AND status not in (${quoted(excluded)})`;
+  }
+  if (refKeys.length) {
+    const byKey = `key in (${quoted(refKeys)})`;
+    jql = jql ? `(${jql}) OR ${byKey}` : byKey;
+  }
+  jql += ' ORDER BY updated DESC';
+
+  const params = new URLSearchParams({
+    jql,
+    fields: 'summary,status,priority,issuetype,updated,assignee,resolution',
+    maxResults: String(JIRA_QUERY_MAX_RESULTS),
+  });
+  return `${base}/rest/api/3/search/jql?${params}`;
+}
+
+// Drift zwischen Jira und Planung, über jiraRef-Key-Matching (nicht Anzahl):
+// unplanned = assigned Tickets ohne laufenden/zukünftigen Block,
+// stale = Blöcke, deren Ticket laut Sync erledigt oder umassigned ist.
+// Blöcke ohne jiraRef bleiben bewusst außen vor.
+function jiraDriftForPerson(person) {
+  const tickets = jiraTicketsForPerson(person);
+  if (tickets === null) return null;
+  const today = todayStr();
+  const activeBlocks = (data.blocks || []).filter(b =>
+    b.personId === person.id && !b.done && b.jiraRef && (b.end || b.start || '') >= today);
+  const plannedKeys = new Set(activeBlocks.map(b => b.jiraRef.trim().toUpperCase()));
+  const openKeys = new Set(tickets.map(t => String(t.key || '').toUpperCase()));
+  const unplanned = tickets.filter(t => !plannedKeys.has(String(t.key || '').toUpperCase()));
+  const refs = (jiraSyncData && jiraSyncData.refs) || {};
+  const refByKey = {};
+  for (const k of Object.keys(refs)) refByKey[k.trim().toUpperCase()] = refs[k];
+  const stale = activeBlocks.filter(b => {
+    const key = b.jiraRef.trim().toUpperCase();
+    if (openKeys.has(key)) return false;
+    const ref = refByKey[key];
+    if (!ref) return false; // unbekannter Key (Epic, fremdes Projekt) -> kein Urteil
+    if (ref.statusCategory === 'done') return true;
+    if (isJiraStatusExcluded(ref.status)) return true;
+    return !!(ref.assignee && person.jiraAccountId
+      && ref.assignee.trim() !== person.jiraAccountId.trim());
+  });
+  return { unplanned, stale, hasDrift: unplanned.length > 0 || stale.length > 0 };
+}
+
+function jiraSyncAgeLabel() {
+  if (!jiraSyncData || !jiraSyncData.generatedAt) return '';
+  const ts = new Date(jiraSyncData.generatedAt).getTime();
+  if (Number.isNaN(ts)) return '';
+  const mins = Math.max(0, Math.round((Date.now() - ts) / 60000));
+  if (mins < 60) return `vor ${mins} min`;
+  const hours = Math.round(mins / 60);
+  if (hours < 48) return `vor ${hours} h`;
+  return `vor ${Math.round(hours / 24)} Tagen`;
+}
+
 function includesQuery(value, query) {
   return String(value || '').toLocaleLowerCase('de-AT').includes(query);
 }
@@ -426,6 +593,7 @@ function personMatchesQuery(person, query) {
     person.pushDirection,
     person.type === 'kontakt' ? '' : person.notes,
     person.jiraUrl,
+    person.jiraAccountId,
     person.gitlabMrUrl,
   ].some(value => includesQuery(value, query));
 }
