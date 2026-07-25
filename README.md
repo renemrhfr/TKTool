@@ -108,6 +108,14 @@ Highlights and concerns are logged per person as dated items. A rolling
 monthly reviews summarize them per month. The point is trend over incident:
 one concern is a Tuesday, three in a month is a conversation.
 
+### Person dossiers
+
+Each team member can be exported as a Markdown dossier for a chosen date
+range. It combines their highlights and concerns, assigned done and open
+items, 1:1 notes, and planning blocks. The summary also lists months without
+any person-specific entry, making documentation gaps visible before an annual
+review.
+
 ### Sudo mode
 
 Sensitive content — growth journal, personal notes, development direction —

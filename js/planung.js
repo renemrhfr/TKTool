@@ -1471,35 +1471,33 @@ function exportMonthBlocks(month) {
   return md;
 }
 
-function exportPersonBlocks(personId) {
-  const cur = currentMonth();
-  // last 3 months + next 3
-  const months = [];
-  let m = cur;
-  for (let i = 0; i < 3; i++) m = prevMonth(m);
-  for (let i = 0; i < 7; i++) { months.push(m); m = nextMonth(m); }
-  const winStart = toISO(monthStart(months[0]));
-  const winEnd = toISO(monthEnd(months[months.length - 1]));
-  const blocks = data.blocks.filter(b => b.personId === personId && b.end >= winStart && b.start <= winEnd);
-  let md = '';
+function exportPersonBlocks(personId, from, to, matchingBlocks) {
+  const blocks = matchingBlocks || data.blocks.filter(b =>
+    b.personId === personId
+    && (!from || (b.end && b.end >= from))
+    && (!to || (b.start && b.start <= to))
+  );
+  let md = `## Planungsblöcke (${blocks.length})\n\n`;
   if (blocks.length) {
-    md += `## Allokationen\n`;
-    blocks.slice().sort((a, b) => a.start.localeCompare(b.start)).forEach(b => {
-      md += `- ${b.label || '(ohne Label)'} · ${b.typ}`;
+    blocks.slice().sort((a, b) => (b.start || '').localeCompare(a.start || '')).forEach(b => {
+      md += `- ${b.start && b.end ? `${formatDate(b.start)}–${formatDate(b.end)}` : 'ohne Zeitraum'} · ${b.label || '(ohne Label)'} · ${b.typ}`;
+      if (b.done) md += ` · erledigt`;
       if (b.jiraRef) md += ` · ${jiraMd(b.jiraRef)}`;
       md += '\n';
     });
-    md += '\n';
+  } else {
+    md += `_Keine Planungsblöcke im gewählten Zeitraum._\n`;
   }
+  md += '\n';
+
   const p = data.persons.find(x => x.id === personId);
-  const sup = (p && p.supportMonate) ? p.supportMonate.slice().sort() : [];
+  const sup = (p && p.supportMonate)
+    ? p.supportMonate.filter(month => (!from || month >= from.slice(0, 7)) && (!to || month <= to.slice(0, 7))).slice().sort()
+    : [];
   if (sup.length) {
-    const past = sup.filter(x => x <= cur);
-    const future = sup.filter(x => x > cur);
-    md += `## Support-Rotation\n`;
+    md += `## Support-Rotation\n\n`;
     sup.forEach(m => { md += `- ${formatMonthName(m)}\n`; });
-    md += `\n_Letzte: ${past.length ? formatMonthName(past[past.length - 1]) : '—'}_\n`;
-    md += `_Nächste: ${future.length ? formatMonthName(future[0]) : '—'}_\n\n`;
+    md += '\n';
   }
   return md;
 }

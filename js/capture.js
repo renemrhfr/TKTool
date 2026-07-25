@@ -1191,41 +1191,161 @@ function exportMonth(month) {
   downloadFile(`${month}.md`, md);
 }
 
-function exportPerson(id) {
+function openPersonDossierExport(id) {
   const p = data.persons.find(p => p.id === id);
   if (!p) return;
 
-  let md = `# ${p.name}\n\n`;
-  md += `**Push-Richtung:** ${p.pushDirection || '—'}\n\n`;
+  const year = todayStr().slice(0, 4);
+  document.getElementById('modal').innerHTML = `
+    <div class="modal-header">
+      <span class="modal-title">Personen-Dossier exportieren</span>
+      <button class="modal-close" onclick="closeOverlay()">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-hint" style="margin-bottom:16px">
+        Erstellt eine Markdown-Chronik für ${esc(p.name)} aus personenbezogenen Items,
+        1:1-Notizen und Planungsblöcken.
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Von</label>
+          <input type="date" class="form-input" id="personDossierFrom" value="${year}-01-01">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Bis</label>
+          <input type="date" class="form-input" id="personDossierTo" value="${todayStr()}">
+        </div>
+      </div>
+      <button class="btn btn-primary" style="width:100%" onclick="exportPersonDossier('${id}')">Dossier herunterladen</button>
+    </div>
+  `;
+  openOverlay();
+}
 
-  const meetings = data.meetings.filter(m => m.personId === id).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-  if (meetings.length) {
-    md += `## 1:1 Gespräche\n\n`;
-    meetings.forEach(m => {
-      md += `### ${m.date ? formatDate(m.date) : 'ohne Datum'}\n`;
-      if (m.prep) md += `**Vorbereitung:** ${m.prep}\n`;
-      if (m.notes) md += `${m.notes}\n`;
-      md += '\n';
-    });
+function personDossierMonths(from, to) {
+  const months = [];
+  let cursor = from.slice(0, 7);
+  const last = to.slice(0, 7);
+  while (cursor <= last) {
+    months.push(cursor);
+    const [year, month] = cursor.split('-').map(Number);
+    cursor = `${year + (month === 12 ? 1 : 0)}-${String(month === 12 ? 1 : month + 1).padStart(2, '0')}`;
+  }
+  return months;
+}
+
+function personDossierItemDate(item) {
+  return item.date || (item.month ? `${item.month}-01` : '');
+}
+
+function dossierItemLine(item) {
+  const date = personDossierItemDate(item);
+  const check = item.status === 'done' ? 'x' : ' ';
+  let line = `- [${check}] ${date ? formatDate(date) : 'ohne Datum'} · ${item.text}`;
+  if (item.type !== 'todo') line += ` · ${itemTypeLabel(item.type)}`;
+  if (item.status !== 'done') line += ` · ${itemTypeLabel(item.status)}`;
+  line += '\n';
+  if (item.notes) line += `  > ${item.notes.replace(/\n/g, '\n  > ')}\n`;
+  return line;
+}
+
+function exportPersonDossier(id) {
+  const p = data.persons.find(person => person.id === id);
+  if (!p) return;
+
+  const from = document.getElementById('personDossierFrom')?.value || '';
+  const to = document.getElementById('personDossierTo')?.value || '';
+  if (!from || !to) {
+    toast('Zeitraum vollständig angeben');
+    return;
+  }
+  if (from > to) {
+    toast('„Von“ muss vor „Bis“ liegen');
+    return;
   }
 
-  const items = data.items.filter(i => i.personId === id && i.status !== 'done');
-  if (items.length) {
-    md += `## Offene Items\n`;
-    items.forEach(i => { md += `- [${itemTypeLabel(i.type)}] ${i.text} (${i.status})\n`; });
-    md += '\n';
+  const inRange = date => !!date && date >= from && date <= to;
+  const items = data.items
+    .filter(item => item.personId === id && !isPersonalWin(item) && inRange(personDossierItemDate(item)))
+    .sort((a, b) => personDossierItemDate(b).localeCompare(personDossierItemDate(a)));
+  const growth = items.filter(isGrowthEntry);
+  const doneItems = items.filter(item => !isGrowthEntry(item) && item.status === 'done');
+  const openItems = items.filter(item => !isGrowthEntry(item) && item.status !== 'done');
+  const meetings = data.meetings
+    .filter(meeting => meeting.type === 'oneOnOne' && meeting.personId === id && inRange(meeting.date))
+    .sort((a, b) => b.date.localeCompare(a.date));
+  const blocks = data.blocks
+    .filter(block => block.personId === id && block.start && block.end && block.end >= from && block.start <= to)
+    .sort((a, b) => b.start.localeCompare(a.start));
+
+  const coveredMonths = new Set();
+  items.forEach(item => coveredMonths.add(personDossierItemDate(item).slice(0, 7)));
+  meetings.forEach(meeting => coveredMonths.add(meeting.date.slice(0, 7)));
+  blocks.forEach(block => {
+    personDossierMonths(
+      block.start < from ? from : block.start,
+      block.end > to ? to : block.end
+    ).forEach(month => coveredMonths.add(month));
+  });
+  const missingMonths = personDossierMonths(from, to).filter(month => !coveredMonths.has(month));
+
+  let md = `# Personen-Dossier: ${p.name}\n\n`;
+  md += `**Zeitraum:** ${formatDate(from)} bis ${formatDate(to)}  \n`;
+  md += `**Erstellt am:** ${formatDate(todayStr())}\n\n`;
+
+  md += `## Überblick\n\n`;
+  md += `- ${growth.length} Highlights / Concerns\n`;
+  md += `- ${doneItems.length} erledigte Items\n`;
+  md += `- ${openItems.length} offene Items\n`;
+  md += `- ${meetings.length} 1:1-Gespräche\n`;
+  md += `- ${blocks.length} Planungsblöcke\n`;
+  md += `- ${missingMonths.length} Monate ohne personenbezogene Einträge\n\n`;
+  if (missingMonths.length) {
+    md += `**Keine Einträge in:** ${missingMonths.map(formatMonthName).join(', ')}\n\n`;
   }
 
-  const growth = data.items.filter(i => i.personId === id && isGrowthEntry(i)).sort(compareItemsByDateDesc);
+  if (p.pushDirection || p.notes) {
+    md += `## Profil-Kontext\n\n`;
+    if (p.pushDirection) md += `**Push-Richtung:** ${p.pushDirection}\n\n`;
+    if (p.notes) md += `**Notizen:**\n\n${p.notes}\n\n`;
+  }
+
+  md += `## Highlights & Concerns (${growth.length})\n\n`;
   if (growth.length) {
-    md += `## Growth Journal\n`;
-    growth.forEach(i => { md += `- ${formatDate(i.date)} · ${itemTypeLabel(i.type)}: ${i.text}\n`; });
-    md += '\n';
+    growth.forEach(item => {
+      md += `- ${formatDate(personDossierItemDate(item))} · **${itemTypeLabel(item.type)}:** ${item.text}\n`;
+    });
+  } else {
+    md += `_Keine Einträge im gewählten Zeitraum._\n`;
+  }
+  md += '\n';
+
+  md += `## Erledigte Items (${doneItems.length})\n\n`;
+  md += doneItems.length ? doneItems.map(dossierItemLine).join('') : `_Keine Einträge im gewählten Zeitraum._\n`;
+  md += '\n';
+
+  md += `## Offene Items (${openItems.length})\n\n`;
+  md += openItems.length ? openItems.map(dossierItemLine).join('') : `_Keine Einträge im gewählten Zeitraum._\n`;
+  md += '\n';
+
+  md += `## 1:1-Gespräche (${meetings.length})\n\n`;
+  if (meetings.length) {
+    meetings.forEach(meeting => {
+      md += `### ${formatDate(meeting.date)}\n\n`;
+      if (meeting.prep) md += `**Vorbereitung**\n\n${meeting.prep}\n\n`;
+      if (meeting.notes) md += `**Mitschrift**\n\n${meeting.notes}\n\n`;
+      if (!meeting.prep && !meeting.notes) md += `_Keine Notizen._\n\n`;
+    });
+  } else {
+    md += `_Keine Gespräche im gewählten Zeitraum._\n\n`;
   }
 
-  md += exportPersonBlocks(id);
+  md += exportPersonBlocks(id, from, to, blocks);
 
-  downloadFile(`${p.name.toLowerCase().replace(/\s+/g, '-')}.md`, md);
+  const slug = p.name.toLowerCase().trim().replace(/[^a-z0-9äöüß]+/gi, '-').replace(/^-|-$/g, '');
+  closeOverlay();
+  downloadFile(`${slug}-dossier-${from}-${to}.md`, md);
+  toast('Personen-Dossier exportiert');
 }
 
 function exportMeeting(id) {

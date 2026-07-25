@@ -1,7 +1,7 @@
 // ============================================================
 // DATA LAYER — File System Access API
 // ============================================================
-const APP_VERSION = '1.0.30';
+const APP_VERSION = '1.0.32';
 const DATA_FILENAME = 'tktool-data.json';
 const JIRA_SYNC_FILENAME = 'jira-tickets.json';
 const JIRA_QUERY_MAX_RESULTS = 100;
@@ -1100,7 +1100,9 @@ const CLEANUP_GROUPS = [
     label: 'erledigte todos',
     hint: 'status done, ohne wins',
     defaultMonths: 4,
-    match: r => r.status === 'done' && r.type !== 'win',
+    // Growth-Eintraege tragen ebenfalls status 'done' — die gehoeren in die
+    // wins-Rubrik und duerfen hier nicht mit abgeraeumt werden.
+    match: r => r.status === 'done' && r.type !== 'win' && !isGrowthType(r.type),
   },
   {
     id: 'blocks',
@@ -1129,10 +1131,10 @@ const CLEANUP_GROUPS = [
   {
     id: 'wins',
     key: 'items',
-    label: 'wins',
-    hint: 'fliessen in impact-summary & reviews',
+    label: 'wins & teamnotizen',
+    hint: 'impact-summary, reviews & teamfokus',
     defaultMonths: 0,
-    match: r => r.type === 'win',
+    match: r => r.type === 'win' || isGrowthType(r.type),
   },
 ];
 

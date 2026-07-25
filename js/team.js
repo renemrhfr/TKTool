@@ -283,6 +283,7 @@ function renderTeam() {
                 </div>
                 <div class="team-detail-actions">
                   <button class="btn btn-secondary btn-sm" onclick="openMeetingForm('oneOnOne', '${selectedPerson.id}')">+ 1:1</button>
+                  <button class="btn btn-secondary btn-sm" onclick="openPersonDossierExport('${selectedPerson.id}')">Dossier .md</button>
                   <button class="btn btn-secondary btn-sm" onclick="openPersonForm('${selectedPerson.id}')">Bearbeiten</button>
                 </div>
               </div>
@@ -396,7 +397,7 @@ function renderPersonDetail() {
       </div>
       <div style="margin-left:auto;display:flex;gap:8px">
         <button class="btn btn-secondary btn-sm" onclick="openPersonForm('${p.id}')">Bearbeiten</button>
-        <button class="btn btn-secondary btn-sm" onclick="exportPerson('${p.id}')">Export .md</button>
+        <button class="btn btn-secondary btn-sm" onclick="openPersonDossierExport('${p.id}')">Dossier .md</button>
       </div>
     </div>
 
@@ -562,4 +563,3 @@ function renderKontaktDetail() {
     </div>
 	  `;
 }
-
