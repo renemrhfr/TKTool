@@ -898,18 +898,46 @@ function updatePersonFieldDebounced(id, field, value) {
 // ============================================================
 // REVIEWS VIEW
 // ============================================================
-function personLastOneOnOneDate(personId) {
-  const meetings = data.meetings
-    .filter(meeting => meeting.type === 'oneOnOne' && meeting.personId === personId)
-    .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-  return meetings[0]?.date || '';
+// Bei woechentlichem Rhythmus ist "wann war das letzte 1:1" kein Signal mehr —
+// die Antwort ist immer "diese Woche". Interessant ist die Gegenrichtung: steht
+// das naechste schon, und was ist bis dahin liegengeblieben.
+function personNextOneOnOne(personId) {
+  const today = todayStr();
+  return data.meetings
+    .filter(meeting => meeting.type === 'oneOnOne'
+      && meeting.personId === personId
+      && meeting.date
+      && meeting.date >= today)
+    .sort((a, b) => a.date.localeCompare(b.date))[0] || null;
 }
 
-function personLastOneOnOneMeeting(personId) {
-  return data.meetings
-    .filter(meeting => meeting.type === 'oneOnOne' && meeting.personId === personId)
-    .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
-    [0] || null;
+// Ein angelegtes, aber noch nicht terminiertes 1:1. Zaehlt nicht als geplant,
+// darf aber auch kein zweites nach sich ziehen.
+function personUnscheduledOneOnOne(personId) {
+  return data.meetings.find(meeting =>
+    meeting.type === 'oneOnOne' && meeting.personId === personId && !meeting.date) || null;
+}
+
+// Ein Klick, egal in welchem Zustand das naechste Gespraech steckt: geplantes
+// oeffnen, undatiertes einplanen, sonst gleich ein neues anlegen.
+function openNextOneOnOne(personId) {
+  const next = personNextOneOnOne(personId);
+  if (next) { openMeetingDetail(next.id); return; }
+  const draft = personUnscheduledOneOnOne(personId);
+  if (draft) { openScheduleMeetingDate(draft.id); return; }
+  openMeetingForm('oneOnOne', personId);
+}
+
+function oneOnOneDueLabel(dateISO) {
+  if (!dateISO) return 'ohne datum';
+  const days = Math.round((parseISO(dateISO) - parseISO(todayStr())) / 86400000);
+  if (days === 0) return 'heute';
+  if (days === 1) return 'morgen';
+  if (days <= 7) {
+    const weekday = new Date(`${dateISO}T12:00:00`).toLocaleDateString('de-AT', { weekday: 'short' }).replace('.', '');
+    return `${weekday.toLowerCase()} · in ${days} tagen`;
+  }
+  return `in ${days} tagen`;
 }
 
 function personAbsenceOnDate(personId, date) {
@@ -921,13 +949,18 @@ function personAbsenceOnDate(personId, date) {
   ) || null;
 }
 
-function teamFocusStatusReason(entry) {
-  if (entry.absenceToday) return entry.absenceToday.label || 'Abwesend';
-  if (entry.attentionLevel === 'low') return '';
-  if (entry.dueWaiting.length) return 'Urgieren';
-  if (entry.overPlanned) return 'Entlasten';
-  if (entry.underPlanned) return 'Einplanen';
-  if (entry.daysSinceOneOnOne === null || entry.oneOnOneStale) return '1:1 planen';
-  if (entry.openItems.length) return 'Unterstützen';
-  return '';
+// Sortierung der Karten. Bewusst nur aus dem, was die Karte selbst zeigt —
+// eine unsichtbare Rangfolge waere nicht nachvollziehbar. Freie Werktage und
+// Todo-Zahlen fehlen: die stehen in Planung und Todos.
+// "Nichts geplant" greift erst, wenn wirklich nichts da ist: wer Montag
+// anfaengt, hat einen kommenden Block und stand sonst trotzdem ganz oben,
+// waehrend die Karte darunter brav "ab 03.08." anzeigte.
+function teamFocusScore(entry) {
+  const nothingPlanned = !entry.activeBlocks.length
+    && !entry.upcomingBlocks.length
+    && !entry.overdueBlocks.length;
+  return (nothingPlanned && !entry.absenceToday ? 30 : 0)
+    + (entry.overdueBlocks.length * 20)
+    + (entry.oneOnOneMissing ? 24 : 0)
+    + (entry.drift ? (entry.drift.stale.length * 16) + (entry.drift.unplanned.length * 6) + (entry.drift.renamed.length * 3) : 0);
 }

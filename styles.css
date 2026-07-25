@@ -906,6 +906,50 @@ textarea,
 .person-avatar-md { width: 34px; height: 34px; font-size: 12px; }
 .person-avatar-lg { width: 48px; height: 48px; font-size: 15px; }
 
+.person-avatar-stack {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.person-avatar-count {
+  position: absolute;
+  top: -4px;
+  right: -6px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-elev);
+  color: var(--text-secondary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.person-avatar-count-ok {
+  border-color: color-mix(in srgb, var(--success) 48%, var(--border));
+  background: color-mix(in srgb, var(--success) 14%, var(--bg-elev));
+  color: color-mix(in srgb, var(--success) 76%, var(--text));
+}
+
+.person-avatar-count-warn {
+  border-color: color-mix(in srgb, var(--warning) 54%, var(--border));
+  background: color-mix(in srgb, var(--warning) 18%, var(--bg-elev));
+  color: color-mix(in srgb, var(--warning) 80%, var(--text));
+}
+
+.person-avatar-count-bad {
+  border-color: color-mix(in srgb, var(--danger) 56%, var(--border));
+  background: color-mix(in srgb, var(--danger) 18%, var(--bg-elev));
+  color: color-mix(in srgb, var(--danger) 82%, var(--text));
+}
+
 .person-chip-button {
   display: inline-flex;
   align-items: center;
@@ -2426,14 +2470,19 @@ textarea,
   align-items: start;
 }
 
-.review-meeting-stack {
-  display: grid;
-  gap: 8px;
-  min-width: 0;
+/* Bei fuenf bis sieben Leuten passen die Karten nebeneinander — dann steht
+   alles gleichzeitig da und niemand muss aufklappen. */
+.review-team-focus-card {
+  grid-column: 1 / -1;
 }
 
-.review-events-card {
-  grid-column: 1 / -1;
+/* Bewusst kein align-items:start — die Karten einer Reihe ziehen sich auf
+   dieselbe Hoehe, sonst franst das Raster bei unterschiedlich vielen
+   Bloecken aus. */
+.review-team-focus-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 8px;
 }
 
 .dashboard-links {
@@ -2549,17 +2598,6 @@ textarea,
 .dashboard-link-title {
   font-size: 11px;
   font-weight: 700;
-}
-
-.team-focus-tools {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin-left: auto;
-}
-
-.team-focus-tools .filters {
-  margin-bottom: 0;
 }
 
 .dashboard-link-meta {
@@ -2685,80 +2723,47 @@ textarea,
   white-space: nowrap;
 }
 
-.review-row {
-  display: block;
-  padding: 0;
-  margin-top: 4px;
+/* Kopf, Kacheln, Blockliste: die Kacheln stehen bei jeder Karte auf derselben
+   Hoehe, die Blockliste darunter nimmt den Rest und scrollt bei Bedarf. */
+.tf-card {
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px;
   border: 1px solid var(--border);
   border-left-width: 3px;
-  border-radius: 0;
-  cursor: pointer;
   background: var(--surface);
-  position: relative;
-  overflow: hidden;
-  transition: background-color 140ms ease, border-color 140ms ease;
+  transition: border-color 140ms ease;
 }
 
-.review-row summary {
+.tf-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--border));
+}
+
+.tf-card-head {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 8px;
-  padding: 7px 8px;
-  list-style: none;
 }
 
-.review-row summary::-webkit-details-marker {
-  display: none;
-}
+.tf-card-high { border-left-color: var(--danger); }
+.tf-card-medium { border-left-color: var(--warning); }
+.tf-card-low { border-left-color: var(--success); }
 
-.review-row-high {
-  border-color: var(--border);
-  border-left-color: var(--danger);
-  background: var(--surface);
-}
-
-.review-row-medium {
-  border-color: var(--border);
-  border-left-color: var(--warning);
-  background: var(--surface);
-}
-
-.review-row-low {
-  border-color: var(--border);
-  border-left-color: var(--success);
-  background: var(--surface);
-}
-
-.review-row-absent {
+.tf-card-absent {
   border-color: color-mix(in srgb, var(--text-muted) 36%, var(--border));
   border-left-color: var(--text-muted);
   background: color-mix(in srgb, var(--text-muted) 8%, var(--surface));
   color: var(--text-muted);
 }
 
-.review-row-absent .tf-name-link,
-.review-row-absent .tf-expanded-subline,
-.review-row-absent .tf-mini-dashboard {
+.tf-card-absent .tf-name-link,
+.tf-card-absent .tf-blocks,
+.tf-card-absent .tf-metric-row {
   filter: grayscale(1);
   opacity: 0.62;
-}
-
-.review-row:first-of-type {
-  margin-top: 0;
-}
-
-.review-row:last-child {
-  margin-bottom: 0;
-}
-
-.review-row:hover {
-  border-color: color-mix(in srgb, var(--accent) 38%, var(--border));
-  background: var(--interactive-hover-bg);
-}
-
-.review-row[open] {
-  background: var(--surface);
 }
 
 .review-row-title {
@@ -3037,36 +3042,6 @@ textarea,
   color: var(--success);
 }
 
-.tf-period-hint {
-  color: var(--text-muted);
-  font-weight: 400;
-  font-size: 11px;
-  letter-spacing: 0.02em;
-}
-
-.tf-main {
-  min-width: 0;
-  flex: 1;
-}
-
-.tf-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.tf-identity {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.tf-name-block {
-  min-width: 0;
-}
-
 .tf-name-line {
   min-width: 0;
   display: flex;
@@ -3074,82 +3049,168 @@ textarea,
   gap: 6px;
 }
 
-.tf-subline {
-  margin-top: 1px;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
+.tf-absent-mark {
+  flex-shrink: 0;
+  padding: 1px 4px;
+  border: 1px solid color-mix(in srgb, var(--text-muted) 42%, var(--border));
   color: var(--text-muted);
-  font-size: 10px;
-  letter-spacing: 0.06em;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.tf-metric-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.tf-blocks {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  align-content: start;
+  gap: 3px;
+  min-height: 0;
+}
+
+/* Drei Zeilen sind sichtbar, alles darueber scrollt in der Karte. */
+.tf-blocks-list {
+  display: grid;
+  align-content: start;
+  gap: 3px;
+  max-height: 84px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.tf-blocks-count {
+  padding: 0 3px;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 9px;
+}
+
+.tf-blocks-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
-.tf-expanded-subline {
-  display: none;
-  margin-top: 1px;
-  align-items: center;
-  gap: 5px;
+.tf-blocks-link {
+  padding: 0;
+  border: 0;
+  background: none;
   color: var(--text-muted);
-  font-size: 10px;
+  font: inherit;
   letter-spacing: 0.06em;
-  text-transform: uppercase;
+  cursor: pointer;
 }
 
-.review-row[open] .tf-subline {
-  display: none;
+.tf-blocks-link:hover { color: var(--accent); }
+
+.tf-block {
+  display: grid;
+  grid-template-columns: 3px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 8px 5px 0;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-elev) 78%, var(--surface));
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
-.review-row[open] .tf-expanded-subline {
-  display: inline-flex;
+.tf-block:hover {
+  border-color: color-mix(in srgb, var(--accent) 52%, var(--border));
+  background: var(--interactive-hover-bg);
 }
 
-.tf-subline-label {
-  color: var(--text-muted);
+.tf-block-mark {
+  align-self: stretch;
+  background: var(--accent);
 }
 
-.tf-subline-value {
-  color: var(--text-primary);
+.tf-block-upcoming .tf-block-mark {
+  background: color-mix(in srgb, var(--text-muted) 60%, transparent);
+}
+
+.tf-block-overdue {
+  border-color: color-mix(in srgb, var(--danger) 50%, var(--border));
+  background: color-mix(in srgb, var(--danger) 10%, var(--bg-elev));
+}
+
+.tf-block-overdue .tf-block-mark { background: var(--danger); }
+
+.tf-block-overdue .tf-block-timing {
+  color: color-mix(in srgb, var(--danger) 82%, var(--text));
   font-weight: 700;
 }
 
-.tf-subline-sep {
-  opacity: 0.5;
+/* Fertig von der Person, blockiert bei jemand anderem. */
+.tf-block-handover .tf-block-mark {
+  background: color-mix(in srgb, var(--warning) 78%, transparent);
 }
 
-.tf-metrics {
-  margin-top: 8px;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+.tf-block-handover .tf-block-title { color: var(--text-secondary); }
+
+.tf-block-handover .tf-block-timing {
+  color: color-mix(in srgb, var(--warning) 80%, var(--text));
+  font-weight: 700;
+}
+
+.tf-block-body {
+  display: flex;
+  align-items: baseline;
   gap: 6px;
+  min-width: 0;
 }
 
-.tf-mini-dashboard {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
-  padding: 0 8px 8px 46px;
+.tf-block-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 600;
 }
 
-.tf-expand {
-  width: 18px;
-  height: 18px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.tf-block-upcoming .tf-block-title { color: var(--text-secondary); }
+
+.tf-block-ref {
+  flex-shrink: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--accent);
+}
+
+.tf-block-timing {
+  flex-shrink: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10px;
   color: var(--text-muted);
-  border: 1px solid var(--border);
-  background: var(--bg-elev);
+  white-space: nowrap;
 }
 
-.tf-expand::before {
-  content: "+";
-  line-height: 1;
+.tf-blocks-empty {
+  padding: 6px 8px;
+  border: 1px dashed var(--border);
+  color: var(--text-muted);
+  font-size: 11px;
 }
 
-.review-row[open] .tf-expand::before {
-  content: "-";
-}
 
 .tf-metric {
   display: grid;
@@ -3227,30 +3288,6 @@ button.tf-metric {
 .tf-sig-ok .tf-metric-value { color: color-mix(in srgb, var(--success) 72%, var(--text)); }
 .tf-sig-warn .tf-metric-value { color: color-mix(in srgb, var(--warning) 78%, var(--text)); }
 .tf-sig-bad .tf-metric-value { color: color-mix(in srgb, var(--danger) 82%, var(--text)); }
-
-.tf-state {
-  max-width: 160px;
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1.15;
-  overflow-wrap: anywhere;
-  text-align: right;
-  padding: 4px 6px;
-  border-radius: 0;
-  border: 1px solid currentColor;
-  background: var(--bg-elev);
-}
-
-.tf-state-high { color: var(--danger); }
-.tf-state-medium { color: var(--warning); }
-.tf-state-low { color: var(--success); }
-.tf-state-absent { color: var(--text-muted); }
-
-.tf-util {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 11px;
-  color: var(--text-muted);
-}
 
 .stat-todo { color: var(--blue); background: var(--stat-todo-bg); }
 .stat-waiting { color: var(--warning); background: var(--stat-waiting-bg); }
@@ -5706,13 +5743,11 @@ a.jira-ticket-key:hover { text-decoration: underline; }
   .overview-search-toggle { justify-self: stretch; }
   .overview-meta { justify-self: start; }
   .review-due-summary { grid-template-columns: 1fr; }
-  .review-row { align-items: flex-start; }
   .oneonone-carryover-signal { grid-template-columns: 42px minmax(0, 1fr); }
   .oneonone-carryover-signal .badge { justify-self: start; }
   .oneonone-carryover-text { grid-column: 1 / -1; }
   .notes-page-head .overview-toolbar { grid-template-columns: 1fr; }
-  .tf-head { flex-direction: column; align-items: stretch; }
-  .tf-metrics { grid-template-columns: 1fr; }
+  .tf-metric-row { grid-template-columns: 1fr; }
   .review-row-side { align-items: flex-start; min-width: 0; }
   .team-detail-stats { grid-template-columns: 1fr; }
   .team-detail-topline { align-items: flex-start; }

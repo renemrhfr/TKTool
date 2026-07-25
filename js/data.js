@@ -1,7 +1,7 @@
 // ============================================================
 // DATA LAYER — File System Access API
 // ============================================================
-const APP_VERSION = '1.0.29';
+const APP_VERSION = '1.0.30';
 const DATA_FILENAME = 'tktool-data.json';
 const JIRA_SYNC_FILENAME = 'jira-tickets.json';
 const JIRA_QUERY_MAX_RESULTS = 100;
@@ -12,7 +12,6 @@ const IDB_DATA_CACHE_KEY = 'dataCache';
 const DEVICE_ID_KEY = 'tktool-device-id';
 const THEME_KEY = 'tktool-theme';
 const OVERVIEW_LAYOUT_KEY = 'tktool-overview-layout';
-const REVIEW_PERIOD_KEY = 'tktool-review-period';
 const JIRA_BASE_KEY = 'tktool-jira-base';
 const JIRA_STATUS_SETTING_ID = 'jira-status';
 const BACKUP_SETTING_ID = 'backup';

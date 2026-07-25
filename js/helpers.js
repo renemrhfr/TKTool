@@ -370,12 +370,22 @@ function personAccentColor(person) {
   return palette[Math.abs(hash) % palette.length];
 }
 
+// `count` haengt eine kleine Zahl an den Kreis (offene Jira-Tickets im
+// Teamfokus). `countTone` faerbt sie nach Drift, nicht nach Menge: viele
+// Tickets sind normal, ein veralteter Block ist es nicht.
 function personAvatar(person, size = 'md', options = {}) {
   if (!person) return '';
-  const { absent = false } = options;
-  return `
+  const { absent = false, count = null, countTone = '', countTitle = '' } = options;
+  const avatar = `
     <span class="person-avatar-badge person-avatar-${size} ${absent ? 'is-absent' : ''}" style="--person-accent:${personAccentColor(person)}" aria-hidden="true">
       ${esc(personInitials(person))}
+    </span>
+  `;
+  if (count === null || count === '') return avatar;
+  return `
+    <span class="person-avatar-stack person-avatar-stack-${size}"${countTitle ? ` title="${esc(countTitle)}"` : ''}>
+      ${avatar}
+      <span class="person-avatar-count ${countTone ? `person-avatar-count-${countTone}` : ''}">${esc(String(count))}</span>
     </span>
   `;
 }

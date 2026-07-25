@@ -128,6 +128,44 @@ function personSupportInWindow(p, startISO, endISO) {
   return p.supportMonate.some(m => months.has(m));
 }
 
+// Woran sitzt jemand heute? Abwesenheiten bleiben aussen vor, die sind ein
+// eigener Zustand. Sortiert nach Ende: was zuerst faellig wird, steht vorne.
+function personActiveBlocks(personId, date = todayStr()) {
+  return (data.blocks || [])
+    .filter(b => b.personId === personId
+      && b.typ !== 'abwesenheit'
+      && !b.done
+      && !isBlockParked(b)
+      && b.start <= date
+      && b.end >= date)
+    .sort((a, b) => a.end.localeCompare(b.end));
+}
+
+function personCurrentBlock(personId, date = todayStr()) {
+  return personActiveBlocks(personId, date)[0] || null;
+}
+
+// Abgelaufen, aber nie auf "erledigt" gesetzt. Faellt sonst aus jeder
+// Ansicht heraus, weil das Ende in der Vergangenheit liegt — genau deshalb
+// ist es das ehrlichste "hier stimmt was nicht"-Signal.
+function personOverdueBlocks(personId) {
+  return (data.blocks || [])
+    .filter(b => b.personId === personId && isBlockOverdue(b))
+    .sort((a, b) => a.end.localeCompare(b.end));
+}
+
+// Was danach ansteht, bis zum Ende des gewaehlten Fensters.
+function personUpcomingBlocks(personId, date = todayStr(), until = null) {
+  return (data.blocks || [])
+    .filter(b => b.personId === personId
+      && b.typ !== 'abwesenheit'
+      && !b.done
+      && !isBlockParked(b)
+      && b.start > date
+      && (!until || b.start <= until))
+    .sort((a, b) => a.start.localeCompare(b.start));
+}
+
 // --- Capacity for a person in a window ---
 function personCapacity(personId, winStart, winEnd) {
   const werktage = workdaysBetween(winStart, winEnd);

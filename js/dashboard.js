@@ -1,27 +1,6 @@
 // ============================================================
 // DASHBOARD / REVIEWS
 // ============================================================
-function reviewPeriod() {
-  if (viewState.reviewPeriod === 'month' || viewState.reviewPeriod === 'week') {
-    return viewState.reviewPeriod;
-  }
-  try {
-    const saved = localStorage.getItem(REVIEW_PERIOD_KEY);
-    return saved === 'month' ? 'month' : 'week';
-  } catch {
-    return 'week';
-  }
-}
-
-function setReviewPeriod(period) {
-  const next = period === 'month' ? 'month' : 'week';
-  viewState.reviewPeriod = next;
-  try {
-    localStorage.setItem(REVIEW_PERIOD_KEY, next);
-  } catch {}
-  render();
-}
-
 function renderReviewItemList(items, emptyText) {
   if (!items.length) return `<div style="color:var(--text-muted);font-size:14px">${emptyText}</div>`;
   return `<ul class="item-list">${items.map(item => renderItem(item)).join('')}</ul>`;
@@ -239,16 +218,150 @@ function renderDashboardReviewAction() {
   `;
 }
 
+// Die Zahl am Avatar ist die Ticketmenge — die will man auf einen Blick sehen,
+// ohne aufzuklappen. Die Farbe kommt dagegen aus der Drift: viele Tickets sind
+// normal, ein Block auf einem erledigten Ticket ist es nicht.
+function teamFocusJiraBadge(entry) {
+  // Ohne Mapping gibt es nichts zu zaehlen, und eine 0 waere nur Rauschen —
+  // "keine Tickets" steht im aufgeklappten Zustand als Kachel.
+  if (entry.jiraTickets === null || !entry.jiraTickets.length) return {};
+  const drift = entry.drift;
+  const parts = [
+    `${entry.jiraTickets.length} offene tickets`,
+    drift?.unplanned.length ? `${drift.unplanned.length} ohne block` : '',
+    drift?.stale.length ? `${drift.stale.length} block veraltet` : '',
+  ].filter(Boolean);
+  return {
+    count: entry.jiraTickets.length,
+    countTone: drift?.stale.length ? 'bad' : drift?.unplanned.length ? 'warn' : 'ok',
+    countTitle: parts.join(' · '),
+  };
+}
+
+// "urlaub bis 12.08." — ohne das Enddatum weiss man nur, dass jemand heute
+// weg ist, nicht ob man morgen wieder mit ihm rechnen kann.
+function teamFocusAbsenceLabel(absence) {
+  const label = (absence.label || 'abwesend').toLocaleLowerCase('de-AT');
+  return absence.end ? `${label} bis ${formatDateShort(absence.end)}` : label;
+}
+
+// Haengt das Ticket hinter dem Block in einem Uebergabe-Status (Review, QA),
+// dann ist die Person fertig und wartet auf jemand anderen. Fuer die Frage
+// "wen muss ich anstossen" ist das eine andere Antwort als "arbeitet dran".
+function teamFocusBlockHandoverStatus(block) {
+  if (!block.jiraRef) return '';
+  const ref = jiraStatusForBlock(block);
+  return ref && isJiraHandoverStatus(ref.status) ? String(ref.status || '') : '';
+}
+
+// Woran die Person arbeitet und was als naechstes kommt. Ein Klick fuehrt in
+// die Planung.
+function renderTeamFocusBlockRow(block, kind) {
+  const handover = kind === 'active' ? teamFocusBlockHandoverStatus(block) : '';
+  const timing = kind === 'overdue' ? `seit ${formatDateShort(block.end)}`
+    : kind === 'upcoming' ? `ab ${formatDateShort(block.start)}`
+    : handover ? 'wartet'
+    : `noch ${workdaysBetween(todayStr(), block.end)} wt`;
+  const state = kind === 'overdue' ? 'überfällig — nicht erledigt'
+    : handover ? `wartet auf ${handover}`
+    : '';
+  return `
+    <button class="tf-block tf-block-${kind} ${handover ? 'tf-block-handover' : ''}" type="button" onclick="navigate('planung')" title="${esc([`${block.label || 'Block'} · ${formatDate(block.start)} – ${formatDate(block.end)}`, state].filter(Boolean).join('\n'))}">
+      <span class="tf-block-mark"></span>
+      <span class="tf-block-body">
+        <span class="tf-block-title">${esc(block.label || 'Block')}</span>
+        ${block.jiraRef ? `<span class="tf-block-ref">${esc(block.jiraRef)}</span>` : ''}
+      </span>
+      <span class="tf-block-timing">${esc(timing)}</span>
+    </button>
+  `;
+}
+
+// Alle Bloecke, aber ab dem vierten scrollt die Liste in sich. So zieht ein
+// Teammitglied mit sieben Bloecken die Nachbarkarte nicht in die Laenge, und
+// trotzdem geht nichts verloren. Laufende stehen vor kommenden.
+function renderTeamFocusBlocks(entry) {
+  // Ueberfaellige zuerst: sie sind das einzige, was hier eine Handlung
+  // erzwingt, und wuerden sonst im Scrollbereich verschwinden.
+  const blocks = [
+    ...entry.overdueBlocks.map(block => ({ block, kind: 'overdue' })),
+    ...entry.activeBlocks.map(block => ({ block, kind: 'active' })),
+    ...entry.upcomingBlocks.map(block => ({ block, kind: 'upcoming' })),
+  ];
+  const empty = entry.absenceToday
+    ? `${esc(teamFocusAbsenceLabel(entry.absenceToday))} · nichts geplant`
+    : 'nichts geplant';
+  return `
+    <div class="tf-blocks">
+      <div class="tf-blocks-head">
+        <span>Arbeitet an${blocks.length > 1 ? ` <span class="tf-blocks-count">${blocks.length}</span>` : ''}</span>
+        <button class="tf-blocks-link" type="button" onclick="navigate('planung')">planung öffnen</button>
+      </div>
+      <div class="tf-blocks-list">
+        ${blocks.length
+          ? blocks.map(({ block, kind }) => renderTeamFocusBlockRow(block, kind)).join('')
+          : `<div class="tf-blocks-empty">${empty}</div>`}
+      </div>
+    </div>
+  `;
+}
+
+function renderTeamFocusJiraMetric(entry) {
+  if (!jiraSyncData) return '';
+  if (entry.jiraTickets === null) {
+    return `
+      <button class="tf-metric tf-metric-action" type="button" onclick="event.preventDefault(); event.stopPropagation(); openPersonForm('${entry.person.id}')" title="jira-user im Profil ergänzen">
+        <span class="tf-metric-label">Jira</span>
+        <span class="tf-metric-value">&ndash;</span>
+        <span class="tf-metric-note">kein jira-user</span>
+      </button>`;
+  }
+  const drift = entry.drift;
+  const driftParts = [];
+  if (drift.unplanned.length) driftParts.push(`${drift.unplanned.length} nicht eingeplant`);
+  if (drift.stale.length) driftParts.push(`${drift.stale.length} ${drift.stale.length === 1 ? 'block' : 'blocks'} veraltet`);
+  const driftDetail = [
+    drift.unplanned.length ? `Ohne Block: ${drift.unplanned.map(t => t.key).join(', ')}` : '',
+    drift.stale.length ? `Veraltet: ${drift.stale.map(b => `${b.label || b.jiraRef} (${b.jiraRef})`).join(', ')}` : '',
+  ].filter(Boolean).join('\n');
+  const jiraSig = drift.stale.length ? 'tf-sig-bad' : drift.unplanned.length ? 'tf-sig-warn' : 'tf-sig-ok';
+  return `
+    <button class="tf-metric tf-metric-action ${jiraSig}" type="button" onclick="event.preventDefault(); event.stopPropagation(); openPersonById('${entry.person.id}')" title="${esc(`Jira-Tickets von ${entry.person.name} ansehen (Stand: ${jiraSyncAgeLabel() || 'unbekannt'})${driftDetail ? '\n' + driftDetail : ''}`)}">
+      <span class="tf-metric-label">Jira</span>
+      <span class="tf-metric-value">${entry.jiraTickets.length ? `${entry.jiraTickets.length} tickets` : 'keine tickets'}</span>
+      ${driftParts.length ? `<span class="tf-metric-note">${driftParts.join(' · ')}</span>` : ''}
+    </button>`;
+}
+
+// Vorschau statt Rueckschau: bei woechentlichem Rhythmus ist "wann war das
+// letzte" immer dieselbe Antwort. Der Klick fuehrt in jedem Zustand ans Ziel —
+// notfalls legt er das Gespraech gleich an.
+function renderTeamFocusOneOnOneMetric(entry) {
+  const meeting = entry.nextOneOnOne || entry.unscheduledOneOnOne
+    || { id: '', type: 'oneOnOne', personId: entry.person.id, date: todayStr() };
+  const carryover = carryoverCount(oneOnOneCarryover(meeting));
+  const value = entry.nextOneOnOne
+    ? oneOnOneDueLabel(entry.nextOneOnOne.date)
+    : entry.unscheduledOneOnOne ? 'nicht terminiert' : 'keines geplant';
+  const note = carryover
+    ? `${carryover} mitzunehmen`
+    : entry.nextOneOnOne ? 'nichts offen' : 'anlegen';
+  const title = entry.nextOneOnOne ? 'Nächstes 1:1 öffnen'
+    : entry.unscheduledOneOnOne ? '1:1 einplanen'
+    : `Neues 1:1 mit ${entry.person.name} anlegen`;
+  return `
+    <button class="tf-metric tf-metric-action ${entry.nextOneOnOne ? 'tf-sig-ok' : 'tf-sig-warn'}" type="button" onclick="event.preventDefault(); event.stopPropagation(); openNextOneOnOne('${entry.person.id}')" title="${esc(title)}">
+      <span class="tf-metric-label">Nächstes 1:1</span>
+      <span class="tf-metric-value">${esc(value)}</span>
+      <span class="tf-metric-note">${esc(note)}</span>
+    </button>`;
+}
+
 function renderReviews() {
-  const period = reviewPeriod();
   const currentMonthLabel = currentMonth();
   const dueItems = data.items
     .filter(item => item.status !== 'done' && item.status !== 'backlog' && item.date && item.date <= todayStr())
     .sort(compareByDueDate);
-  const upcomingOneOnOnes = data.meetings
-    .filter(meeting => meeting.type === 'oneOnOne' && (!meeting.date || meeting.date >= todayStr()))
-    .sort(compareUpcomingMeetingDate)
-    .slice(0, 6);
   const upcomingMeetings = data.meetings
     .filter(meeting => meeting.type !== 'oneOnOne' && meeting.date && meeting.date >= todayStr())
     .sort((a, b) => a.date.localeCompare(b.date))
@@ -257,62 +370,28 @@ function renderReviews() {
     .filter(marker => marker.date && marker.date >= todayStr())
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(0, 5);
-  const periodDays = period === 'month' ? 30 : 7;
-  const planStart = todayStr();
-  const planEnd = dateShift(planStart, periodDays - 1);
   const today = todayStr();
-  const todoMonth = currentMonth();
   const peopleAttention = data.persons
     .filter(person => person.type !== 'kontakt')
     .map(person => {
-      const openItems = data.items.filter(item => item.personId === person.id && item.month === todoMonth && item.status !== 'done');
-      const waitingItems = openItems.filter(item => item.status === 'waiting');
-      const dueWaiting = waitingItems.filter(item => item.date && item.date <= today);
-      const dueTodos = openItems.filter(item => item.status === 'todo' && item.date && item.date <= today);
-      const lastOneOnOne = personLastOneOnOneDate(person.id);
       const absenceToday = personAbsenceOnDate(person.id, today);
-      const cap = personCapacity(person.id, planStart, planEnd);
-      const daysSinceOneOnOne = lastOneOnOne ? Math.round((parseISO(today) - parseISO(lastOneOnOne)) / 86400000) : null;
-      const utilization = cap.werktage > 0 ? Math.round((cap.allokiert / cap.werktage) * 100) : 0;
-      const overPlanned = cap.frei < 0;
-      const underPlanned = !overPlanned && cap.werktage > 0 && utilization < 60;
-      const oneOnOneStale = daysSinceOneOnOne !== null && daysSinceOneOnOne > 7;
-      const oneOnOneVeryStale = daysSinceOneOnOne !== null && daysSinceOneOnOne > 21;
-      const attentionScore =
-        (dueWaiting.length * 20) +
-        (dueTodos.length * 12) +
-        (waitingItems.length * 10) +
-        (openItems.length * 4) +
-        (overPlanned ? 45 + Math.abs(cap.frei) * 3 : 0) +
-        (underPlanned ? 34 : 0) +
-        (oneOnOneVeryStale ? 20 : oneOnOneStale ? 12 : 0) +
-        (!lastOneOnOne ? 18 : 0);
-      const attentionLevel = attentionScore >= 50 ? 'high' : attentionScore >= 20 ? 'medium' : 'low';
-      const workloadHint = cap.werktage > 0
-        ? `${cap.allokiert}/${cap.werktage} WT belegt · ${utilization}%`
-        : '0/0 WT belegt · 0%';
-      let planningState;
-      let planningHint;
-      if (cap.werktage === 0) {
-        planningState = 'kein Plan';
-        planningHint = 'kein Planfenster';
-      } else if (overPlanned) {
-        planningState = 'entlasten';
-        planningHint = `${Math.abs(cap.frei)} WT überplant`;
-      } else if (underPlanned) {
-        planningState = 'unterplant';
-        planningHint = `${cap.frei} WT frei`;
-      } else {
-        planningState = 'ausgeglichen';
-        planningHint = cap.frei === 0 ? 'voll belegt' : `${cap.frei} WT frei`;
-      }
-      return {
-        person, openItems, waitingItems, dueWaiting, dueTodos,
-        absenceToday,
-        lastOneOnOne, daysSinceOneOnOne, oneOnOneStale, oneOnOneVeryStale,
-        attentionScore, attentionLevel, cap, utilization, workloadHint, planningState, planningHint,
-        overPlanned, underPlanned,
+      const activeBlocks = personActiveBlocks(person.id, today);
+      const overdueBlocks = personOverdueBlocks(person.id);
+      // Ohne Fenster: die Liste scrollt ohnehin, und "ab 12.08." sagt mehr
+      // als eine Stichtagsgrenze, die man nicht mehr einstellen kann.
+      const upcomingBlocks = personUpcomingBlocks(person.id, today);
+      const jiraTickets = jiraTicketsForPerson(person);
+      const drift = jiraDriftForPerson(person);
+      const nextOneOnOne = personNextOneOnOne(person.id);
+      const unscheduledOneOnOne = nextOneOnOne ? null : personUnscheduledOneOnOne(person.id);
+      const oneOnOneMissing = !nextOneOnOne;
+      const entry = {
+        person, absenceToday, activeBlocks, overdueBlocks, upcomingBlocks,
+        jiraTickets, drift, nextOneOnOne, unscheduledOneOnOne, oneOnOneMissing,
       };
+      entry.attentionScore = teamFocusScore(entry);
+      entry.attentionLevel = entry.attentionScore >= 50 ? 'high' : entry.attentionScore >= 20 ? 'medium' : 'low';
+      return entry;
     })
     .sort((a, b) => {
       if (!!a.absenceToday !== !!b.absenceToday) return a.absenceToday ? 1 : -1;
@@ -329,126 +408,40 @@ function renderReviews() {
     <div class="review-grid">
       <div class="card review-team-focus-card">
         <div class="card-header">
-          <span class="card-title">Teamfokus <span class="tf-period-hint">&middot; nächste ${periodDays} Tage</span></span>
-          <div class="team-focus-tools">
-            <div class="filters">
-              <button class="filter-btn ${period === 'week' ? 'active' : ''}" onclick="setReviewPeriod('week')">7 Tage</button>
-              <button class="filter-btn ${period === 'month' ? 'active' : ''}" onclick="setReviewPeriod('month')">30 Tage</button>
-            </div>
-            <span
-              class="info-chip"
-              title="Ranking nach Aufmerksamkeitsbedarf. Signale: offene Items im aktuellen Todo-Monat, Planungsauslastung (nächste ${periodDays} Tage), 1:1-Abstand (>7d markiert, >21d stark). Abwesenheit heute wird grau markiert."
-              aria-label="Erklärung zum Teamfokus-Ranking"
-            >?</span>
-          </div>
+          <span class="card-title">Teamfokus</span>
         </div>
         <div class="review-team-focus-list">
         ${peopleAttention.length ? peopleAttention.map(entry => {
-          const oneOnOneLabel = entry.daysSinceOneOnOne === null
-            ? 'nie'
-            : entry.daysSinceOneOnOne < -1 ? `in ${Math.abs(entry.daysSinceOneOnOne)} Tagen`
-            : entry.daysSinceOneOnOne === -1 ? 'morgen'
-            : entry.daysSinceOneOnOne === 0 ? 'heute'
-            : entry.daysSinceOneOnOne === 1 ? 'gestern'
-            : `vor ${entry.daysSinceOneOnOne} Tagen`;
-          const attentionLabel = teamFocusStatusReason(entry);
-          const rowStateClass = entry.absenceToday ? 'absent' : entry.attentionLevel;
-          const absenceLabel = entry.absenceToday ? (entry.absenceToday.label || 'Abwesenheit') : '';
-          const lastOneOnOneMeeting = personLastOneOnOneMeeting(entry.person.id);
-          const itemLabel = entry.dueWaiting.length
-            ? `${entry.openItems.length} offen · ${entry.dueWaiting.length} fällig wartet`
-            : entry.waitingItems.length
-              ? `${entry.openItems.length} offen · ${entry.waitingItems.length} wartet`
-            : entry.openItems.length
-              ? `${entry.openItems.length} offen`
-              : 'keine offenen Items';
-          const supportItems = entry.openItems.filter(item => item.status !== 'waiting');
+          const cardStateClass = entry.absenceToday ? 'absent' : entry.attentionLevel;
           const supportThisMonth = personSupportInMonth(entry.person, currentMonthLabel);
-          const detailTitle = `${attentionLabel} | ${itemLabel} | ${entry.workloadHint} | 1:1 ${oneOnOneLabel}${supportThisMonth ? ` | Support ${formatMonth(currentMonthLabel)}` : ''}${absenceLabel ? ' | heute: ' + absenceLabel : ''}`;
           return `
-          <details class="review-row review-row-${rowStateClass}" title="${esc(detailTitle)}">
-            <summary>
-              <button class="tf-person-link" type="button" onclick="event.preventDefault(); event.stopPropagation(); openPersonById('${entry.person.id}')" title="Teammitglied öffnen">
-                ${personAvatar(entry.person, 'md', { absent: !!entry.absenceToday })}
+          <div class="tf-card tf-card-${cardStateClass}">
+            <div class="tf-card-head">
+              <button class="tf-person-link" type="button" onclick="openPersonById('${entry.person.id}')" title="Teammitglied öffnen">
+                ${personAvatar(entry.person, 'md', { absent: !!entry.absenceToday, ...teamFocusJiraBadge(entry) })}
               </button>
-              <div class="tf-main">
-                <div class="tf-name-line">
-                  <button class="review-row-title tf-name-link" type="button" onclick="event.preventDefault(); event.stopPropagation(); openPersonById('${entry.person.id}')" title="Teammitglied öffnen">${esc(entry.person.name)}</button>
-                  ${supportThisMonth ? `<span class="tl-sup-badge" title="Support ${esc(formatMonth(currentMonthLabel))}">sup</span>` : ''}
-                </div>
-                <div class="tf-expanded-subline">
-                  <span class="tf-subline-label">Planung</span>
-                  <span class="tf-subline-value">${entry.planningState}</span>
-                  <span class="tf-subline-sep">·</span>
-                  <span>${entry.planningHint}</span>
-                </div>
+              <div class="tf-name-line">
+                <button class="review-row-title tf-name-link" type="button" onclick="openPersonById('${entry.person.id}')" title="Teammitglied öffnen">${esc(entry.person.name)}</button>
+                ${supportThisMonth ? `<span class="tl-sup-badge" title="Support ${esc(formatMonth(currentMonthLabel))}">sup</span>` : ''}
+                ${entry.absenceToday ? `<span class="tf-absent-mark" title="${esc(`${entry.absenceToday.label || 'Abwesend'} · ${formatDate(entry.absenceToday.start)} – ${formatDate(entry.absenceToday.end)}`)}">${esc(teamFocusAbsenceLabel(entry.absenceToday))}</span>` : ''}
               </div>
-              <div class="review-row-side">
-                ${attentionLabel ? `<div class="tf-state tf-state-${rowStateClass}">${esc(attentionLabel)}</div>` : ''}
-                <div class="tf-util">${entry.openItems.length} offen</div>
-              </div>
-              <span class="tf-expand" aria-hidden="true"></span>
-            </summary>
-            <div class="tf-mini-dashboard">
-              ${jiraSyncData ? (() => {
-                const personJiraTickets = jiraTicketsForPerson(entry.person);
-                if (personJiraTickets === null) {
-                  return `
-                    <button class="tf-metric tf-metric-action" type="button" onclick="event.preventDefault(); event.stopPropagation(); openPersonForm('${entry.person.id}')" title="jira-user im Profil ergänzen">
-                      <span class="tf-metric-label">Jira</span>
-                      <span class="tf-metric-value">&ndash;</span>
-                      <span class="tf-metric-note">kein jira-user</span>
-                    </button>`;
-                }
-                const drift = jiraDriftForPerson(entry.person);
-                const driftParts = [];
-                if (drift.unplanned.length) driftParts.push(`${drift.unplanned.length} nicht eingeplant`);
-                if (drift.stale.length) driftParts.push(`${drift.stale.length} ${drift.stale.length === 1 ? 'block' : 'blocks'} veraltet`);
-                const driftDetail = [
-                  drift.unplanned.length ? `Ohne Block: ${drift.unplanned.map(t => t.key).join(', ')}` : '',
-                  drift.stale.length ? `Veraltet: ${drift.stale.map(b => `${b.label || b.jiraRef} (${b.jiraRef})`).join(', ')}` : '',
-                ].filter(Boolean).join('\n');
-                const jiraSig = driftParts.length ? 'tf-sig-warn' : 'tf-sig-ok';
-                return `
-                  <button class="tf-metric tf-metric-action ${jiraSig}" type="button" onclick="event.preventDefault(); event.stopPropagation(); openPersonById('${entry.person.id}')" title="${esc(`Jira-Tickets von ${entry.person.name} ansehen (Stand: ${jiraSyncAgeLabel() || 'unbekannt'})${driftDetail ? '\n' + driftDetail : ''}`)}">
-                    <span class="tf-metric-label">Jira</span>
-                    <span class="tf-metric-value">${personJiraTickets.length ? `${personJiraTickets.length} tickets` : 'keine tickets'}</span>
-                    ${driftParts.length ? `<span class="tf-metric-note">${driftParts.join(' · ')}</span>` : ''}
-                  </button>`;
-              })() : ''}
-              <button class="tf-metric tf-metric-action ${entry.overPlanned ? 'tf-sig-bad' : entry.underPlanned ? 'tf-sig-warn' : 'tf-sig-ok'}" type="button" onclick="event.preventDefault(); event.stopPropagation(); openPersonById('${entry.person.id}')" title="Teammitglied öffnen">
-                <span class="tf-metric-label">Workload</span>
-                <span class="tf-metric-value">${entry.workloadHint}</span>
-                <span class="tf-metric-note">${entry.planningState}</span>
-              </button>
-              <button class="tf-metric tf-metric-action ${entry.daysSinceOneOnOne === null || entry.oneOnOneVeryStale ? 'tf-sig-bad' : entry.oneOnOneStale ? 'tf-sig-warn' : 'tf-sig-ok'}" type="button" onclick="event.preventDefault(); event.stopPropagation(); ${lastOneOnOneMeeting ? `openMeetingDetail('${lastOneOnOneMeeting.id}')` : `openPersonById('${entry.person.id}')`}" title="${lastOneOnOneMeeting ? 'Letztes 1:1 öffnen' : 'Kein 1:1 vorhanden'}">
-                <span class="tf-metric-label">Letztes 1:1</span>
-                <span class="tf-metric-value">${entry.lastOneOnOne ? oneOnOneLabel : 'noch keines'}</span>
-              </button>
-              <button class="tf-metric tf-metric-action ${entry.dueWaiting.length ? 'tf-sig-bad' : (supportItems.length || entry.waitingItems.length) ? 'tf-sig-warn' : 'tf-sig-ok'}" type="button" onclick="event.preventDefault(); event.stopPropagation(); openPersonTodos('${entry.person.id}')" title="Todo-Liste nach ${esc(entry.person.name)} filtern">
-                <span class="tf-metric-label">Items</span>
-                <span class="tf-metric-value">${itemLabel}</span>
-                <span class="tf-metric-note">${entry.dueWaiting.length ? 'nachfassen' : supportItems.length ? 'unterstützen' : entry.waitingItems.length ? 'warten auf' : 'alles erledigt'}</span>
-              </button>
             </div>
-          </details>`;
+            <div class="tf-metric-row">
+              ${renderTeamFocusJiraMetric(entry)}
+              ${renderTeamFocusOneOnOneMetric(entry)}
+            </div>
+            ${renderTeamFocusBlocks(entry)}
+          </div>`;
         }).join('') : '<div style="color:var(--text-muted);font-size:14px">Keine Teammitglieder vorhanden</div>'}
-              </div>
-            </div>
-
-      <div class="review-meeting-stack">
-        <div class="card">
-          <div class="card-header"><span class="card-title">Nächste Meetings</span></div>
-          ${renderReviewMeetingList(upcomingMeetings, 'Keine kommenden Meetings')}
-        </div>
-
-        <div class="card">
-          <div class="card-header"><span class="card-title">Nächste 1:1</span></div>
-          ${renderReviewMeetingList(upcomingOneOnOnes, 'Keine kommenden 1:1s')}
         </div>
       </div>
 
-      <div class="card review-events-card">
+      <div class="card">
+        <div class="card-header"><span class="card-title">Nächste Meetings</span></div>
+        ${renderReviewMeetingList(upcomingMeetings, 'Keine kommenden Meetings')}
+      </div>
+
+      <div class="card">
         <div class="card-header"><span class="card-title">Events</span></div>
         ${renderReviewMarkerList(upcomingMarkers, 'Keine kommenden Events')}
       </div>
