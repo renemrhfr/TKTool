@@ -370,9 +370,9 @@ function personAccentColor(person) {
   return palette[Math.abs(hash) % palette.length];
 }
 
-// `count` haengt eine kleine Zahl an den Kreis (offene Jira-Tickets im
-// Teamfokus). `countTone` faerbt sie nach Drift, nicht nach Menge: viele
-// Tickets sind normal, ein veralteter Block ist es nicht.
+// `count` haengt eine kleine Zahl an den Kreis (im Teamfokus: die Punkte, die
+// Handlungsbedarf haben). `countTone` faerbt sie nach Schwere, nicht nach
+// Menge — Arbeitsmenge ist kein Signal, ein veralteter Block schon.
 function personAvatar(person, size = 'md', options = {}) {
   if (!person) return '';
   const { absent = false, count = null, countTone = '', countTitle = '' } = options;

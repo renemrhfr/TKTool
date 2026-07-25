@@ -3068,18 +3068,64 @@ textarea,
 
 .tf-blocks {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
   align-content: start;
   gap: 3px;
   min-height: 0;
 }
 
-/* Drei Zeilen sind sichtbar, alles darueber scrollt in der Karte. */
+.tf-blocks-scroll {
+  position: relative;
+  min-height: 0;
+}
+
+/* Dass die Liste weitergeht, muss man sehen, bevor man scrollt: der Verlauf
+   schneidet die vierte Zeile an, die Zeile darunter sagt wie viele fehlen.
+   Wo scroll-driven animations unterstuetzt werden, blendet beides am
+   Listenende aus. */
+.tf-blocks-more .tf-blocks-scroll::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 16px;
+  pointer-events: none;
+  background: linear-gradient(to top, var(--surface), transparent);
+}
+
+.tf-blocks-hint {
+  padding-top: 1px;
+  color: color-mix(in srgb, var(--accent) 70%, var(--text-muted));
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+@supports (animation-timeline: scroll()) {
+  .tf-blocks-more { timeline-scope: --tf-blocks-scroll; }
+  .tf-blocks-more .tf-blocks-list { scroll-timeline: --tf-blocks-scroll block; }
+  .tf-blocks-more .tf-blocks-scroll::after,
+  .tf-blocks-more .tf-blocks-hint {
+    animation: tf-blocks-fade linear both;
+    animation-timeline: --tf-blocks-scroll;
+  }
+}
+
+@keyframes tf-blocks-fade {
+  0%, 70% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Drei Zeilen plus ein angeschnittener Rest: der Schnitt ist die halbe
+   Scroll-Ansage, den Rest macht der Verlauf aus .tf-blocks-more. */
 .tf-blocks-list {
   display: grid;
   align-content: start;
   gap: 3px;
-  max-height: 84px;
+  max-height: 94px;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
@@ -3212,16 +3258,22 @@ textarea,
 }
 
 
+/* Label und Wert stehen in einer Zeile: die Kachel ist eine Kennzahl, kein
+   Absatz — zwei Zeilen statt drei sparen pro Karte rund 14px. */
 .tf-metric {
   display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   align-content: start;
-  gap: 3px;
+  align-items: baseline;
+  gap: 2px 6px;
   min-width: 0;
-  padding: 7px 8px;
+  padding: 5px 7px;
   border: 1px solid var(--border);
   border-left-width: 3px;
   background: color-mix(in srgb, var(--bg-elev) 78%, var(--surface));
 }
+
+.tf-metric-note { grid-column: 1 / -1; }
 
 button.tf-metric {
   width: 100%;
@@ -3242,6 +3294,7 @@ button.tf-metric {
 }
 
 .tf-metric-label {
+  flex-shrink: 0;
   color: var(--text-muted);
   font-size: 9px;
   font-weight: 700;
@@ -3251,9 +3304,9 @@ button.tf-metric {
 
 .tf-metric-value {
   min-width: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--text);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 11px;

@@ -218,22 +218,34 @@ function renderDashboardReviewAction() {
   `;
 }
 
-// Die Zahl am Avatar ist die Ticketmenge — die will man auf einen Blick sehen,
-// ohne aufzuklappen. Die Farbe kommt dagegen aus der Drift: viele Tickets sind
-// normal, ein Block auf einem erledigten Ticket ist es nicht.
-function teamFocusJiraBadge(entry) {
-  // Ohne Mapping gibt es nichts zu zaehlen, und eine 0 waere nur Rauschen —
-  // "keine Tickets" steht im aufgeklappten Zustand als Kachel.
-  if (entry.jiraTickets === null || !entry.jiraTickets.length) return {};
+// Muss zur max-height von .tf-blocks-list passen: so viele Zeilen stehen ohne
+// Scrollen da, der Rest wird als "+n" angekuendigt.
+const TF_VISIBLE_BLOCKS = 3;
+
+function ticketCountLabel(count) {
+  return `${count} ${count === 1 ? 'ticket' : 'tickets'}`;
+}
+
+// Die Zahl am Avatar zaehlt nicht die Arbeit, sondern den Handlungsbedarf:
+// ueberfaellige Bloecke plus Jira-Drift. Zehn saubere Tickets sind kein
+// Signal, ein ueberfaelliger Block ist eines — und nur das gehoert an den
+// Avatar, der aus drei Metern Abstand noch lesbar ist.
+function teamFocusAttentionBadge(entry) {
   const drift = entry.drift;
   const parts = [
-    `${entry.jiraTickets.length} offene tickets`,
+    entry.overdueBlocks.length ? `${entry.overdueBlocks.length} überfällig` : '',
     drift?.unplanned.length ? `${drift.unplanned.length} ohne block` : '',
-    drift?.stale.length ? `${drift.stale.length} block veraltet` : '',
+    drift?.stale.length ? `${drift.stale.length} ${drift.stale.length === 1 ? 'block' : 'blocks'} veraltet` : '',
   ].filter(Boolean);
+  // Nichts offen heisst kein Badge: eine 0 waere nur Rauschen, und der ruhige
+  // Avatar ist selbst die Aussage.
+  if (!parts.length) return {};
+  const count = entry.overdueBlocks.length + (drift?.unplanned.length || 0) + (drift?.stale.length || 0);
   return {
-    count: entry.jiraTickets.length,
-    countTone: drift?.stale.length ? 'bad' : drift?.unplanned.length ? 'warn' : 'ok',
+    count,
+    // Ueberfaellig und veraltet sind Fehler, ein ungeplantes Ticket ist bloss
+    // noch nicht eingeplant — das darf nicht gleich aussehen.
+    countTone: entry.overdueBlocks.length || drift?.stale.length ? 'bad' : 'warn',
     countTitle: parts.join(' · '),
   };
 }
@@ -291,17 +303,24 @@ function renderTeamFocusBlocks(entry) {
   const empty = entry.absenceToday
     ? `${esc(teamFocusAbsenceLabel(entry.absenceToday))} · nichts geplant`
     : 'nichts geplant';
+  // Drei Zeilen sind sichtbar. Dass darunter noch etwas liegt, sieht man sonst
+  // erst beim Scrollen — der Hinweis steht deshalb unten am Schnitt, wo man
+  // hinschaut, nicht oben in der Kopfzeile.
+  const hidden = Math.max(0, blocks.length - TF_VISIBLE_BLOCKS);
   return `
-    <div class="tf-blocks">
+    <div class="tf-blocks${hidden ? ' tf-blocks-more' : ''}">
       <div class="tf-blocks-head">
         <span>Arbeitet an${blocks.length > 1 ? ` <span class="tf-blocks-count">${blocks.length}</span>` : ''}</span>
         <button class="tf-blocks-link" type="button" onclick="navigate('planung')">planung öffnen</button>
       </div>
-      <div class="tf-blocks-list">
-        ${blocks.length
-          ? blocks.map(({ block, kind }) => renderTeamFocusBlockRow(block, kind)).join('')
-          : `<div class="tf-blocks-empty">${empty}</div>`}
+      <div class="tf-blocks-scroll">
+        <div class="tf-blocks-list">
+          ${blocks.length
+            ? blocks.map(({ block, kind }) => renderTeamFocusBlockRow(block, kind)).join('')
+            : `<div class="tf-blocks-empty">${empty}</div>`}
+        </div>
       </div>
+      ${hidden ? `<div class="tf-blocks-hint">+${hidden} ${hidden === 1 ? 'weiterer' : 'weitere'} ↓</div>` : ''}
     </div>
   `;
 }
@@ -328,7 +347,7 @@ function renderTeamFocusJiraMetric(entry) {
   return `
     <button class="tf-metric tf-metric-action ${jiraSig}" type="button" onclick="event.preventDefault(); event.stopPropagation(); openPersonById('${entry.person.id}')" title="${esc(`Jira-Tickets von ${entry.person.name} ansehen (Stand: ${jiraSyncAgeLabel() || 'unbekannt'})${driftDetail ? '\n' + driftDetail : ''}`)}">
       <span class="tf-metric-label">Jira</span>
-      <span class="tf-metric-value">${entry.jiraTickets.length ? `${entry.jiraTickets.length} tickets` : 'keine tickets'}</span>
+      <span class="tf-metric-value">${entry.jiraTickets.length ? ticketCountLabel(entry.jiraTickets.length) : 'keine tickets'}</span>
       ${driftParts.length ? `<span class="tf-metric-note">${driftParts.join(' · ')}</span>` : ''}
     </button>`;
 }
@@ -351,7 +370,7 @@ function renderTeamFocusOneOnOneMetric(entry) {
     : `Neues 1:1 mit ${entry.person.name} anlegen`;
   return `
     <button class="tf-metric tf-metric-action ${entry.nextOneOnOne ? 'tf-sig-ok' : 'tf-sig-warn'}" type="button" onclick="event.preventDefault(); event.stopPropagation(); openNextOneOnOne('${entry.person.id}')" title="${esc(title)}">
-      <span class="tf-metric-label">Nächstes 1:1</span>
+      <span class="tf-metric-label">1:1</span>
       <span class="tf-metric-value">${esc(value)}</span>
       <span class="tf-metric-note">${esc(note)}</span>
     </button>`;
@@ -393,11 +412,7 @@ function renderReviews() {
       entry.attentionLevel = entry.attentionScore >= 50 ? 'high' : entry.attentionScore >= 20 ? 'medium' : 'low';
       return entry;
     })
-    .sort((a, b) => {
-      if (!!a.absenceToday !== !!b.absenceToday) return a.absenceToday ? 1 : -1;
-      if (b.attentionScore !== a.attentionScore) return b.attentionScore - a.attentionScore;
-      return a.person.name.localeCompare(b.person.name, 'de-AT');
-    });
+    .sort((a, b) => comparePersonsByName(a.person, b.person));
 
   return `
     <div class="section-header">
@@ -418,7 +433,7 @@ function renderReviews() {
           <div class="tf-card tf-card-${cardStateClass}">
             <div class="tf-card-head">
               <button class="tf-person-link" type="button" onclick="openPersonById('${entry.person.id}')" title="Teammitglied öffnen">
-                ${personAvatar(entry.person, 'md', { absent: !!entry.absenceToday, ...teamFocusJiraBadge(entry) })}
+                ${personAvatar(entry.person, 'md', { absent: !!entry.absenceToday, ...teamFocusAttentionBadge(entry) })}
               </button>
               <div class="tf-name-line">
                 <button class="review-row-title tf-name-link" type="button" onclick="openPersonById('${entry.person.id}')" title="Teammitglied öffnen">${esc(entry.person.name)}</button>
