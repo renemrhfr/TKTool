@@ -96,16 +96,10 @@ body[data-theme="hyrule"] .hyrule-easter-eggs {
   visibility: visible;
 }
 
-/* keep the ambience idle while another theme is active */
-.hyrule-easter-eggs :is(.hyrule-ray, .hyrule-motes, .hyrule-triforce, .hyrule-navi-wing) {
-  animation-play-state: paused;
-}
-
-body[data-theme="hyrule"] .hyrule-easter-eggs :is(.hyrule-ray, .hyrule-motes, .hyrule-triforce, .hyrule-navi-wing) {
-  animation-play-state: running;
-}
-
+.hyrule-triforce,
 .hyrule-triforce::after { animation-play-state: paused; }
+
+body[data-theme="hyrule"] .hyrule-triforce,
 body[data-theme="hyrule"] .hyrule-triforce::after { animation-play-state: running; }
 
 body[data-theme="hyrule"] .main {
@@ -125,68 +119,6 @@ body[data-theme="hyrule"] {
   background-attachment: fixed;
 }
 
-/* Hyrule field layer: sun shafts + drifting pollen */
-.hyrule-field {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.hyrule-ray {
-  position: absolute;
-  top: -40%;
-  width: clamp(90px, 13vw, 190px);
-  height: 190%;
-  background: linear-gradient(180deg, rgba(255, 243, 191, 0.62) 0%, rgba(255, 236, 165, 0.22) 44%, transparent 88%);
-  filter: blur(9px);
-  transform-origin: 50% 0;
-  will-change: transform, opacity;
-}
-
-.hyrule-ray-a {
-  left: 12%;
-  transform: rotate(14deg);
-  animation: hyrule-ray-sway 27s ease-in-out infinite;
-}
-
-.hyrule-ray-b {
-  left: 31%;
-  width: clamp(50px, 7vw, 108px);
-  opacity: 0.66;
-  transform: rotate(19deg);
-  animation: hyrule-ray-sway 34s ease-in-out infinite -11s;
-}
-
-.hyrule-motes {
-  position: absolute;
-  inset: -20% 0;
-  background-repeat: repeat;
-  will-change: transform;
-}
-
-.hyrule-motes-far {
-  opacity: 0.5;
-  background-image:
-    radial-gradient(circle, rgba(214, 176, 74, 0.55) 0 1px, transparent 1.6px),
-    radial-gradient(circle, rgba(255, 236, 168, 0.9) 0 1.2px, transparent 1.8px),
-    radial-gradient(circle, rgba(126, 170, 116, 0.42) 0 1px, transparent 1.5px);
-  background-size: 149px 181px, 233px 197px, 311px 271px;
-  background-position: 23px 41px, 97px 133px, 181px 59px;
-  animation: hyrule-motes-rise-far 88s linear infinite;
-}
-
-.hyrule-motes-near {
-  opacity: 0.34;
-  background-image:
-    radial-gradient(circle, rgba(255, 246, 199, 0.95) 0 1.7px, transparent 2.4px),
-    radial-gradient(circle, rgba(198, 156, 56, 0.5) 0 1.4px, transparent 2px);
-  background-size: 277px 241px, 359px 313px;
-  background-position: 61px 17px, 197px 121px;
-  animation: hyrule-motes-rise-near 54s linear infinite;
-}
-
 .hyrule-triforce {
   position: fixed;
   z-index: 0;
@@ -197,35 +129,6 @@ body[data-theme="hyrule"] {
   opacity: 0.08;
   filter: drop-shadow(0 0 7px rgba(166, 124, 33, 0.28));
   animation: hyrule-triforce-breathe 13s ease-in-out infinite;
-}
-
-/* Sword slash on button clicks */
-.hyrule-slash {
-  position: fixed;
-  z-index: 280;
-  left: 50%;
-  top: 50%;
-  width: 72px;
-  height: 72px;
-  visibility: hidden;
-  pointer-events: none;
-  transform: translate(-50%, -50%);
-}
-
-body[data-theme="hyrule"] .hyrule-slash.is-slashing { visibility: visible; }
-
-.hyrule-slash-arc {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  border: 3px solid transparent;
-  border-top-color: #fffbe4;
-  filter: drop-shadow(0 0 6px rgba(255, 236, 168, 0.95)) drop-shadow(0 0 12px rgba(120, 214, 235, 0.55));
-  transform: rotate(var(--hyrule-slash-angle, -35deg));
-}
-
-.hyrule-slash.is-slashing .hyrule-slash-arc {
-  animation: hyrule-slash-sweep 560ms cubic-bezier(0.22, 0.9, 0.24, 1) both;
 }
 
 /* Chrome */
@@ -240,108 +143,6 @@ body[data-theme="hyrule"] .header {
 
 body[data-theme="hyrule"] .card {
   box-shadow: 0 1px 2px rgba(112, 92, 42, 0.1), 0 6px 16px rgba(112, 92, 42, 0.06);
-}
-
-/* Hyrule modal: parchment panel framed like a royal field map */
-body[data-theme="hyrule"] .overlay {
-  background:
-    radial-gradient(circle at 50% 36%, rgba(240, 214, 125, 0.12), transparent 32%),
-    rgba(20, 31, 24, 0.72);
-  backdrop-filter: blur(3px) saturate(0.85);
-  -webkit-backdrop-filter: blur(3px) saturate(0.85);
-}
-
-body[data-theme="hyrule"] .modal {
-  position: relative;
-  border: 2px solid #a67c21;
-  border-radius: 5px;
-  background:
-    linear-gradient(135deg, rgba(166, 124, 33, 0.08) 0 1px, transparent 1px 11px),
-    linear-gradient(-135deg, rgba(63, 119, 82, 0.055) 0 1px, transparent 1px 13px),
-    linear-gradient(180deg, #fffdf2 0%, #f7f2dc 100%);
-  box-shadow:
-    0 0 0 2px #f6e7aa,
-    0 0 0 4px #315f40,
-    0 0 0 5px rgba(240, 211, 117, 0.82),
-    0 18px 48px rgba(20, 35, 23, 0.38),
-    inset 0 0 0 1px rgba(255, 250, 218, 0.95),
-    inset 0 0 26px rgba(112, 92, 42, 0.1);
-  scrollbar-color: #a67c21 #eee7cf;
-}
-
-body[data-theme="hyrule"] .modal-header {
-  min-height: 42px;
-  padding: 8px 10px 7px 16px;
-  border-bottom: 1px solid rgba(166, 124, 33, 0.54);
-  background:
-    linear-gradient(90deg, rgba(63, 119, 82, 0.16), transparent 42%),
-    linear-gradient(180deg, rgba(255, 253, 239, 0.94), rgba(232, 225, 195, 0.72));
-  box-shadow:
-    inset 0 -1px 0 rgba(255, 249, 211, 0.9),
-    0 2px 0 rgba(63, 119, 82, 0.14);
-}
-
-body[data-theme="hyrule"] .modal-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #315f40;
-  font-weight: 700;
-  letter-spacing: 0.09em;
-  text-shadow: 0 1px 0 #fffbea;
-}
-
-body[data-theme="hyrule"] .modal-title::before {
-  content: "";
-  width: 14px;
-  height: 12px;
-  flex: 0 0 auto;
-  background: linear-gradient(145deg, #f5d96f, #a67c21);
-  clip-path: polygon(50% 0, 100% 100%, 0 100%);
-  filter: drop-shadow(0 1px 0 rgba(49, 95, 64, 0.5));
-}
-
-body[data-theme="hyrule"] .modal-close {
-  display: inline-grid;
-  place-items: center;
-  width: 27px;
-  height: 27px;
-  padding: 0;
-  border: 1px solid rgba(166, 124, 33, 0.68);
-  border-radius: 50%;
-  color: #315f40;
-  background: rgba(255, 252, 232, 0.76);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 240, 0.9),
-    0 1px 2px rgba(73, 58, 24, 0.16);
-}
-
-body[data-theme="hyrule"] .modal-close:hover {
-  color: #fffbed;
-  border-color: #d6b24d;
-  background: linear-gradient(180deg, #4c8a5e, #315f40);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 244, 190, 0.36),
-    0 0 0 2px rgba(246, 220, 125, 0.28),
-    0 0 10px rgba(166, 124, 33, 0.25);
-}
-
-body[data-theme="hyrule"] .modal-body {
-  padding: 13px 14px 14px;
-}
-
-body[data-theme="hyrule"] .participant-pill.active {
-  color: #fdfbe9;
-  background: linear-gradient(180deg, #4c8a5e 0%, #336542 100%);
-  border-color: #a67c21;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 244, 190, 0.35),
-    0 0 0 1px rgba(255, 226, 143, 0.5),
-    0 0 12px rgba(166, 124, 33, 0.3);
-}
-
-body[data-theme="hyrule"] .participant-pill.active .person-avatar-badge {
-  box-shadow: 0 0 0 2px #ffe58f;
 }
 
 .hyrule-triforce span {
@@ -365,78 +166,6 @@ body[data-theme="hyrule"] .participant-pill.active .person-avatar-badge {
   animation: hyrule-triforce-sunbeam 13s ease-in-out infinite;
 }
 
-.hyrule-navi-orbit {
-  position: fixed;
-  z-index: 0;
-  right: calc(clamp(24px, 4vw, 72px) - 28px);
-  bottom: calc(clamp(58px, 8vh, 104px) - 24px);
-  width: 188px;
-  height: 162px;
-}
-
-.hyrule-navi {
-  position: absolute;
-  left: 50%;
-  top: 0;
-  width: 14px;
-  height: 14px;
-  opacity: 0;
-  filter: drop-shadow(0 0 6px rgba(114, 220, 255, 0.95));
-  will-change: left, top, opacity;
-}
-
-.hyrule-navi.is-visiting {
-  animation: hyrule-navi-orbit 12s ease-in-out both;
-}
-
-.hyrule-navi-core {
-  position: absolute;
-  inset: 3px;
-  border-radius: 50%;
-  background: #efffff;
-  box-shadow:
-    0 0 5px 2px rgba(218, 255, 255, 0.95),
-    0 0 14px 5px rgba(77, 198, 255, 0.72),
-    0 0 26px 8px rgba(77, 198, 255, 0.26);
-}
-
-.hyrule-navi-wing {
-  position: absolute;
-  top: 0;
-  width: 10px;
-  height: 7px;
-  border-radius: 75% 15% 70% 25%;
-  background: rgba(225, 255, 255, 0.8);
-  box-shadow: 0 0 7px rgba(126, 225, 255, 0.8);
-  transform-origin: center right;
-  animation: hyrule-navi-wing 180ms ease-in-out infinite alternate;
-}
-
-.hyrule-navi-wing-left { right: 9px; transform: rotate(24deg); }
-.hyrule-navi-wing-right { left: 9px; transform: scaleX(-1) rotate(24deg); }
-
-@keyframes hyrule-ray-sway {
-  0%, 100% { transform: rotate(13deg) scaleX(1); opacity: 0.7; }
-  50% { transform: rotate(20deg) scaleX(1.22); opacity: 1; }
-}
-
-@keyframes hyrule-motes-rise-far {
-  from { transform: translate3d(0, 6%, 0); }
-  to { transform: translate3d(3%, -9%, 0); }
-}
-
-@keyframes hyrule-motes-rise-near {
-  from { transform: translate3d(0, 8%, 0) scale(1); }
-  to { transform: translate3d(-4%, -12%, 0) scale(1.05); }
-}
-
-@keyframes hyrule-slash-sweep {
-  0% { opacity: 0; transform: rotate(calc(var(--hyrule-slash-angle, -35deg) - 70deg)) scale(0.5); }
-  22% { opacity: 1; }
-  70% { opacity: 0.85; transform: rotate(calc(var(--hyrule-slash-angle, -35deg) + 44deg)) scale(1.12); }
-  100% { opacity: 0; transform: rotate(calc(var(--hyrule-slash-angle, -35deg) + 82deg)) scale(1.42); }
-}
-
 @keyframes hyrule-triforce-breathe {
   0%, 24%, 100% { opacity: 0.055; transform: translateY(2px) scale(0.98); }
   48%, 64% { opacity: 0.16; transform: translateY(-2px) scale(1.02); }
@@ -448,39 +177,14 @@ body[data-theme="hyrule"] .participant-pill.active .person-avatar-badge {
   66%, 100% { transform: translateX(75%); opacity: 0; }
 }
 
-@keyframes hyrule-navi-orbit {
-  0% { left: 50%; top: 2%; opacity: 0; transform: translate(-50%, -50%) scale(0.72); }
-  8% { opacity: 0.9; }
-  12.5% { left: 82%; top: 14%; transform: translate(-50%, -50%) scale(0.95); }
-  25% { left: 98%; top: 50%; transform: translate(-50%, -50%) scale(1.04); }
-  37.5% { left: 82%; top: 86%; transform: translate(-50%, -50%) scale(0.96); }
-  50% { left: 50%; top: 98%; transform: translate(-50%, -50%) scale(0.88); }
-  62.5% { left: 18%; top: 86%; transform: translate(-50%, -50%) scale(0.96); }
-  75% { left: 2%; top: 50%; transform: translate(-50%, -50%) scale(1.04); }
-  87.5% { left: 18%; top: 14%; transform: translate(-50%, -50%) scale(0.95); }
-  92% { opacity: 0.9; }
-  100% { left: 50%; top: 2%; opacity: 0; transform: translate(-50%, -50%) scale(0.72); }
-}
-
-@keyframes hyrule-navi-wing {
-  from { margin-top: -1px; height: 6px; opacity: 0.6; }
-  to { margin-top: 3px; height: 9px; opacity: 0.95; }
-}
-
 @media (prefers-reduced-motion: reduce) {
   body[data-theme="hyrule"] {
     background-attachment: scroll;
   }
 
-  body[data-theme="hyrule"] .hyrule-ray,
-  body[data-theme="hyrule"] .hyrule-motes,
   body[data-theme="hyrule"] .hyrule-triforce,
-  body[data-theme="hyrule"] .hyrule-navi-wing {
+  body[data-theme="hyrule"] .hyrule-triforce::after {
     animation: none;
     will-change: auto;
-  }
-
-  body[data-theme="hyrule"] .hyrule-slash {
-    display: none;
   }
 }

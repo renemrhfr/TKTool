@@ -1,0 +1,183 @@
+body[data-theme="gameboy"] {
+  --bg: #b7c684;
+  --bg-elev: #c8d497;
+  --surface: #a8ba72;
+  --surface-hover: #98ad5f;
+  --border: #64783a;
+  --text: #243417;
+  --text-secondary: #405426;
+  --text-muted: #5b6e37;
+  --accent: #314b22;
+  --accent-hover: #1f3516;
+  --accent-light: #91a85c;
+  --today-bg: #d0d99e;
+  --today-text: #243417;
+  --today-line: #314b22;
+  --danger: #8b2850;
+  --danger-light: #c9979e;
+  --success: #314b22;
+  --success-light: #91a85c;
+  --warning: #6f4d20;
+  --warning-light: #c8b878;
+  --purple: #704067;
+  --purple-light: #b69aab;
+  --blue: #365a50;
+  --weekend-bg: #9cac68;
+  --weekend-bg-strong: #8d9f59;
+  --weekend-border: #5f7336;
+  --weekend-text: #405426;
+  --weekend-support-bg: #b8aa6a;
+  --weekend-support-bg-strong: #aa9c5c;
+  --weekend-support-border: #75682f;
+  --font-body: var(--font-mono);
+  --board-todo-bg: #9fb375;
+  --board-backlog-bg: #b1c27d;
+  --board-waiting-bg: #c8b878;
+  --board-done-bg: #91a85c;
+  --task-done-shadow: inset 0 6px 0 rgba(36, 52, 23, 0.08);
+  --badge-todo-text: #294b43;
+  --badge-todo-bg: #9fb375;
+  --badge-todo-border: #577368;
+  --badge-backlog-text: #405426;
+  --badge-backlog-bg: #b1c27d;
+  --badge-backlog-border: #718447;
+  --badge-waiting-text: #60441e;
+  --badge-waiting-bg: #c8b878;
+  --badge-waiting-border: #897642;
+  --badge-done-text: #263d1b;
+  --badge-done-bg: #91a85c;
+  --badge-done-border: #566f32;
+  --badge-win-text: #5b3454;
+  --badge-win-bg: #b69aab;
+  --badge-win-border: #805a75;
+  --badge-highlight-text: #263d1b;
+  --badge-highlight-bg: #91a85c;
+  --badge-highlight-border: #566f32;
+  --badge-concern-text: #6f2140;
+  --badge-concern-bg: #c9979e;
+  --badge-concern-border: #97516d;
+  --badge-note-text: #5b3454;
+  --badge-note-bg: #b69aab;
+  --badge-note-border: #805a75;
+  --badge-focus-text: #243417;
+  --badge-focus-bg: #9fb375;
+  --badge-focus-border: #577368;
+  --stat-todo-bg: #9fb375;
+  --stat-backlog-bg: #b1c27d;
+  --stat-waiting-bg: #c8b878;
+  --stat-done-bg: #91a85c;
+  --stat-wins-text: #5b3454;
+  --stat-wins-bg: #b69aab;
+  --quicknotes-bar-bg: #c1cf8f;
+  --quicknotes-bar-bg-hover: #afc079;
+  --quicknotes-bar-gradient: linear-gradient(180deg, #cbd69c 0%, #b7c684 100%);
+  --quicknotes-bar-gradient-hover: linear-gradient(180deg, #c1cf8f 0%, #a8ba72 100%);
+  --quicknotes-bar-border: #64783a;
+  --quicknotes-indicator-border: rgba(36, 52, 23, 0.38);
+  --quicknotes-indicator-bg: rgba(36, 52, 23, 0.08);
+  --quicknotes-indicator-active-border: rgba(49, 75, 34, 0.6);
+  --quicknotes-indicator-active-bg: rgba(49, 75, 34, 0.18);
+  --quicknotes-indicator-active-text: #263d1b;
+  --quicknotes-capture-border: rgba(36, 52, 23, 0.38);
+  --quicknotes-capture-bg: rgba(200, 212, 151, 0.42);
+  --quicknotes-capture-bg-hover: rgba(200, 212, 151, 0.72);
+  --timeline-projekt: #365a50;
+  --timeline-ticket: #314b22;
+  --timeline-incident: #8b2850;
+  --timeline-abwesenheit: #5b6e37;
+  --radius: 4px;
+  --radius-sm: 2px;
+  --radius-md: 5px;
+  --radius-lg: 7px;
+  --border-width: 1px;
+  --border-strong-width: 2px;
+  --border-accent-width: 3px;
+  --header-height: 50px;
+  --layout-gap: 11px;
+  --control-radius: 2px;
+  --badge-radius: 2px;
+  --shadow-card: 3px 3px 0 rgba(36, 52, 23, 0.22);
+  --shadow-float: 4px 4px 0 rgba(36, 52, 23, 0.28);
+  --shadow-popover: 6px 6px 0 rgba(36, 52, 23, 0.32);
+  --label-letter-spacing: 0.08em;
+  --brand-letter-spacing: 0.04em;
+  --active-font-weight: 700;
+  --nav-active-border-width: 2px;
+  --check-radius: 1px;
+  --progress-radius: 2px;
+  --transition-fast: 0.05s;
+}
+
+body[data-theme="gameboy"] {
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(rgba(36, 52, 23, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(36, 52, 23, 0.035) 1px, transparent 1px);
+  background-size: 4px 4px;
+}
+
+body[data-theme="gameboy"] .header {
+  color: #c8d497;
+  background: #31451e;
+  border-bottom: 3px solid #1e3014;
+  box-shadow: 0 3px 0 rgba(36, 52, 23, 0.28);
+}
+
+body[data-theme="gameboy"] .logo {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #f1d9df;
+  background: #8b2850;
+  border: 2px solid #54182f;
+  border-radius: 50%;
+  letter-spacing: 0;
+  box-shadow: 2px 2px 0 #1e3014;
+}
+
+body[data-theme="gameboy"] .header :is(.nav button, .theme-trigger) {
+  color: #a8ba72;
+  border-color: #64783a;
+}
+
+body[data-theme="gameboy"] .header :is(.nav button, .theme-trigger):hover,
+body[data-theme="gameboy"] .header .nav button.active {
+  color: #243417;
+  background: #b7c684;
+  border-color: #b7c684;
+  box-shadow: 2px 2px 0 #1e3014;
+}
+
+body[data-theme="gameboy"] .header input {
+  color: #243417;
+  background: #a8ba72;
+  border-color: #64783a;
+  box-shadow: inset 2px 2px 0 rgba(36, 52, 23, 0.18);
+}
+
+body[data-theme="gameboy"] .card {
+  box-shadow: var(--shadow-card);
+}
+
+body[data-theme="gameboy"] .btn-primary {
+  color: #c8d497;
+  box-shadow: 2px 2px 0 #1e3014;
+}
+
+body[data-theme="gameboy"] .btn-primary:active {
+  box-shadow: none;
+  transform: translate(2px, 2px);
+}
+
+body[data-theme="gameboy"] ::selection {
+  color: #f1d9df;
+  background: #8b2850;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-theme="gameboy"] .btn-primary:active {
+    transform: none;
+  }
+}

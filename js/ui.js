@@ -13,7 +13,6 @@ function getSavedTheme() {
 function applyTheme(theme) {
   const next = THEMES.includes(theme) ? theme : 'light';
   document.body.setAttribute('data-theme', next);
-  syncHyruleEasterEggs(next);
   const trigger = document.getElementById('themeTrigger');
   if (trigger) {
     trigger.title = `Einstellungen - Theme: ${THEME_LABELS[next] || next}`;
@@ -170,17 +169,10 @@ function initTheme() {
 }
 
 // ============================================================
-// HYRULE EASTER EGGS
+// THEME EASTER EGGS
 // ============================================================
-let hyruleNaviTimer = null;
-let hyruleNaviHideTimer = null;
-let hyruleSlashTimer = null;
 let starfoxShotTimer = null;
 let themeEasterEggsReady = false;
-
-function hyruleThemeActive() {
-  return document.body.getAttribute('data-theme') === 'hyrule';
-}
 
 function initThemeEasterEggs() {
   if (themeEasterEggsReady) return;
@@ -191,24 +183,8 @@ function initThemeEasterEggs() {
   layer.id = 'hyruleEasterEggs';
   layer.setAttribute('aria-hidden', 'true');
   layer.innerHTML = `
-    <div class="hyrule-field" aria-hidden="true">
-      <span class="hyrule-ray hyrule-ray-a"></span>
-      <span class="hyrule-ray hyrule-ray-b"></span>
-      <span class="hyrule-motes hyrule-motes-far"></span>
-      <span class="hyrule-motes hyrule-motes-near"></span>
-    </div>
     <div class="hyrule-triforce" aria-hidden="true">
       <span></span><span></span><span></span>
-    </div>
-    <div class="hyrule-navi-orbit" aria-hidden="true">
-      <div class="hyrule-navi" id="hyruleNavi">
-        <span class="hyrule-navi-core"></span>
-        <span class="hyrule-navi-wing hyrule-navi-wing-left"></span>
-        <span class="hyrule-navi-wing hyrule-navi-wing-right"></span>
-      </div>
-    </div>
-    <div class="hyrule-slash" id="hyruleSlash">
-      <span class="hyrule-slash-arc"></span>
     </div>
   `;
   document.body.appendChild(layer);
@@ -244,60 +220,6 @@ function initThemeEasterEggs() {
   document.body.appendChild(atmosphereLayer);
 
   document.addEventListener('click', triggerStarfoxTargetShot, true);
-  document.addEventListener('click', triggerHyruleSlash, true);
-}
-
-function syncHyruleEasterEggs(theme) {
-  clearTimeout(hyruleNaviTimer);
-  clearTimeout(hyruleNaviHideTimer);
-  hyruleNaviTimer = null;
-  hyruleNaviHideTimer = null;
-
-  const navi = document.getElementById('hyruleNavi');
-  navi?.classList.remove('is-visiting');
-
-  if (theme !== 'hyrule') return;
-  scheduleHyruleNavi(16000);
-}
-
-function scheduleHyruleNavi(delay = 60000 + Math.random() * 60000) {
-  clearTimeout(hyruleNaviTimer);
-  if (!hyruleThemeActive()) return;
-  hyruleNaviTimer = setTimeout(flyHyruleNavi, delay);
-}
-
-function flyHyruleNavi() {
-  const navi = document.getElementById('hyruleNavi');
-  if (!navi || !hyruleThemeActive()) return;
-
-  navi.classList.remove('is-visiting');
-  void navi.offsetWidth;
-  navi.classList.add('is-visiting');
-  clearTimeout(hyruleNaviHideTimer);
-  hyruleNaviHideTimer = setTimeout(() => {
-    navi.classList.remove('is-visiting');
-    scheduleHyruleNavi();
-  }, 12000);
-}
-
-function triggerHyruleSlash(event) {
-  if (!hyruleThemeActive()) return;
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  const button = event.target.closest('button');
-  const slash = document.getElementById('hyruleSlash');
-  if (!button || button.disabled || !slash) return;
-
-  const rect = button.getBoundingClientRect();
-  const x = Number.isFinite(event.clientX) && event.clientX > 0 ? event.clientX : rect.left + rect.width / 2;
-  const y = Number.isFinite(event.clientY) && event.clientY > 0 ? event.clientY : rect.top + rect.height / 2;
-  slash.style.left = `${x}px`;
-  slash.style.top = `${y}px`;
-  slash.style.setProperty('--hyrule-slash-angle', `${-70 + Math.random() * 50}deg`);
-  slash.classList.remove('is-slashing');
-  void slash.offsetWidth;
-  slash.classList.add('is-slashing');
-  clearTimeout(hyruleSlashTimer);
-  hyruleSlashTimer = setTimeout(() => slash.classList.remove('is-slashing'), 560);
 }
 
 function triggerStarfoxTargetShot(event) {
