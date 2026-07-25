@@ -1,0 +1,200 @@
+body[data-theme="kodama"] {
+  --bg: #071d1f;
+  --bg-elev: #0b292b;
+  --surface: #103234;
+  --surface-hover: #19484a;
+  --border: #28585a;
+  --text: #d7e8df;
+  --text-secondary: #9dbcb2;
+  --text-muted: #73958d;
+  --accent: #d99b45;
+  --accent-hover: #e9ad58;
+  --accent-light: #49371f;
+  --today-bg: #43351f;
+  --today-text: #f0bc67;
+  --today-line: #d99b45;
+  --danger: #d87062;
+  --danger-light: #422925;
+  --success: #76aa89;
+  --success-light: #1d3d32;
+  --warning: #d99b45;
+  --warning-light: #49371f;
+  --purple: #9992bb;
+  --purple-light: #302f45;
+  --blue: #65aeb1;
+  --weekend-bg: #123638;
+  --weekend-bg-strong: #194144;
+  --weekend-border: #326466;
+  --weekend-text: #9ab9b0;
+  --weekend-support-bg: #3b351f;
+  --weekend-support-bg-strong: #494027;
+  --weekend-support-border: #74643a;
+  --font-body: var(--font-sans);
+  --board-todo-bg: #123b40;
+  --board-backlog-bg: #103234;
+  --board-waiting-bg: #3d331e;
+  --board-done-bg: #18382e;
+  --task-done-shadow: inset 0 8px 0 rgba(118, 170, 137, 0.045);
+  --badge-todo-text: #83c7ca;
+  --badge-todo-bg: #123b40;
+  --badge-todo-border: #31636a;
+  --badge-backlog-text: #9dbcb2;
+  --badge-backlog-bg: #103234;
+  --badge-backlog-border: #28585a;
+  --badge-waiting-text: #f0bc67;
+  --badge-waiting-bg: #3d331e;
+  --badge-waiting-border: #74643a;
+  --badge-done-text: #96c8a6;
+  --badge-done-bg: #18382e;
+  --badge-done-border: #3b6751;
+  --badge-win-text: #bbb4d8;
+  --badge-win-bg: #302f45;
+  --badge-win-border: #5a5877;
+  --badge-highlight-text: #96c8a6;
+  --badge-highlight-bg: #18382e;
+  --badge-highlight-border: #3b6751;
+  --badge-concern-text: #ed9284;
+  --badge-concern-bg: #422925;
+  --badge-concern-border: #70453e;
+  --badge-note-text: #bbb4d8;
+  --badge-note-bg: #302f45;
+  --badge-note-border: #5a5877;
+  --badge-focus-text: #83c7ca;
+  --badge-focus-bg: #123b40;
+  --badge-focus-border: #31636a;
+  --stat-todo-bg: #123b40;
+  --stat-backlog-bg: #103234;
+  --stat-waiting-bg: #3d331e;
+  --stat-done-bg: #18382e;
+  --stat-wins-text: #bbb4d8;
+  --stat-wins-bg: #302f45;
+  --quicknotes-bar-bg: #0b292b;
+  --quicknotes-bar-bg-hover: #143d3f;
+  --quicknotes-bar-gradient: linear-gradient(180deg, #103234, #0b292b);
+  --quicknotes-bar-gradient-hover: linear-gradient(180deg, #19484a, #103638);
+  --quicknotes-bar-border: #28585a;
+  --quicknotes-indicator-border: rgba(217, 155, 69, 0.34);
+  --quicknotes-indicator-bg: rgba(217, 155, 69, 0.08);
+  --quicknotes-indicator-active-border: rgba(118, 170, 137, 0.48);
+  --quicknotes-indicator-active-bg: rgba(118, 170, 137, 0.16);
+  --quicknotes-indicator-active-text: #96c8a6;
+  --quicknotes-capture-border: rgba(217, 155, 69, 0.34);
+  --quicknotes-capture-bg: rgba(217, 155, 69, 0.08);
+  --quicknotes-capture-bg-hover: rgba(217, 155, 69, 0.17);
+  --timeline-projekt: #65aeb1;
+  --timeline-ticket: #d99b45;
+  --timeline-incident: #d87062;
+  --timeline-abwesenheit: #73958d;
+  --radius: 4px;
+  --radius-sm: 3px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --shadow-card: 0 5px 16px rgba(0, 12, 13, 0.18);
+  --shadow-float: 0 10px 28px rgba(0, 10, 11, 0.4);
+  --shadow-popover: 0 18px 42px rgba(0, 10, 11, 0.48);
+}
+
+body[data-theme="kodama"] {
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(ellipse at 18% 2%, rgba(66, 133, 129, 0.2), transparent 34%),
+    radial-gradient(ellipse at 84% 82%, rgba(41, 98, 91, 0.15), transparent 38%),
+    linear-gradient(180deg, #092526, #06191b);
+  background-attachment: fixed;
+}
+
+.kodama-spores {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  display: none;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+body[data-theme="kodama"] .kodama-spores { display: block; }
+body[data-theme="kodama"] .main { position: relative; z-index: 1; }
+
+.kodama-spores-layer {
+  position: absolute;
+  inset: -24%;
+  background-repeat: repeat;
+  will-change: transform;
+}
+
+.kodama-spores-far {
+  opacity: 0.28;
+  background-image:
+    radial-gradient(circle, rgba(220, 238, 191, 0.75) 0 1px, transparent 1.6px),
+    radial-gradient(circle, rgba(105, 185, 171, 0.6) 0 1.2px, transparent 1.8px),
+    radial-gradient(circle, rgba(237, 173, 83, 0.48) 0 1px, transparent 1.7px);
+  background-size: 157px 193px, 239px 277px, 349px 311px;
+  background-position: 17px 83px, 101px 29px, 211px 149px;
+  animation: kodama-spores-rise-far 71.3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.kodama-spores-near {
+  opacity: 0.22;
+  background-image:
+    radial-gradient(circle, rgba(228, 243, 202, 0.92) 0 1.6px, transparent 2.4px),
+    radial-gradient(circle, rgba(227, 165, 75, 0.65) 0 1.3px, transparent 2px);
+  background-size: 281px 251px, 397px 337px;
+  background-position: 73px 19px, 193px 127px;
+  animation: kodama-spores-rise-near 47.7s cubic-bezier(0.37, 0.02, 0.61, 0.98) infinite -13s;
+}
+
+body[data-theme="kodama"] .header {
+  background: rgba(8, 31, 32, 0.9);
+  border-bottom-color: rgba(217, 155, 69, 0.5);
+  box-shadow: 0 2px 18px rgba(0, 12, 13, 0.36);
+  backdrop-filter: blur(9px);
+  -webkit-backdrop-filter: blur(9px);
+}
+
+body[data-theme="kodama"] .logo {
+  color: #f0bc67;
+  text-shadow: 0 0 5px rgba(227, 165, 75, 0.72), 0 0 13px rgba(227, 165, 75, 0.34);
+  animation: kodama-lantern 6.8s steps(1, end) infinite;
+}
+
+body[data-theme="kodama"] .card {
+  box-shadow: inset 0 1px 0 rgba(198, 235, 220, 0.035), var(--shadow-card);
+}
+
+body[data-theme="kodama"] .participant-pill.active {
+  color: #112222;
+  background: linear-gradient(180deg, #edb55f, #c98b36);
+  border-color: #f4c97c;
+}
+
+body[data-theme="kodama"] .btn-primary,
+body[data-theme="kodama"] ::selection {
+  color: #112222;
+}
+
+@keyframes kodama-spores-rise-far {
+  0% { transform: translate3d(0, 9%, 0); }
+  27% { transform: translate3d(2%, 2%, 0); }
+  61% { transform: translate3d(-1%, -7%, 0); }
+  100% { transform: translate3d(3%, -16%, 0); }
+}
+
+@keyframes kodama-spores-rise-near {
+  0% { transform: translate3d(1%, 12%, 0) scale(1); }
+  19% { transform: translate3d(-2%, 6%, 0) scale(1.01); }
+  54% { transform: translate3d(3%, -5%, 0) scale(1.03); }
+  78% { transform: translate3d(1%, -10%, 0) scale(1.02); }
+  100% { transform: translate3d(-3%, -19%, 0) scale(1.04); }
+}
+
+@keyframes kodama-lantern {
+  0%, 8%, 12%, 31%, 35%, 62%, 66%, 100% { opacity: 1; filter: brightness(1); }
+  9%, 32%, 64% { opacity: 0.86; filter: brightness(0.84); }
+  10%, 34%, 65% { opacity: 0.96; filter: brightness(1.13); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-theme="kodama"] { background-attachment: scroll; }
+  body[data-theme="kodama"] .kodama-spores-layer,
+  body[data-theme="kodama"] .logo { animation: none; }
+}

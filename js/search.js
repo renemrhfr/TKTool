@@ -1,6 +1,8 @@
 // ============================================================
 // GLOBAL SEARCH
 // ============================================================
+let globalSearchReturnTarget = null;
+
 function syncGlobalSearchInput() {
   const input = document.getElementById('globalSearchInput');
   if (!input) return;
@@ -8,20 +10,37 @@ function syncGlobalSearchInput() {
   if (input.value !== nextValue) input.value = nextValue;
 }
 
+function openGlobalSearch(query) {
+  if (currentView !== 'search') {
+    globalSearchReturnTarget = {
+      view: currentView,
+      state: { ...viewState },
+    };
+  }
+  navigate('search', { query });
+}
+
+function closeGlobalSearch() {
+  if (currentView !== 'search') return;
+  const target = globalSearchReturnTarget;
+  globalSearchReturnTarget = null;
+  navigate(target?.view || 'overview', target?.state || {});
+}
+
 function handleGlobalSearchInput(value) {
   const query = value.trim();
   if (!query) {
-    if (currentView === 'search') navigate('overview');
+    closeGlobalSearch();
     return;
   }
-  navigate('search', { query: value });
+  openGlobalSearch(value);
 }
 
 function handleGlobalSearchKeydown(event) {
   if (event.key === 'Escape') {
     event.preventDefault();
     event.currentTarget.value = '';
-    if (currentView === 'search') navigate('overview');
+    closeGlobalSearch();
     return;
   }
   if (event.key === 'Enter') {
@@ -35,10 +54,10 @@ function submitGlobalSearch() {
   if (!input) return;
   const query = input.value.trim();
   if (!query) {
-    if (currentView === 'search') navigate('overview');
+    closeGlobalSearch();
     return;
   }
-  navigate('search', { query });
+  openGlobalSearch(query);
 }
 
 function restoreOverviewSearchFocus() {
@@ -64,4 +83,3 @@ function restoreMeetingSearchFocus() {
     nextInput.setSelectionRange(start ?? nextInput.value.length, end ?? nextInput.value.length);
   });
 }
-

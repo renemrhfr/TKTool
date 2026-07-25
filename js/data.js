@@ -1,7 +1,7 @@
 // ============================================================
 // DATA LAYER — File System Access API
 // ============================================================
-const APP_VERSION = '1.0.26';
+const APP_VERSION = '1.0.27';
 const DATA_FILENAME = 'tktool-data.json';
 const JIRA_SYNC_FILENAME = 'jira-tickets.json';
 const JIRA_QUERY_MAX_RESULTS = 100;
@@ -46,47 +46,44 @@ const DEVICES_SETTING_ID = 'devices';
 const THEMES = [
   'light',
   'dark',
-  'tokyo-night',
   'rose-pine-dawn',
   'daylight',
-  'naboo',
   'bridges',
   'hyrule',
   'starfox',
   'nord',
   'switch',
   'matrix',
-  'serum',
+  'kodama',
+  'arrakis',
 ];
 const THEME_LABELS = {
   light: 'light',
   dark: 'dark',
-  'tokyo-night': 'tokyo',
   'rose-pine-dawn': 'dawn',
   daylight: 'daylight',
-  naboo: 'naboo',
   bridges: 'bridges',
   hyrule: 'hyrule',
   starfox: 'starfox',
   nord: 'nord',
   switch: 'switch',
   matrix: 'matrix',
-  serum: 'serum',
+  kodama: 'kodama',
+  arrakis: 'arrakis',
 };
 const THEME_COLORS = {
   light: ['#fdf6e3', '#f57d26'],
   dark: ['#232a2e', '#e69875'],
-  'tokyo-night': ['#1a1b26', '#7aa2f7'],
   'rose-pine-dawn': ['#faf4ed', '#d7827e'],
   daylight: ['#f4f8fc', '#2563a6'],
-  naboo: ['#f3f5f0', '#2f6f82'],
   bridges: ['#eef2f3', '#b94d1c'],
   hyrule: ['#f4f0df', '#3f7752'],
   starfox: ['#07111d', '#2a7ba2'],
   nord: ['#2e3440', '#88c0d0'],
   switch: ['#ebebeb', '#e60012'],
   matrix: ['#030703', '#38b84a'],
-  serum: ['#121820', '#75d64b'],
+  kodama: ['#092526', '#e3a54b'],
+  arrakis: ['#ead4a6', '#c8662d'],
 };
 
 // Surface runtime failures in the app as well as in DevTools. This is
