@@ -58,9 +58,21 @@ function renderThemeMenu() {
     <div class="theme-menu-divider" aria-hidden="true"></div>
     <div class="theme-menu-section" aria-label="Daten">
       <div class="theme-menu-label">daten</div>
-      <button class="theme-action" type="button" role="menuitem" onclick="exportBackup()">backup</button>
+      <button class="theme-action" type="button" role="menuitem" onclick="exportBackup()">
+        backup
+        ${backupAgeLabel() ? `<span class="theme-action-note">${backupAgeLabel()}</span>` : ''}
+      </button>
+      <button class="theme-action" type="button" role="menuitem"
+        aria-pressed="${autoBackupEnabled() ? 'true' : 'false'}"
+        title="Tägliche Sicherung beim Start – gilt für alle Geräte in diesem Datenordner"
+        onclick="toggleAutoBackup()">
+        auto-backup
+        <span class="theme-action-toggle ${autoBackupEnabled() ? 'is-on' : ''}">${autoBackupEnabled() ? 'täglich' : 'aus'}</span>
+      </button>
       <button class="theme-action" type="button" role="menuitem" onclick="importBackup()">import</button>
+      <button class="theme-action" type="button" role="menuitem" onclick="openCleanupDialog()">cleanup</button>
       <button class="theme-action" type="button" role="menuitem" onclick="configureJiraBase()">jira-url</button>
+      ${renderDeviceList()}
     </div>
     <div class="theme-menu-divider" aria-hidden="true"></div>
     <div class="theme-menu-section" aria-label="App">
@@ -76,6 +88,34 @@ function renderThemeMenu() {
       <div class="theme-menu-version">v${APP_VERSION}</div>
     </div>
   `;
+}
+
+// Menü bleibt offen: man will sehen, dass der Schalter umgesprungen ist.
+async function toggleAutoBackup() {
+  const enabled = await setAutoBackupEnabled(!autoBackupEnabled());
+  renderThemeMenu();
+  updateThemeMenuSelection(document.body.getAttribute('data-theme'));
+  toast(enabled ? 'Auto-Backup an – täglich beim Start' : 'Auto-Backup aus');
+  if (enabled) maybeAutoBackup();
+}
+
+// Wer teilt sich diesen Datenordner, und wann war das letzte Mal? Wenn etwas
+// nicht ankommt, sieht man hier zuerst, ob die andere Seite ueberhaupt
+// synchronisiert hat.
+function renderDeviceList() {
+  const devices = activeDevices();
+  if (devices.length < 2) return '';
+  const me = getDeviceId();
+  const rows = devices
+    .slice()
+    .sort((a, b) => (b.lastSeenAt || '').localeCompare(a.lastSeenAt || ''))
+    .map(device => `
+      <div class="theme-menu-device ${device.id === me ? 'is-self' : ''}">
+        <span class="theme-menu-device-name">${esc(device.label || device.id.slice(0, 4))}</span>
+        <span class="theme-menu-device-seen">${device.id === me ? 'dieses gerät' : esc(agoLabel(device.lastSeenAt))}</span>
+      </div>
+    `).join('');
+  return `<div class="theme-menu-devices" title="Geräte, die diesen Datenordner nutzen">${rows}</div>`;
 }
 
 function configureJiraBase() {
@@ -104,6 +144,11 @@ function setThemeMenuOpen(open) {
   const picker = document.getElementById('themePicker');
   const trigger = document.getElementById('themeTrigger');
   if (!picker || !trigger) return;
+  // Beim Oeffnen neu bauen: das Backup-Alter steht erst nach dem Laden fest.
+  if (open) {
+    renderThemeMenu();
+    updateThemeMenuSelection(document.body.getAttribute('data-theme'));
+  }
   picker.classList.toggle('open', open);
   trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
 }
@@ -344,6 +389,17 @@ async function finishStorageConnection(handle) {
   await loadData();
   document.getElementById('setupScreen').style.display = 'none';
   render();
+  scheduleAutoBackup();
+}
+
+// Nicht awaiten: der erste Render darf darauf nicht warten, und Fehler
+// melden sich selbst. Erst bestaetigen, dann sichern — so steht die
+// Geraete-Bestaetigung schon im Backup.
+function scheduleAutoBackup() {
+  setTimeout(async () => {
+    await ackAndPurgeGraves();
+    await maybeAutoBackup();
+  }, 1500);
 }
 
 async function connectStorage() {
@@ -373,6 +429,7 @@ async function chooseStorageDirectory() {
       dirHandle = saved;
       await loadData();
       render();
+      scheduleAutoBackup();
     } else {
       render();
       showSetupScreen('reconnect');

@@ -1281,11 +1281,172 @@ function exportWins() {
 // ============================================================
 // BACKUP / IMPORT
 // ============================================================
-function exportBackup() {
+async function exportBackup() {
   if (typeof closeThemeMenu === 'function') closeThemeMenu();
-  const json = JSON.stringify(data, null, 2);
-  downloadFile('tktool-backup-' + todayStr() + '.json', json);
-  toast('Backup heruntergeladen');
+  try {
+    const info = await writeBackupFile('manuell');
+    await updateBackupSetting({ lastBackupAt: new Date().toISOString() });
+    toast(`Backup gespeichert: ${info.path}`, 5000);
+  } catch (error) {
+    // Kein Ordnerzugriff (oder verweigert): dann eben in den Download-Ordner,
+    // damit die Aktion nie folgenlos bleibt.
+    console.error('Backup to data folder failed:', error);
+    downloadFile('tktool-backup-' + todayStr() + '.json', JSON.stringify(data, null, 2));
+    toast('Ordner-Backup fehlgeschlagen – als Download gespeichert', 5000, 'error');
+  }
+}
+
+// ============================================================
+// CLEANUP
+// ============================================================
+let cleanupDialogState = null;
+
+const CLEANUP_MONTH_CHOICES = [0, 1, 2, 3, 4, 6, 9, 12, 18, 24, 36];
+
+function openCleanupDialog() {
+  if (typeof closeThemeMenu === 'function') closeThemeMenu();
+  cleanupDialogState = { months: cleanupMonthsMap(), running: false };
+  renderCleanupDialog();
+  openOverlay();
+}
+
+function setCleanupGroupMonths(id, months) {
+  if (!cleanupDialogState) return;
+  cleanupDialogState.months[id] = Math.max(0, parseInt(months, 10) || 0);
+  renderCleanupDialog();
+}
+
+function monthsLabel(months) {
+  if (!months) return 'nie';
+  if (months === 12) return '1 jahr';
+  if (months === 24) return '2 jahre';
+  if (months === 36) return '3 jahre';
+  return `${months} mon`;
+}
+
+function relativeDaysLabel(iso) {
+  if (!iso) return 'nie';
+  const days = Math.floor((Date.now() - Date.parse(iso)) / 86400000);
+  if (!Number.isFinite(days)) return 'unbekannt';
+  if (days <= 0) return 'heute';
+  return days === 1 ? 'gestern' : `vor ${days} tagen`;
+}
+
+// Zeigt, warum die Löschmarker noch da sind: entweder wartet ein Gerät auf
+// seine Bestätigung, oder es ist alles bestätigt und sie fallen mit.
+function renderCleanupGraveSection(staleGraves) {
+  const graves = countGraves();
+  if (!graves) return '';
+  const pending = devicesPendingAck();
+  const others = activeDevices().filter(d => d.id !== getDeviceId());
+  if (staleGraves >= graves && !pending.length) {
+    return `
+      <div class="cleanup-row cleanup-row-fixed">
+        <span class="cleanup-row-fixed-mark" aria-hidden="true">&#x2713;</span>
+        <span class="cleanup-row-label">löschmarker</span>
+        <span class="cleanup-row-hint">von allen geräten bestätigt, fallen mit</span>
+        <span class="cleanup-row-count">${staleGraves}</span>
+      </div>
+    `;
+  }
+  return `
+    <div class="cleanup-row cleanup-row-fixed">
+      <span class="cleanup-row-fixed-mark" aria-hidden="true">&#8987;</span>
+      <span class="cleanup-row-label">löschmarker</span>
+      <span class="cleanup-row-hint">${pending.length
+        ? `warten auf ${pending.map(d => esc(d.label || d.id.slice(0, 4))).join(', ')}`
+        : `warten auf die frist (${GRAVE_GRACE_DAYS} tage)`}</span>
+      <span class="cleanup-row-count">${staleGraves}/${graves}</span>
+    </div>
+    ${pending.length ? `
+      <div class="cleanup-devices">
+        TKTool dort einmal öffnen, dann verschwinden die Marker automatisch.
+        ${others.map(d => `<span class="cleanup-device">${esc(d.label || d.id.slice(0, 4))} · ${relativeDaysLabel(d.lastSeenAt)}</span>`).join('')}
+      </div>
+    ` : ''}
+  `;
+}
+
+function renderCleanupDialog() {
+  if (!cleanupDialogState) return;
+  const { months, running } = cleanupDialogState;
+  const picked = cleanupCandidates(months);
+  const total = Object.values(picked).reduce((sum, list) => sum + list.length, 0);
+  const staleGraves = countStaleGraves();
+  const lastCleanup = backupSetting()?.lastCleanupAt;
+
+  const rows = CLEANUP_GROUPS.map(group => {
+    const groupMonths = months[group.id] || 0;
+    const count = (picked[group.id] || []).length;
+    // Wieviel läge bei der großzügigsten Einstellung an? Zeigt, ob eine
+    // strengere Aufbewahrung überhaupt etwas brächte.
+    const possible = cleanupCandidates({ [group.id]: 36 })[group.id].length;
+    return `
+      <div class="cleanup-row ${groupMonths ? '' : 'cleanup-row-off'}">
+        <span class="cleanup-row-label">${esc(group.label)}</span>
+        <span class="cleanup-row-hint">${esc(group.hint)}</span>
+        <select class="cleanup-row-select" onchange="setCleanupGroupMonths('${group.id}', this.value)">
+          ${CLEANUP_MONTH_CHOICES.map(m => `
+            <option value="${m}" ${m === groupMonths ? 'selected' : ''}>${monthsLabel(m)}</option>
+          `).join('')}
+        </select>
+        <span class="cleanup-row-count" title="${possible} älter als 3 jahre">${count}</span>
+      </div>
+    `;
+  }).join('') + renderCleanupGraveSection(staleGraves);
+
+  document.getElementById('modal').innerHTML = `
+    <div class="modal-header">
+      <span class="modal-title">Cleanup</span>
+      <button class="modal-close" onclick="closeOverlay()">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">aufbewahren</label>
+        <div class="cleanup-groups">${rows}</div>
+        <div class="form-hint">
+          Alles Ältere wird gelöscht. Notizen, Personen und Monatsreviews bleiben immer.
+        </div>
+      </div>
+      <div class="cleanup-summary">
+        <strong>${total}</strong> einträge weniger in suche, listen und exporten
+        ${lastCleanup ? `<span class="cleanup-summary-last">letztes cleanup: ${relativeDaysLabel(lastCleanup)}</span>` : ''}
+      </div>
+      <div class="form-hint">
+        Backup nach <code>${BACKUP_DIRNAME}/</code> läuft vorher automatisch.
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+        <button class="btn btn-danger" style="flex:1;min-width:160px"
+          ${(total || staleGraves) && !running ? '' : 'disabled'}
+          onclick="confirmCleanup()">${running ? 'läuft...' : `Backup + ${total} löschen`}</button>
+        <button class="btn btn-secondary" onclick="closeOverlay()">Abbrechen</button>
+      </div>
+    </div>
+  `;
+}
+
+async function confirmCleanup() {
+  if (!cleanupDialogState || cleanupDialogState.running) return;
+  const months = cleanupDialogState.months;
+  const picked = cleanupCandidates(months);
+  const lines = CLEANUP_GROUPS
+    .filter(g => (picked[g.id] || []).length)
+    .map(g => `• ${picked[g.id].length} ${g.label} (älter als ${monthsLabel(months[g.id])})`);
+  if (lines.length && !confirm(`Endgültig löschen?\n\n${lines.join('\n')}\n\nEin Backup wird vorher angelegt.`)) return;
+  cleanupDialogState.running = true;
+  renderCleanupDialog();
+  try {
+    const result = await runCleanup(months);
+    closeOverlay();
+    cleanupDialogState = null;
+    toast(`${result.removed} Einträge gelöscht — Backup: ${result.backup.path}`, 6000);
+    render();
+  } catch (error) {
+    console.error('Cleanup failed:', error);
+    cleanupDialogState.running = false;
+    renderCleanupDialog();
+    reportUiError('Cleanup fehlgeschlagen – es wurde nichts gelöscht', error);
+  }
 }
 
 function importBackup() {

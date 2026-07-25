@@ -27,10 +27,60 @@ The UI is in German. So is the data model in places (`werktage`, `allokiert`,
 All data lives in a single `tktool-data.json` in a directory *you* pick via
 the File System Access API. The directory handle is persisted in IndexedDB,
 so you pick once. No backend, no accounts, no cloud — put the folder in
-whatever sync you already trust (or none). Backup/restore is "download the
-JSON" / "import the JSON". The reasoning: this is personal data about real
-people; the least surprising storage model is a file the user can see,
-diff, and delete.
+whatever sync you already trust (or none). The reasoning: this is personal
+data about real people; the least surprising storage model is a file the
+user can see, diff, and delete.
+
+### Backups and cleanup
+
+Backups are byte copies of `tktool-data.json` written into a `backups/`
+subfolder of the same directory — no second directory picker, nothing in the
+Downloads folder. One is written automatically once a day (`lastBackupAt`
+lives in the data file, so a second instance doesn't write its own). The
+automatic one can be switched off in the settings menu; that flag lives in
+the data file too, because it describes the folder ("this one gets backed
+up"), not the machine you happen to be sitting at. Manual backups keep
+working either way.
+
+Pruning is per reason, because the three kinds are worth different things: 7
+daily ones, 2 manual, 5 from cleanup runs. A backup is a full snapshot, not a
+delta — restoring a month-old one costs a month of work, so for the daily
+copies a short rolling window is enough. And since a copy is only written
+when the app is opened, 7 of them span your last seven *active* days, not
+seven calendar days. The cleanup backups are the only remaining copy of what
+cleanup deleted, so daily copies must not push them out. The counts are kept
+deliberately low: every copy is the size of the whole data file, so the
+backup folder costs several times what cleanup ever frees.
+
+Cleanup is *not* a disk-space feature, despite how it looks. The data file is
+tens of kilobytes and would be a few hundred after a decade; the backup
+folder alone costs more than cleanup will ever free. What it actually buys is
+that finished work stops turning up in search, lists and exports — and that
+every view keeps rendering off a small array.
+
+It has a retention per category, because they age differently: done todos 4
+months, planning blocks 3, markers 12, meetings 24, wins never (opt-in).
+Notes, people, focuses and month reviews are never touched. Your choice is
+remembered in the data file. A backup is always written first.
+
+The content goes immediately; what survives is a ~140-byte tombstone so a
+stale copy on another device can't resurrect the entry. Which is why the
+data file also keeps a small device registry (`{id, label, lastSeenAt}` per
+device, updated on load). Once every active device has loaded the file after
+a deletion, its tombstone is provably in every local cache and gets dropped
+automatically — with two machines that means "open the other one once". The
+90-day grace period is only the fallback for devices that never come back; a
+device unseen for 90 days is considered retired and stops blocking.
+
+Deleting entries is *only* ever triggered from the cleanup dialog. What runs
+on its own after a load is: the device check-in, dropping tombstones that
+every device has confirmed, and the daily backup.
+
+The registry pays for itself twice over: `changeId` already encodes the
+writing device (`<deviceId>:<ts>:<seq>`), so a concurrent edit merged in from
+the other machine can name its source ("Änderung von windows · a1b2
+übernommen") instead of the anonymous "external change merged", and the
+settings menu lists who shares the folder and when they last synced.
 
 ### Capacity blocks
 

@@ -2,3 +2,5 @@
 .claude/
 tktool-data.json
 jira-tickets.json
+backups/
+tests/
