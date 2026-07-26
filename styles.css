@@ -2307,6 +2307,25 @@ textarea,
   box-shadow: inset 2px 0 0 var(--accent);
 }
 
+.review-schedule-card {
+  overflow: hidden;
+}
+
+.review-schedule-list {
+  display: grid;
+  grid-template-rows: repeat(5, 60px);
+  height: 300px;
+}
+
+.review-schedule-list .review-meeting-row {
+  min-height: 0;
+}
+
+.review-schedule-empty {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
 .review-meeting-badge {
   min-width: 44px;
   text-align: center;

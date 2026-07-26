@@ -7,8 +7,7 @@ function renderReviewItemList(items, emptyText) {
 }
 
 function renderReviewMeetingList(meetings, emptyText) {
-  if (!meetings.length) return `<div style="color:var(--text-muted);font-size:14px">${emptyText}</div>`;
-  return meetings.map(meeting => {
+  const rows = meetings.map(meeting => {
     const linkedCount = meetingItems(meeting.id).length;
     const date = meeting.date ? new Date(`${meeting.date}T12:00:00`) : null;
     const weekday = date ? date.toLocaleDateString('de-AT', { weekday: 'short' }).replace('.', '') : '';
@@ -33,7 +32,8 @@ function renderReviewMeetingList(meetings, emptyText) {
         </div>
       </div>
     `;
-  }).join('');
+  });
+  return renderReviewScheduleList(rows, emptyText);
 }
 
 function reviewMarkerRelativeLabel(date) {
@@ -46,8 +46,7 @@ function reviewMarkerRelativeLabel(date) {
 }
 
 function renderReviewMarkerList(markers, emptyText) {
-  if (!markers.length) return `<div style="color:var(--text-muted);font-size:14px">${emptyText}</div>`;
-  return markers.map(marker => {
+  const rows = markers.map(marker => {
     const date = marker.date ? new Date(`${marker.date}T12:00:00`) : null;
     const weekday = date ? date.toLocaleDateString('de-AT', { weekday: 'short' }).replace('.', '') : '';
     const day = date ? String(date.getDate()).padStart(2, '0') : '--';
@@ -65,7 +64,18 @@ function renderReviewMarkerList(markers, emptyText) {
         <div class="review-row-side review-marker-side">${marker.date ? reviewMarkerRelativeLabel(marker.date) : ''}</div>
       </div>
     `;
-  }).join('');
+  });
+  return renderReviewScheduleList(rows, emptyText);
+}
+
+function renderReviewScheduleList(rows, emptyText) {
+  return `
+    <div class="review-schedule-list">
+      ${rows.length
+        ? rows.join('')
+        : `<div class="review-schedule-empty">${emptyText}</div>`}
+    </div>
+  `;
 }
 
 function itemStatusLabel(status) {
@@ -384,7 +394,7 @@ function renderReviews() {
   const upcomingMeetings = data.meetings
     .filter(meeting => meeting.type !== 'oneOnOne' && meeting.date && meeting.date >= todayStr())
     .sort((a, b) => a.date.localeCompare(b.date))
-    .slice(0, 8);
+    .slice(0, 5);
   const upcomingMarkers = (data.markers || [])
     .filter(marker => marker.date && marker.date >= todayStr())
     .sort((a, b) => a.date.localeCompare(b.date))
@@ -451,12 +461,12 @@ function renderReviews() {
         </div>
       </div>
 
-      <div class="card">
+      <div class="card review-schedule-card">
         <div class="card-header"><span class="card-title">Nächste Meetings</span></div>
         ${renderReviewMeetingList(upcomingMeetings, 'Keine kommenden Meetings')}
       </div>
 
-      <div class="card">
+      <div class="card review-schedule-card">
         <div class="card-header"><span class="card-title">Events</span></div>
         ${renderReviewMarkerList(upcomingMarkers, 'Keine kommenden Events')}
       </div>
