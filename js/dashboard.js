@@ -280,6 +280,7 @@ function teamFocusBlockHandoverStatus(block) {
 // die Planung.
 function renderTeamFocusBlockRow(block, kind) {
   const handover = kind === 'active' ? teamFocusBlockHandoverStatus(block) : '';
+  const canOpenJira = !!jiraUrl(block.jiraRef);
   const timing = kind === 'overdue' ? `seit ${formatDateShort(block.end)}`
     : kind === 'upcoming' ? `ab ${formatDateShort(block.start)}`
     : handover ? 'wartet'
@@ -287,8 +288,13 @@ function renderTeamFocusBlockRow(block, kind) {
   const state = kind === 'overdue' ? 'überfällig — nicht erledigt'
     : handover ? `wartet auf ${handover}`
     : '';
+  const title = [
+    `${block.label || 'Block'} · ${formatDate(block.start)} – ${formatDate(block.end)}`,
+    state,
+    canOpenJira ? `Jira: ${block.jiraRef} (Cmd/Strg-Klick öffnet)` : '',
+  ].filter(Boolean).join('\n');
   return `
-    <button class="tf-block tf-block-${kind} ${handover ? 'tf-block-handover' : ''}" type="button" onclick="navigate('planung')" title="${esc([`${block.label || 'Block'} · ${formatDate(block.start)} – ${formatDate(block.end)}`, state].filter(Boolean).join('\n'))}">
+    <button class="tf-block tf-block-${kind} ${handover ? 'tf-block-handover' : ''}" type="button" onclick="if((event.metaKey||event.ctrlKey)&&openBlockJira('${block.id}'))return;navigate('planung')" title="${esc(title)}">
       <span class="tf-block-mark"></span>
       <span class="tf-block-body">
         <span class="tf-block-title">${esc(block.label || 'Block')}</span>
