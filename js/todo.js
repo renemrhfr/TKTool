@@ -356,33 +356,50 @@ function renderTaskSections(sections) {
 }
 
 function renderTaskTable(items) {
-  const sortedItems = items.slice().sort(compareOverviewTaskRows);
+  const groups = [
+    { status: 'todo', label: 'Todo' },
+    { status: 'waiting', label: 'Wartet auf' },
+    { status: 'backlog', label: 'Backlog' },
+    { status: 'done', label: 'Erledigt' },
+  ].map(group => ({
+    ...group,
+    items: items
+      .filter(item => item.status === group.status)
+      .sort(compareOverviewTaskRows),
+  }));
   return `
-    <div class="card task-table-card">
-      <div class="card-header">
-        <span class="card-title">list (${sortedItems.length})</span>
-      </div>
-      ${sortedItems.length ? `
-        <div class="task-table-wrap">
-          <table class="task-table">
-            <thead>
-              <tr>
-                <th>Task</th>
-                <th>Owner</th>
-                <th>Datum</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              ${sortedItems.map((item, index) => {
-                const previousItem = index > 0 ? sortedItems[index - 1] : null;
-                const startsDoneSection = item.status === 'done' && previousItem && previousItem.status !== 'done';
-                return renderTaskTableRow(item, { startsDoneSection });
-              }).join('')}
-            </tbody>
-          </table>
-        </div>
-      ` : `<div style="color:var(--text-muted);font-size:14px">Keine Einträge</div>`}
+    <div class="task-table-sections">
+      ${groups.map(group => `
+        <section class="card task-table-card task-table-section task-table-section-${group.status} drop-target"
+          ondragover="onItemDragOver(event)"
+          ondragleave="onItemDragLeave(event)"
+          ondrop="onItemDrop(event, '${group.status}')">
+          <div class="card-header task-table-section-header">
+            <span class="task-table-group-title">
+              <span class="task-status-dot task-status-dot-${group.status}" aria-hidden="true"></span>
+              ${group.label}
+            </span>
+            <span class="task-table-group-count">${group.items.length}</span>
+          </div>
+          ${group.items.length ? `
+            <div class="task-table-wrap">
+              <table class="task-table">
+                <thead>
+                  <tr>
+                    <th>Task</th>
+                    <th>Owner</th>
+                    <th>Datum</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${group.items.map(item => renderTaskTableRow(item)).join('')}
+                </tbody>
+              </table>
+            </div>
+          ` : '<div class="task-table-group-empty">Keine Einträge</div>'}
+        </section>
+      `).join('')}
     </div>
   `;
 }
@@ -394,16 +411,22 @@ function previewText(text, maxLength = 120) {
   return `${singleLine.slice(0, maxLength).trimEnd()}…`;
 }
 
-function renderTaskTableRow(item, options = {}) {
+function renderTaskTableRow(item) {
   const isDone = item.status === 'done';
   const isPastDue = !isDone && item.date && item.date < todayStr();
   const person = item.personId ? data.persons.find(entry => entry.id === item.personId) : null;
-  const { startsDoneSection = false } = options;
   const notesPreview = previewText(item.notes);
   return `
-    <tr class="${isDone ? 'is-done' : ''} ${isPastDue ? 'task-table-row-past-due' : ''} ${startsDoneSection ? 'task-table-done-start' : ''} task-table-row-${item.status}">
+    <tr class="${isDone ? 'is-done' : ''} ${isPastDue ? 'task-table-row-past-due' : ''} task-table-row-${item.status}"
+      draggable="true"
+      ondragstart="onItemDragStart(event, '${item.id}')"
+      ondragend="onItemDragEnd(event)">
       <td class="task-table-task-cell" onclick="openEditItem('${item.id}')">
-        <div class="task-table-task"><span class="task-status-dot task-status-dot-${item.status}" aria-hidden="true"></span>${esc(item.text)}</div>
+        <div class="task-table-task">
+          <span class="task-status-dot task-status-dot-${item.status}" aria-hidden="true"></span>
+          <span>${esc(item.text)}</span>
+          ${isPastDue ? '<span class="overdue-badge">Überfällig</span>' : ''}
+        </div>
         <div class="task-table-notes ${notesPreview ? '' : 'is-empty'}">${notesPreview ? esc(notesPreview) : ''}</div>
       </td>
       <td class="task-table-link">
@@ -447,9 +470,12 @@ function renderItem(item, draggable = false, options = {}) {
     ? `draggable="true" ondragstart="onItemDragStart(event, '${item.id}')" ondragend="onItemDragEnd(event)"`
     : '';
   return `
-    <li class="item ${isDone ? 'is-done' : ''} ${compact ? 'item-compact' : ''}" ${dragAttrs}>
+    <li class="item ${isDone ? 'is-done' : ''} ${isPastDue ? 'item-overdue' : ''} ${compact ? 'item-compact' : ''}" ${dragAttrs}>
       <div class="item-content" onclick="openEditItem('${item.id}')" style="cursor:pointer;">
-        <div class="item-text ${isDone ? 'done' : ''}">${esc(item.text)}</div>
+        <div class="item-text ${isDone ? 'done' : ''}">
+          ${esc(item.text)}
+          ${isPastDue ? '<span class="overdue-badge">Überfällig</span>' : ''}
+        </div>
         ${notesPreview ? `<div class="item-notes">${esc(notesPreview)}</div>` : ''}
         <div class="item-meta">
           ${showStatus ? `<span class="badge badge-${item.status}">${item.status}</span>` : ''}

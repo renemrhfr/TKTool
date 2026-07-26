@@ -671,8 +671,23 @@ textarea,
   overflow: hidden;
 }
 
-.task-table-card .card-header {
-  padding: 10px 10px 0;
+.task-table-sections {
+  display: grid;
+  gap: var(--layout-gap);
+}
+
+.task-table-sections .task-table-card {
+  margin-bottom: 0;
+}
+
+.task-table-card .task-table-section-header {
+  margin-bottom: 0;
+  padding: 11px var(--table-padding-x);
+  border-bottom: var(--border-width) solid var(--border);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: calc(var(--label-letter-spacing) + 0.02em);
+  text-transform: uppercase;
 }
 
 .task-table-wrap {
@@ -704,17 +719,72 @@ textarea,
   white-space: nowrap;
 }
 
-.task-table tbody tr:hover { background: var(--interactive-hover-bg); }
-.task-table tbody tr.is-done { opacity: 0.68; }
-.task-table tbody tr.task-table-done-start td {
-  border-top: var(--border-accent-width) solid var(--success);
-  box-shadow: var(--task-done-shadow);
+.task-table-section .task-table thead th {
+  border-top: 0;
 }
+
+.task-table tbody tr:hover { background: var(--interactive-hover-bg); }
+.task-table tbody tr[draggable="true"] { cursor: grab; }
+.task-table tbody tr.is-done { opacity: 0.68; }
+.task-table tbody tr.dragging { opacity: 0.42; cursor: grabbing; }
 .task-table tbody tr.task-table-row-todo { box-shadow: inset var(--row-status-width) 0 0 var(--blue); }
 .task-table tbody tr.task-table-row-backlog { box-shadow: inset var(--row-status-width) 0 0 var(--text-muted); }
 .task-table tbody tr.task-table-row-waiting { box-shadow: inset var(--row-status-width) 0 0 var(--warning); }
 .task-table tbody tr.task-table-row-done { box-shadow: inset var(--row-status-width) 0 0 var(--success); }
-.task-table tbody tr.task-table-row-past-due { box-shadow: inset var(--row-danger-width) 0 0 var(--danger); }
+.task-table tbody tr.task-table-row-past-due {
+  box-shadow: inset var(--row-danger-width) 0 0 var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, var(--surface));
+}
+.task-table tbody tr.task-table-row-past-due:hover {
+  background: color-mix(in srgb, var(--danger) 18%, var(--surface-hover));
+}
+.task-table-section-todo {
+  border-left-color: var(--blue);
+}
+.task-table-section-todo .task-table-section-header {
+  color: var(--blue);
+  background: color-mix(in srgb, var(--blue) 12%, var(--bg-elev));
+}
+.task-table-section-waiting {
+  border-left-color: var(--warning);
+}
+.task-table-section-waiting .task-table-section-header {
+  color: color-mix(in srgb, var(--warning) 84%, var(--text));
+  background: color-mix(in srgb, var(--warning) 14%, var(--bg-elev));
+}
+.task-table-section-backlog {
+  border-left-color: var(--text-muted);
+}
+.task-table-section-backlog .task-table-section-header {
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--text-muted) 12%, var(--bg-elev));
+}
+.task-table-section-done {
+  border-left-color: var(--success);
+}
+.task-table-section-done .task-table-section-header {
+  color: color-mix(in srgb, var(--success) 84%, var(--text));
+  background: color-mix(in srgb, var(--success) 12%, var(--bg-elev));
+}
+.task-table-group-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.task-table-group-count {
+  float: right;
+  min-width: 24px;
+  padding: 1px 7px;
+  border: 1px solid currentColor;
+  border-radius: var(--badge-radius);
+  text-align: center;
+}
+.task-table-group-empty {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-style: italic;
+  padding: 12px var(--table-padding-x);
+}
 .task-table th:nth-child(1), .task-table td:nth-child(1) { width: auto; }
 .task-table th:nth-child(2), .task-table td:nth-child(2) { width: 164px; }
 .task-table th:nth-child(3), .task-table td:nth-child(3) { width: 84px; white-space: nowrap; }
@@ -734,6 +804,7 @@ textarea,
 .task-table-notes.is-empty { visibility: hidden; }
 .task-table-task-cell { cursor: pointer; }
 .task-table-task { font-weight: 700; margin-bottom: 3px; display: flex; align-items: center; gap: 8px; color: var(--text); }
+.task-table-task > span:nth-child(2) { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .task-status-dot { width: 8px; height: 8px; border-radius: 999px; flex-shrink: 0; }
 .task-status-dot-backlog { background: var(--text-muted); }
 .task-status-dot-todo { background: var(--blue); }
@@ -872,6 +943,16 @@ textarea,
 }
 
 .item:last-child { margin-bottom: 0; }
+.item.item-overdue {
+  border-color: color-mix(in srgb, var(--danger) 64%, var(--border));
+  border-left-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, var(--surface));
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--danger) 18%, transparent);
+}
+.item.item-overdue:hover {
+  border-left-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 18%, var(--surface-hover));
+}
 .item[draggable="true"] { cursor: grab; }
 .item.dragging { opacity: 0.45; cursor: grabbing; }
 .item:hover { background: var(--interactive-hover-bg); border-left-color: var(--accent); }
@@ -904,6 +985,9 @@ textarea,
   border-left-color: var(--accent);
   background: var(--interactive-hover-bg);
 }
+.task-table-section.drop-target.drop-over {
+  box-shadow: inset 0 0 0 2px var(--accent), var(--shadow-card);
+}
 
 .item-check {
   width: 16px;
@@ -925,6 +1009,23 @@ textarea,
 
 .item-content { min-width: 0; }
 .item-text { font-size: 13px; word-break: break-word; line-height: 1.35; }
+.overdue-badge {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border: 1px solid var(--danger);
+  border-radius: var(--badge-radius);
+  background: var(--danger);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.35;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  vertical-align: 1px;
+}
 .item-text.done { text-decoration: line-through; color: var(--text-muted); }
 .item-notes {
   font-size: 12px;
@@ -7795,7 +7896,7 @@ body[data-theme="arrakis"] ::selection {
 // ============================================================
 // DATA LAYER — File System Access API
 // ============================================================
-const APP_VERSION = '1.0.34';
+const APP_VERSION = '1.0.35';
 const DATA_FILENAME = 'tktool-data.json';
 const JIRA_SYNC_FILENAME = 'jira-tickets.json';
 const JIRA_QUERY_MAX_RESULTS = 100;
@@ -10285,33 +10386,50 @@ function renderTaskSections(sections) {
 }
 
 function renderTaskTable(items) {
-  const sortedItems = items.slice().sort(compareOverviewTaskRows);
+  const groups = [
+    { status: 'todo', label: 'Todo' },
+    { status: 'waiting', label: 'Wartet auf' },
+    { status: 'backlog', label: 'Backlog' },
+    { status: 'done', label: 'Erledigt' },
+  ].map(group => ({
+    ...group,
+    items: items
+      .filter(item => item.status === group.status)
+      .sort(compareOverviewTaskRows),
+  }));
   return `
-    <div class="card task-table-card">
-      <div class="card-header">
-        <span class="card-title">list (${sortedItems.length})</span>
-      </div>
-      ${sortedItems.length ? `
-        <div class="task-table-wrap">
-          <table class="task-table">
-            <thead>
-              <tr>
-                <th>Task</th>
-                <th>Owner</th>
-                <th>Datum</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              ${sortedItems.map((item, index) => {
-                const previousItem = index > 0 ? sortedItems[index - 1] : null;
-                const startsDoneSection = item.status === 'done' && previousItem && previousItem.status !== 'done';
-                return renderTaskTableRow(item, { startsDoneSection });
-              }).join('')}
-            </tbody>
-          </table>
-        </div>
-      ` : `<div style="color:var(--text-muted);font-size:14px">Keine Einträge</div>`}
+    <div class="task-table-sections">
+      ${groups.map(group => `
+        <section class="card task-table-card task-table-section task-table-section-${group.status} drop-target"
+          ondragover="onItemDragOver(event)"
+          ondragleave="onItemDragLeave(event)"
+          ondrop="onItemDrop(event, '${group.status}')">
+          <div class="card-header task-table-section-header">
+            <span class="task-table-group-title">
+              <span class="task-status-dot task-status-dot-${group.status}" aria-hidden="true"></span>
+              ${group.label}
+            </span>
+            <span class="task-table-group-count">${group.items.length}</span>
+          </div>
+          ${group.items.length ? `
+            <div class="task-table-wrap">
+              <table class="task-table">
+                <thead>
+                  <tr>
+                    <th>Task</th>
+                    <th>Owner</th>
+                    <th>Datum</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${group.items.map(item => renderTaskTableRow(item)).join('')}
+                </tbody>
+              </table>
+            </div>
+          ` : '<div class="task-table-group-empty">Keine Einträge</div>'}
+        </section>
+      `).join('')}
     </div>
   `;
 }
@@ -10323,16 +10441,22 @@ function previewText(text, maxLength = 120) {
   return `${singleLine.slice(0, maxLength).trimEnd()}…`;
 }
 
-function renderTaskTableRow(item, options = {}) {
+function renderTaskTableRow(item) {
   const isDone = item.status === 'done';
   const isPastDue = !isDone && item.date && item.date < todayStr();
   const person = item.personId ? data.persons.find(entry => entry.id === item.personId) : null;
-  const { startsDoneSection = false } = options;
   const notesPreview = previewText(item.notes);
   return `
-    <tr class="${isDone ? 'is-done' : ''} ${isPastDue ? 'task-table-row-past-due' : ''} ${startsDoneSection ? 'task-table-done-start' : ''} task-table-row-${item.status}">
+    <tr class="${isDone ? 'is-done' : ''} ${isPastDue ? 'task-table-row-past-due' : ''} task-table-row-${item.status}"
+      draggable="true"
+      ondragstart="onItemDragStart(event, '${item.id}')"
+      ondragend="onItemDragEnd(event)">
       <td class="task-table-task-cell" onclick="openEditItem('${item.id}')">
-        <div class="task-table-task"><span class="task-status-dot task-status-dot-${item.status}" aria-hidden="true"></span>${esc(item.text)}</div>
+        <div class="task-table-task">
+          <span class="task-status-dot task-status-dot-${item.status}" aria-hidden="true"></span>
+          <span>${esc(item.text)}</span>
+          ${isPastDue ? '<span class="overdue-badge">Überfällig</span>' : ''}
+        </div>
         <div class="task-table-notes ${notesPreview ? '' : 'is-empty'}">${notesPreview ? esc(notesPreview) : ''}</div>
       </td>
       <td class="task-table-link">
@@ -10376,9 +10500,12 @@ function renderItem(item, draggable = false, options = {}) {
     ? `draggable="true" ondragstart="onItemDragStart(event, '${item.id}')" ondragend="onItemDragEnd(event)"`
     : '';
   return `
-    <li class="item ${isDone ? 'is-done' : ''} ${compact ? 'item-compact' : ''}" ${dragAttrs}>
+    <li class="item ${isDone ? 'is-done' : ''} ${isPastDue ? 'item-overdue' : ''} ${compact ? 'item-compact' : ''}" ${dragAttrs}>
       <div class="item-content" onclick="openEditItem('${item.id}')" style="cursor:pointer;">
-        <div class="item-text ${isDone ? 'done' : ''}">${esc(item.text)}</div>
+        <div class="item-text ${isDone ? 'done' : ''}">
+          ${esc(item.text)}
+          ${isPastDue ? '<span class="overdue-badge">Überfällig</span>' : ''}
+        </div>
         ${notesPreview ? `<div class="item-notes">${esc(notesPreview)}</div>` : ''}
         <div class="item-meta">
           ${showStatus ? `<span class="badge badge-${item.status}">${item.status}</span>` : ''}
