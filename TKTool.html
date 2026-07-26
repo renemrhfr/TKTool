@@ -7896,7 +7896,7 @@ body[data-theme="arrakis"] ::selection {
 // ============================================================
 // DATA LAYER — File System Access API
 // ============================================================
-const APP_VERSION = '1.0.35';
+const APP_VERSION = '1.0.36';
 const DATA_FILENAME = 'tktool-data.json';
 const JIRA_SYNC_FILENAME = 'jira-tickets.json';
 const JIRA_QUERY_MAX_RESULTS = 100;
@@ -12994,7 +12994,11 @@ function updateEditItemTypeUI() {
   }
   if (meetingGroup) meetingGroup.style.display = isGrowth ? 'none' : '';
   if (personLabel) personLabel.textContent = isGrowth ? 'Teammitglied' : 'Person';
-  if (monthInput && document.getElementById('editDate')?.value) monthInput.value = document.getElementById('editDate').value.slice(0, 7);
+  // Nur Growth-Eintraege leiten den Monat aus dem Datum ab. Bei Todos bleibt der
+  // Monat eigenstaendig, damit uebernommene Items ihr altes Faelligkeitsdatum
+  // behalten koennen, ohne in den Vormonat zurueckzuspringen.
+  const editDate = document.getElementById('editDate')?.value;
+  if (monthInput && isGrowth && editDate) monthInput.value = editDate.slice(0, 7);
   updateEditItemDateUI();
 }
 

@@ -141,7 +141,11 @@ function updateEditItemTypeUI() {
   }
   if (meetingGroup) meetingGroup.style.display = isGrowth ? 'none' : '';
   if (personLabel) personLabel.textContent = isGrowth ? 'Teammitglied' : 'Person';
-  if (monthInput && document.getElementById('editDate')?.value) monthInput.value = document.getElementById('editDate').value.slice(0, 7);
+  // Nur Growth-Eintraege leiten den Monat aus dem Datum ab. Bei Todos bleibt der
+  // Monat eigenstaendig, damit uebernommene Items ihr altes Faelligkeitsdatum
+  // behalten koennen, ohne in den Vormonat zurueckzuspringen.
+  const editDate = document.getElementById('editDate')?.value;
+  if (monthInput && isGrowth && editDate) monthInput.value = editDate.slice(0, 7);
   updateEditItemDateUI();
 }
 
