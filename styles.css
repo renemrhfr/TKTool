@@ -5763,10 +5763,12 @@ a.jira-ticket-key:hover { text-decoration: underline; }
   background: color-mix(in srgb, var(--accent) 82%, var(--text));
 }
 /* Der Block gehoert der Person noch, ist aber kein aktiver Aufwand mehr:
-   gestrichelte Kante statt voller Flaeche. */
+   gleiche Typfarbe, aber visuell hinter die aktive Arbeit zuruecknehmen. */
 .tl-block-handover-on {
+  opacity: .72;
   border: 1px dashed color-mix(in srgb, var(--accent) 65%, transparent);
 }
+.tl-block-handover-on:hover { opacity: .86; }
 .planung-handover-btn.active,
 .planung-handover-btn:hover { border-color: var(--accent); color: var(--accent); }
 
