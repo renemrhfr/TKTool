@@ -203,7 +203,6 @@ body[data-theme="matrix"] .filter-btn,
 body[data-theme="matrix"] .view-toggle-btn,
 body[data-theme="matrix"] .segmented-toggle-btn {
   transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease, box-shadow 120ms ease, transform 120ms ease, text-shadow 120ms ease;
-  will-change: transform;
 }
 
 body[data-theme="matrix"] .nav button:hover,

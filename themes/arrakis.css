@@ -100,7 +100,7 @@ body[data-theme="arrakis"] {
     radial-gradient(ellipse at 72% -10%, rgba(255, 240, 194, 0.8), transparent 38%),
     linear-gradient(165deg, rgba(200, 102, 45, 0.07), transparent 42%),
     linear-gradient(180deg, #efdcb2, #dfc18d);
-  background-attachment: fixed;
+  background-attachment: scroll;
 }
 
 .arrakis-atmosphere {
@@ -126,10 +126,10 @@ body[data-theme="arrakis"] .arrakis-atmosphere { display: block; }
     linear-gradient(0deg, rgba(200, 102, 45, 0.22), transparent);
   filter: blur(6px);
   transform-origin: bottom;
-  animation: arrakis-heat-shimmer 5.6s ease-in-out infinite alternate;
 }
 
 .arrakis-sand {
+  display: none;
   position: absolute;
   left: -25%;
   width: 150%;
@@ -140,18 +140,13 @@ body[data-theme="arrakis"] .arrakis-atmosphere { display: block; }
     radial-gradient(circle, rgba(237, 190, 112, 0.72) 0 1px, transparent 1.5px),
     radial-gradient(circle, rgba(164, 91, 43, 0.34) 0 0.8px, transparent 1.3px);
   background-size: 23px 17px, 41px 29px, 67px 43px;
-  will-change: transform, opacity;
 }
 
-.arrakis-sand-a {
-  top: 31%;
-  animation: arrakis-sand-drift 31s ease-in-out infinite;
-}
+.arrakis-sand-a { top: 31%; }
 
 .arrakis-sand-b {
   top: 68%;
   transform: scale(0.7);
-  animation: arrakis-sand-drift 43s ease-in-out infinite -17s;
 }
 
 body[data-theme="arrakis"] .header {
@@ -195,25 +190,4 @@ body[data-theme="arrakis"] .participant-pill.active {
 body[data-theme="arrakis"] .btn-primary,
 body[data-theme="arrakis"] ::selection {
   color: #1d1713;
-}
-
-@keyframes arrakis-heat-shimmer {
-  0% { transform: translate3d(-1%, 1px, 0) skewX(-1deg) scaleY(0.94); }
-  45% { transform: translate3d(1%, -3px, 0) skewX(1.5deg) scaleY(1.08); }
-  100% { transform: translate3d(-0.5%, -1px, 0) skewX(-0.6deg) scaleY(1.02); }
-}
-
-@keyframes arrakis-sand-drift {
-  0%, 7% { opacity: 0; transform: translate3d(-8%, 0, 0); }
-  10% { opacity: 0.16; }
-  19% { opacity: 0.25; }
-  27% { opacity: 0; transform: translate3d(15%, -9px, 0); }
-  28%, 100% { opacity: 0; transform: translate3d(15%, -9px, 0); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  body[data-theme="arrakis"] { background-attachment: scroll; }
-  body[data-theme="arrakis"] .arrakis-heat,
-  body[data-theme="arrakis"] .arrakis-sand { animation: none; }
-  body[data-theme="arrakis"] .arrakis-sand { display: none; }
 }

@@ -92,7 +92,7 @@ body[data-theme="starfox"] {
     radial-gradient(circle at 18% 12%, rgba(65, 112, 165, 0.22), transparent 30%),
     radial-gradient(circle at 82% 68%, rgba(74, 55, 128, 0.16), transparent 34%),
     linear-gradient(180deg, #07111d 0%, #050b13 100%);
-  background-attachment: fixed;
+  background-attachment: scroll;
 }
 
 .starfox-space {
@@ -109,10 +109,9 @@ body[data-theme="starfox"] .main { position: relative; z-index: 1; }
 
 .starfox-stars {
   position: absolute;
-  inset: -18%;
+  inset: 0;
   opacity: 0.48;
   background-repeat: repeat;
-  will-change: transform;
 }
 
 .starfox-stars-far {
@@ -122,7 +121,6 @@ body[data-theme="starfox"] .main { position: relative; z-index: 1; }
     radial-gradient(circle, rgba(255, 194, 99, 0.48) 0 1px, transparent 1.5px);
   background-size: 131px 149px, 211px 187px, 307px 263px;
   background-position: 17px 29px, 83px 47px, 121px 163px;
-  animation: starfox-stars-drift-far 95s linear infinite;
 }
 
 .starfox-stars-near {
@@ -132,7 +130,6 @@ body[data-theme="starfox"] .main { position: relative; z-index: 1; }
     radial-gradient(circle, rgba(86, 180, 220, 0.8) 0 1.2px, transparent 1.8px);
   background-size: 263px 229px, 347px 311px;
   background-position: 51px 91px, 177px 33px;
-  animation: starfox-stars-drift-near 62s linear infinite;
 }
 
 .starfox-target-burst {
@@ -193,9 +190,7 @@ body[data-theme="starfox"] .starfox-target-burst.is-firing { visibility: visible
 }
 
 body[data-theme="starfox"] .header {
-  background: color-mix(in srgb, var(--bg-elev) 92%, transparent);
-  backdrop-filter: blur(7px);
-  -webkit-backdrop-filter: blur(7px);
+  background: color-mix(in srgb, var(--bg-elev) 98%, transparent);
 }
 
 body[data-theme="starfox"] .participant-pill.active {
@@ -212,16 +207,6 @@ body[data-theme="starfox"] .participant-pill.active .person-avatar-badge {
   box-shadow: 0 0 0 2px #a8ddf2;
 }
 
-@keyframes starfox-stars-drift-far {
-  from { transform: translate3d(0, -3%, 0); }
-  to { transform: translate3d(-4%, 8%, 0); }
-}
-
-@keyframes starfox-stars-drift-near {
-  from { transform: translate3d(0, -6%, 0) scale(1); }
-  to { transform: translate3d(5%, 12%, 0) scale(1.04); }
-}
-
 @keyframes starfox-target-lock {
   0% { opacity: 0; transform: scale(1.5) rotate(14deg); border-color: #69ad75; }
   28% { opacity: 1; transform: scale(1) rotate(0); border-color: #83e98f; }
@@ -236,15 +221,6 @@ body[data-theme="starfox"] .participant-pill.active .person-avatar-badge {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  body[data-theme="starfox"] {
-    background-attachment: scroll;
-  }
-
-  body[data-theme="starfox"] .starfox-stars {
-    animation: none;
-    will-change: auto;
-  }
-
   body[data-theme="starfox"] .starfox-target-burst {
     display: none;
   }

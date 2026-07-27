@@ -100,7 +100,13 @@ body[data-theme="kodama"] {
     radial-gradient(ellipse at 18% 2%, rgba(66, 133, 129, 0.2), transparent 34%),
     radial-gradient(ellipse at 84% 82%, rgba(41, 98, 91, 0.15), transparent 38%),
     linear-gradient(180deg, #092526, #06191b);
-  background-attachment: fixed;
+  /*
+   * Keep this scroll-bound. Together with the fixed, animated spore layers a
+   * fixed body background can make Chromium allocate several full-window
+   * compositor surfaces. Replacing the dashboard then occasionally crashes
+   * the renderer (STATUS_BREAKPOINT) on some GPU/driver combinations.
+   */
+  background-attachment: scroll;
 }
 
 .kodama-spores {
@@ -117,9 +123,8 @@ body[data-theme="kodama"] .main { position: relative; z-index: 1; }
 
 .kodama-spores-layer {
   position: absolute;
-  inset: -24%;
+  inset: 0;
   background-repeat: repeat;
-  will-change: transform;
 }
 
 .kodama-spores-far {
@@ -130,7 +135,6 @@ body[data-theme="kodama"] .main { position: relative; z-index: 1; }
     radial-gradient(circle, rgba(237, 173, 83, 0.48) 0 1px, transparent 1.7px);
   background-size: 157px 193px, 239px 277px, 349px 311px;
   background-position: 17px 83px, 101px 29px, 211px 149px;
-  animation: kodama-spores-rise-far 71.3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 .kodama-spores-near {
@@ -140,15 +144,12 @@ body[data-theme="kodama"] .main { position: relative; z-index: 1; }
     radial-gradient(circle, rgba(227, 165, 75, 0.65) 0 1.3px, transparent 2px);
   background-size: 281px 251px, 397px 337px;
   background-position: 73px 19px, 193px 127px;
-  animation: kodama-spores-rise-near 47.7s cubic-bezier(0.37, 0.02, 0.61, 0.98) infinite -13s;
 }
 
 body[data-theme="kodama"] .header {
-  background: rgba(8, 31, 32, 0.9);
+  background: rgba(8, 31, 32, 0.98);
   border-bottom-color: rgba(217, 155, 69, 0.5);
   box-shadow: 0 2px 18px rgba(0, 12, 13, 0.36);
-  backdrop-filter: blur(9px);
-  -webkit-backdrop-filter: blur(9px);
 }
 
 body[data-theme="kodama"] .logo {
@@ -172,21 +173,6 @@ body[data-theme="kodama"] ::selection {
   color: #112222;
 }
 
-@keyframes kodama-spores-rise-far {
-  0% { transform: translate3d(0, 9%, 0); }
-  27% { transform: translate3d(2%, 2%, 0); }
-  61% { transform: translate3d(-1%, -7%, 0); }
-  100% { transform: translate3d(3%, -16%, 0); }
-}
-
-@keyframes kodama-spores-rise-near {
-  0% { transform: translate3d(1%, 12%, 0) scale(1); }
-  19% { transform: translate3d(-2%, 6%, 0) scale(1.01); }
-  54% { transform: translate3d(3%, -5%, 0) scale(1.03); }
-  78% { transform: translate3d(1%, -10%, 0) scale(1.02); }
-  100% { transform: translate3d(-3%, -19%, 0) scale(1.04); }
-}
-
 @keyframes kodama-lantern {
   0%, 8%, 12%, 31%, 35%, 62%, 66%, 100% { opacity: 1; filter: brightness(1); }
   9%, 32%, 64% { opacity: 0.86; filter: brightness(0.84); }
@@ -194,7 +180,5 @@ body[data-theme="kodama"] ::selection {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  body[data-theme="kodama"] { background-attachment: scroll; }
-  body[data-theme="kodama"] .kodama-spores-layer,
   body[data-theme="kodama"] .logo { animation: none; }
 }

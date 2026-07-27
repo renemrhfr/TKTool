@@ -6589,7 +6589,7 @@ body[data-theme="hyrule"] {
     repeating-linear-gradient(58deg, rgba(150, 132, 82, 0.045) 0 1px, transparent 1px 7px),
     repeating-linear-gradient(-58deg, rgba(150, 132, 82, 0.035) 0 1px, transparent 1px 9px),
     linear-gradient(178deg, #f7f3e4 0%, #f1ecd9 52%, #e9e6cd 100%);
-  background-attachment: fixed;
+  background-attachment: scroll;
 }
 
 .hyrule-triforce {
@@ -6610,8 +6610,6 @@ body[data-theme="hyrule"] .header {
     linear-gradient(180deg, rgba(255, 253, 245, 0.96) 0%, rgba(244, 238, 217, 0.94) 100%);
   border-bottom-color: rgba(166, 124, 33, 0.42);
   box-shadow: 0 1px 0 rgba(255, 250, 224, 0.9), 0 3px 12px rgba(120, 96, 40, 0.09);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
 }
 
 body[data-theme="hyrule"] .card {
@@ -6651,14 +6649,9 @@ body[data-theme="hyrule"] .card {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  body[data-theme="hyrule"] {
-    background-attachment: scroll;
-  }
-
   body[data-theme="hyrule"] .hyrule-triforce,
   body[data-theme="hyrule"] .hyrule-triforce::after {
     animation: none;
-    will-change: auto;
   }
 }
 
@@ -6758,7 +6751,7 @@ body[data-theme="starfox"] {
     radial-gradient(circle at 18% 12%, rgba(65, 112, 165, 0.22), transparent 30%),
     radial-gradient(circle at 82% 68%, rgba(74, 55, 128, 0.16), transparent 34%),
     linear-gradient(180deg, #07111d 0%, #050b13 100%);
-  background-attachment: fixed;
+  background-attachment: scroll;
 }
 
 .starfox-space {
@@ -6775,10 +6768,9 @@ body[data-theme="starfox"] .main { position: relative; z-index: 1; }
 
 .starfox-stars {
   position: absolute;
-  inset: -18%;
+  inset: 0;
   opacity: 0.48;
   background-repeat: repeat;
-  will-change: transform;
 }
 
 .starfox-stars-far {
@@ -6788,7 +6780,6 @@ body[data-theme="starfox"] .main { position: relative; z-index: 1; }
     radial-gradient(circle, rgba(255, 194, 99, 0.48) 0 1px, transparent 1.5px);
   background-size: 131px 149px, 211px 187px, 307px 263px;
   background-position: 17px 29px, 83px 47px, 121px 163px;
-  animation: starfox-stars-drift-far 95s linear infinite;
 }
 
 .starfox-stars-near {
@@ -6798,7 +6789,6 @@ body[data-theme="starfox"] .main { position: relative; z-index: 1; }
     radial-gradient(circle, rgba(86, 180, 220, 0.8) 0 1.2px, transparent 1.8px);
   background-size: 263px 229px, 347px 311px;
   background-position: 51px 91px, 177px 33px;
-  animation: starfox-stars-drift-near 62s linear infinite;
 }
 
 .starfox-target-burst {
@@ -6859,9 +6849,7 @@ body[data-theme="starfox"] .starfox-target-burst.is-firing { visibility: visible
 }
 
 body[data-theme="starfox"] .header {
-  background: color-mix(in srgb, var(--bg-elev) 92%, transparent);
-  backdrop-filter: blur(7px);
-  -webkit-backdrop-filter: blur(7px);
+  background: color-mix(in srgb, var(--bg-elev) 98%, transparent);
 }
 
 body[data-theme="starfox"] .participant-pill.active {
@@ -6878,16 +6866,6 @@ body[data-theme="starfox"] .participant-pill.active .person-avatar-badge {
   box-shadow: 0 0 0 2px #a8ddf2;
 }
 
-@keyframes starfox-stars-drift-far {
-  from { transform: translate3d(0, -3%, 0); }
-  to { transform: translate3d(-4%, 8%, 0); }
-}
-
-@keyframes starfox-stars-drift-near {
-  from { transform: translate3d(0, -6%, 0) scale(1); }
-  to { transform: translate3d(5%, 12%, 0) scale(1.04); }
-}
-
 @keyframes starfox-target-lock {
   0% { opacity: 0; transform: scale(1.5) rotate(14deg); border-color: #69ad75; }
   28% { opacity: 1; transform: scale(1) rotate(0); border-color: #83e98f; }
@@ -6902,15 +6880,6 @@ body[data-theme="starfox"] .participant-pill.active .person-avatar-badge {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  body[data-theme="starfox"] {
-    background-attachment: scroll;
-  }
-
-  body[data-theme="starfox"] .starfox-stars {
-    animation: none;
-    will-change: auto;
-  }
-
   body[data-theme="starfox"] .starfox-target-burst {
     display: none;
   }
@@ -7380,7 +7349,6 @@ body[data-theme="matrix"] .filter-btn,
 body[data-theme="matrix"] .view-toggle-btn,
 body[data-theme="matrix"] .segmented-toggle-btn {
   transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease, box-shadow 120ms ease, transform 120ms ease, text-shadow 120ms ease;
-  will-change: transform;
 }
 
 body[data-theme="matrix"] .nav button:hover,
@@ -7505,7 +7473,13 @@ body[data-theme="kodama"] {
     radial-gradient(ellipse at 18% 2%, rgba(66, 133, 129, 0.2), transparent 34%),
     radial-gradient(ellipse at 84% 82%, rgba(41, 98, 91, 0.15), transparent 38%),
     linear-gradient(180deg, #092526, #06191b);
-  background-attachment: fixed;
+  /*
+   * Keep this scroll-bound. Together with the fixed, animated spore layers a
+   * fixed body background can make Chromium allocate several full-window
+   * compositor surfaces. Replacing the dashboard then occasionally crashes
+   * the renderer (STATUS_BREAKPOINT) on some GPU/driver combinations.
+   */
+  background-attachment: scroll;
 }
 
 .kodama-spores {
@@ -7522,9 +7496,8 @@ body[data-theme="kodama"] .main { position: relative; z-index: 1; }
 
 .kodama-spores-layer {
   position: absolute;
-  inset: -24%;
+  inset: 0;
   background-repeat: repeat;
-  will-change: transform;
 }
 
 .kodama-spores-far {
@@ -7535,7 +7508,6 @@ body[data-theme="kodama"] .main { position: relative; z-index: 1; }
     radial-gradient(circle, rgba(237, 173, 83, 0.48) 0 1px, transparent 1.7px);
   background-size: 157px 193px, 239px 277px, 349px 311px;
   background-position: 17px 83px, 101px 29px, 211px 149px;
-  animation: kodama-spores-rise-far 71.3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 .kodama-spores-near {
@@ -7545,15 +7517,12 @@ body[data-theme="kodama"] .main { position: relative; z-index: 1; }
     radial-gradient(circle, rgba(227, 165, 75, 0.65) 0 1.3px, transparent 2px);
   background-size: 281px 251px, 397px 337px;
   background-position: 73px 19px, 193px 127px;
-  animation: kodama-spores-rise-near 47.7s cubic-bezier(0.37, 0.02, 0.61, 0.98) infinite -13s;
 }
 
 body[data-theme="kodama"] .header {
-  background: rgba(8, 31, 32, 0.9);
+  background: rgba(8, 31, 32, 0.98);
   border-bottom-color: rgba(217, 155, 69, 0.5);
   box-shadow: 0 2px 18px rgba(0, 12, 13, 0.36);
-  backdrop-filter: blur(9px);
-  -webkit-backdrop-filter: blur(9px);
 }
 
 body[data-theme="kodama"] .logo {
@@ -7577,21 +7546,6 @@ body[data-theme="kodama"] ::selection {
   color: #112222;
 }
 
-@keyframes kodama-spores-rise-far {
-  0% { transform: translate3d(0, 9%, 0); }
-  27% { transform: translate3d(2%, 2%, 0); }
-  61% { transform: translate3d(-1%, -7%, 0); }
-  100% { transform: translate3d(3%, -16%, 0); }
-}
-
-@keyframes kodama-spores-rise-near {
-  0% { transform: translate3d(1%, 12%, 0) scale(1); }
-  19% { transform: translate3d(-2%, 6%, 0) scale(1.01); }
-  54% { transform: translate3d(3%, -5%, 0) scale(1.03); }
-  78% { transform: translate3d(1%, -10%, 0) scale(1.02); }
-  100% { transform: translate3d(-3%, -19%, 0) scale(1.04); }
-}
-
 @keyframes kodama-lantern {
   0%, 8%, 12%, 31%, 35%, 62%, 66%, 100% { opacity: 1; filter: brightness(1); }
   9%, 32%, 64% { opacity: 0.86; filter: brightness(0.84); }
@@ -7599,8 +7553,6 @@ body[data-theme="kodama"] ::selection {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  body[data-theme="kodama"] { background-attachment: scroll; }
-  body[data-theme="kodama"] .kodama-spores-layer,
   body[data-theme="kodama"] .logo { animation: none; }
 }
 
@@ -7708,7 +7660,7 @@ body[data-theme="arrakis"] {
     radial-gradient(ellipse at 72% -10%, rgba(255, 240, 194, 0.8), transparent 38%),
     linear-gradient(165deg, rgba(200, 102, 45, 0.07), transparent 42%),
     linear-gradient(180deg, #efdcb2, #dfc18d);
-  background-attachment: fixed;
+  background-attachment: scroll;
 }
 
 .arrakis-atmosphere {
@@ -7734,10 +7686,10 @@ body[data-theme="arrakis"] .arrakis-atmosphere { display: block; }
     linear-gradient(0deg, rgba(200, 102, 45, 0.22), transparent);
   filter: blur(6px);
   transform-origin: bottom;
-  animation: arrakis-heat-shimmer 5.6s ease-in-out infinite alternate;
 }
 
 .arrakis-sand {
+  display: none;
   position: absolute;
   left: -25%;
   width: 150%;
@@ -7748,18 +7700,13 @@ body[data-theme="arrakis"] .arrakis-atmosphere { display: block; }
     radial-gradient(circle, rgba(237, 190, 112, 0.72) 0 1px, transparent 1.5px),
     radial-gradient(circle, rgba(164, 91, 43, 0.34) 0 0.8px, transparent 1.3px);
   background-size: 23px 17px, 41px 29px, 67px 43px;
-  will-change: transform, opacity;
 }
 
-.arrakis-sand-a {
-  top: 31%;
-  animation: arrakis-sand-drift 31s ease-in-out infinite;
-}
+.arrakis-sand-a { top: 31%; }
 
 .arrakis-sand-b {
   top: 68%;
   transform: scale(0.7);
-  animation: arrakis-sand-drift 43s ease-in-out infinite -17s;
 }
 
 body[data-theme="arrakis"] .header {
@@ -7803,27 +7750,6 @@ body[data-theme="arrakis"] .participant-pill.active {
 body[data-theme="arrakis"] .btn-primary,
 body[data-theme="arrakis"] ::selection {
   color: #1d1713;
-}
-
-@keyframes arrakis-heat-shimmer {
-  0% { transform: translate3d(-1%, 1px, 0) skewX(-1deg) scaleY(0.94); }
-  45% { transform: translate3d(1%, -3px, 0) skewX(1.5deg) scaleY(1.08); }
-  100% { transform: translate3d(-0.5%, -1px, 0) skewX(-0.6deg) scaleY(1.02); }
-}
-
-@keyframes arrakis-sand-drift {
-  0%, 7% { opacity: 0; transform: translate3d(-8%, 0, 0); }
-  10% { opacity: 0.16; }
-  19% { opacity: 0.25; }
-  27% { opacity: 0; transform: translate3d(15%, -9px, 0); }
-  28%, 100% { opacity: 0; transform: translate3d(15%, -9px, 0); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  body[data-theme="arrakis"] { background-attachment: scroll; }
-  body[data-theme="arrakis"] .arrakis-heat,
-  body[data-theme="arrakis"] .arrakis-sand { animation: none; }
-  body[data-theme="arrakis"] .arrakis-sand { display: none; }
 }
 
 </style>
@@ -7915,7 +7841,7 @@ body[data-theme="arrakis"] ::selection {
 // ============================================================
 // DATA LAYER — File System Access API
 // ============================================================
-const APP_VERSION = '1.0.39';
+const APP_VERSION = '1.0.40';
 const DATA_FILENAME = 'tktool-data.json';
 const JIRA_SYNC_FILENAME = 'jira-tickets.json';
 const JIRA_QUERY_MAX_RESULTS = 100;
