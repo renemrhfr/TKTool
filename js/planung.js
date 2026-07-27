@@ -316,6 +316,7 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
       const eISO = b.end > endDate ? endDate : b.end;
       const isSingleDay = sISO === eISO;
       const classes = ['tl-block', `tl-block-${b.typ}`];
+      if (viewState.planungHighlightBlockId === b.id) classes.push('tl-block-highlight');
       if (isSingleDay) classes.push('tl-block-single');
       if (b.done) classes.push('tl-block-done');
       else if (isBlockOverdue(b)) classes.push('tl-block-overdue');
@@ -461,6 +462,39 @@ function togglePlanungWeekends() {
 
 function planungWeekOffset() {
   return parseInt(viewState.planungWeekOffset || 0, 10) || 0;
+}
+
+function navigateToPlanungBlock(blockId) {
+  const block = (data.blocks || []).find(candidate => candidate.id === blockId);
+  if (!block || isBlockParked(block)) {
+    navigate('planung');
+    return;
+  }
+
+  const today = todayStr();
+  const anchor = block.start > today ? block.start : block.end < today ? block.end : today;
+  const currentWeek = startOfWeek(parseISO(today));
+  const targetWeek = startOfWeek(parseISO(anchor));
+  const weekOffset = Math.round((targetWeek - currentWeek) / (7 * 86400000));
+
+  navigate('planung', {
+    planungWeekOffset: weekOffset,
+    planungHighlightBlockId: blockId,
+  });
+  setTimeout(() => highlightPlanungBlock(blockId), 0);
+}
+
+function highlightPlanungBlock(blockId) {
+  const target = Array.from(document.querySelectorAll('#planung-timeline .tl-block'))
+    .find(element => element.dataset.blockId === blockId);
+  if (!target) return;
+
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  target.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'center', inline: 'nearest' });
+  setTimeout(() => {
+    target.classList.remove('tl-block-highlight');
+    if (viewState.planungHighlightBlockId === blockId) delete viewState.planungHighlightBlockId;
+  }, reducedMotion ? 1200 : 2200);
 }
 
 function planungWindow() {

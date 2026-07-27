@@ -4930,6 +4930,23 @@ button.tf-metric {
 .tl-block:hover { filter: brightness(1.08); }
 .tl-block:active { cursor: grabbing; }
 
+.tl-block-highlight {
+  z-index: 6;
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+  animation: tl-block-highlight-pulse 2s ease-out both;
+}
+
+@keyframes tl-block-highlight-pulse {
+  0%, 100% { outline-color: transparent; filter: brightness(1); }
+  12%, 42% { outline-color: var(--accent); filter: brightness(1.28); }
+  27%, 58% { outline-color: transparent; filter: brightness(1.08); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tl-block-highlight { animation: none; }
+}
+
 .tl-block-label {
   display: block;
   min-width: 0;
@@ -7896,7 +7913,7 @@ body[data-theme="arrakis"] ::selection {
 // ============================================================
 // DATA LAYER — File System Access API
 // ============================================================
-const APP_VERSION = '1.0.37';
+const APP_VERSION = '1.0.38';
 const DATA_FILENAME = 'tktool-data.json';
 const JIRA_SYNC_FILENAME = 'jira-tickets.json';
 const JIRA_QUERY_MAX_RESULTS = 100;
@@ -12570,7 +12587,7 @@ function renderTeamFocusBlockRow(block, kind) {
     canOpenJira ? `Jira: ${block.jiraRef} (Cmd/Strg-Klick öffnet)` : '',
   ].filter(Boolean).join('\n');
   return `
-    <button class="tf-block tf-block-${kind} ${handover ? 'tf-block-handover' : ''}" type="button" onclick="if((event.metaKey||event.ctrlKey)&&openBlockJira('${block.id}'))return;navigate('planung')" title="${esc(title)}">
+    <button class="tf-block tf-block-${kind} ${handover ? 'tf-block-handover' : ''}" type="button" onclick="if((event.metaKey||event.ctrlKey)&&openBlockJira('${block.id}'))return;navigateToPlanungBlock('${block.id}')" title="${esc(title)}">
       <span class="tf-block-mark"></span>
       <span class="tf-block-body">
         <span class="tf-block-title">${esc(block.label || 'Block')}</span>
@@ -14874,6 +14891,7 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
       const eISO = b.end > endDate ? endDate : b.end;
       const isSingleDay = sISO === eISO;
       const classes = ['tl-block', `tl-block-${b.typ}`];
+      if (viewState.planungHighlightBlockId === b.id) classes.push('tl-block-highlight');
       if (isSingleDay) classes.push('tl-block-single');
       if (b.done) classes.push('tl-block-done');
       else if (isBlockOverdue(b)) classes.push('tl-block-overdue');
@@ -15019,6 +15037,39 @@ function togglePlanungWeekends() {
 
 function planungWeekOffset() {
   return parseInt(viewState.planungWeekOffset || 0, 10) || 0;
+}
+
+function navigateToPlanungBlock(blockId) {
+  const block = (data.blocks || []).find(candidate => candidate.id === blockId);
+  if (!block || isBlockParked(block)) {
+    navigate('planung');
+    return;
+  }
+
+  const today = todayStr();
+  const anchor = block.start > today ? block.start : block.end < today ? block.end : today;
+  const currentWeek = startOfWeek(parseISO(today));
+  const targetWeek = startOfWeek(parseISO(anchor));
+  const weekOffset = Math.round((targetWeek - currentWeek) / (7 * 86400000));
+
+  navigate('planung', {
+    planungWeekOffset: weekOffset,
+    planungHighlightBlockId: blockId,
+  });
+  setTimeout(() => highlightPlanungBlock(blockId), 0);
+}
+
+function highlightPlanungBlock(blockId) {
+  const target = Array.from(document.querySelectorAll('#planung-timeline .tl-block'))
+    .find(element => element.dataset.blockId === blockId);
+  if (!target) return;
+
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  target.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'center', inline: 'nearest' });
+  setTimeout(() => {
+    target.classList.remove('tl-block-highlight');
+    if (viewState.planungHighlightBlockId === blockId) delete viewState.planungHighlightBlockId;
+  }, reducedMotion ? 1200 : 2200);
 }
 
 function planungWindow() {

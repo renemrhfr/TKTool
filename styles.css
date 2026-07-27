@@ -4793,6 +4793,23 @@ button.tf-metric {
 .tl-block:hover { filter: brightness(1.08); }
 .tl-block:active { cursor: grabbing; }
 
+.tl-block-highlight {
+  z-index: 6;
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+  animation: tl-block-highlight-pulse 2s ease-out both;
+}
+
+@keyframes tl-block-highlight-pulse {
+  0%, 100% { outline-color: transparent; filter: brightness(1); }
+  12%, 42% { outline-color: var(--accent); filter: brightness(1.28); }
+  27%, 58% { outline-color: transparent; filter: brightness(1.08); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tl-block-highlight { animation: none; }
+}
+
 .tl-block-label {
   display: block;
   min-width: 0;

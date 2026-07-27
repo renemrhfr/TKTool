@@ -294,7 +294,7 @@ function renderTeamFocusBlockRow(block, kind) {
     canOpenJira ? `Jira: ${block.jiraRef} (Cmd/Strg-Klick öffnet)` : '',
   ].filter(Boolean).join('\n');
   return `
-    <button class="tf-block tf-block-${kind} ${handover ? 'tf-block-handover' : ''}" type="button" onclick="if((event.metaKey||event.ctrlKey)&&openBlockJira('${block.id}'))return;navigate('planung')" title="${esc(title)}">
+    <button class="tf-block tf-block-${kind} ${handover ? 'tf-block-handover' : ''}" type="button" onclick="if((event.metaKey||event.ctrlKey)&&openBlockJira('${block.id}'))return;navigateToPlanungBlock('${block.id}')" title="${esc(title)}">
       <span class="tf-block-mark"></span>
       <span class="tf-block-body">
         <span class="tf-block-title">${esc(block.label || 'Block')}</span>
