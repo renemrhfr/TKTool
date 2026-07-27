@@ -134,50 +134,47 @@ function meetingMatchesRange(meeting, range, today) {
   return true;
 }
 
+// Kommende Meetings bleiben eine flache, chronologische Liste. Unscharfe Koerbe
+// ("naechste 7 tage") sind zum Scannen schlechter als das Datum selbst — die
+// Datebox links sagt ohnehin schon Tag und Wochentag. Struktur kommt nur noch
+// aus echten Kalendergrenzen: Monatstrenner vorne, Monatsgruppen in der Historie.
 function groupMeetingsByTimeline(meetings, today) {
-  const in7 = dateShift(today, 7);
-  const in30 = dateShift(today, 30);
-  const groups = { heute: [], diese: [], monat: [], spaeter: [], ohneDatum: [], vergangen: {} };
+  const groups = { kommend: [], ohneDatum: [], vergangen: {} };
   meetings.forEach(m => {
     if (!m.date) { groups.ohneDatum.push(m); return; }
-    if (m.date === today) groups.heute.push(m);
-    else if (m.date < today) {
-      const key = meetingMonthKey(m);
-      if (!groups.vergangen[key]) groups.vergangen[key] = [];
-      groups.vergangen[key].push(m);
-    }
-    else if (m.date <= in7) groups.diese.push(m);
-    else if (m.date <= in30) groups.monat.push(m);
-    else groups.spaeter.push(m);
+    if (m.date >= today) { groups.kommend.push(m); return; }
+    const key = meetingMonthKey(m);
+    if (!groups.vergangen[key]) groups.vergangen[key] = [];
+    groups.vergangen[key].push(m);
   });
-  groups.heute.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
-  groups.diese.sort((a, b) => a.date.localeCompare(b.date));
-  groups.monat.sort((a, b) => a.date.localeCompare(b.date));
-  groups.spaeter.sort((a, b) => a.date.localeCompare(b.date));
+  groups.kommend.sort((a, b) => a.date.localeCompare(b.date)
+    || meetingTitleText(a).localeCompare(meetingTitleText(b), 'de-AT'));
   groups.ohneDatum.sort((a, b) => meetingTitleText(a).localeCompare(meetingTitleText(b), 'de-AT'));
   Object.values(groups.vergangen).forEach(entries => entries.sort((a, b) => (b.date || '').localeCompare(a.date || '')));
   return groups;
 }
 
+function pastMonthKeys(groups) {
+  return Object.keys(groups.vergangen).sort((a, b) => b.localeCompare(a));
+}
+
 function flattenMeetingGroups(groups) {
-  const pastKeys = Object.keys(groups.vergangen).sort((a, b) => b.localeCompare(a));
   return [
-    ...groups.heute,
-    ...groups.diese,
-    ...groups.monat,
-    ...groups.spaeter,
+    ...groups.kommend,
     ...groups.ohneDatum,
-    ...pastKeys.flatMap(key => groups.vergangen[key]),
+    ...pastMonthKeys(groups).flatMap(key => groups.vergangen[key]),
   ];
 }
 
-function renderMeetingListRow(m, isActive, query = '') {
+function renderMeetingListRow(m, isActive, query = '', isToday = false) {
   const counts = meetingFollowupCounts(m.id);
   const person = m.personId ? data.persons.find(p => p.id === m.personId) : null;
   const participants = meetingParticipants(m);
   const openTodos = counts.todo + counts.waiting;
   const teamMeeting = isTeamMeeting(m);
-  const excerpt = meetingListExcerpt(m, query);
+  // Ohne Suche ist der Auszug nur Rauschen und kostet jede Zeile eine Zeile mehr;
+  // fuer den Blick zwischendurch reicht der Hover-Peek.
+  const excerpt = query ? meetingListExcerpt(m, query) : '';
   const date = m.date ? new Date(`${m.date}T12:00:00`) : null;
   const day = date ? String(date.getDate()).padStart(2, '0') : '--';
   const weekday = date ? date.toLocaleDateString('de-AT', { weekday: 'short' }).replace('.', '') : '';
@@ -186,7 +183,7 @@ function renderMeetingListRow(m, isActive, query = '') {
   if (m.notes) peekBits.push(previewText(m.notes));
   const peek = peekBits.join('\n\n');
   return `
-    <div class="meeting-list-row ${isActive ? 'active' : ''}"
+    <div class="meeting-list-row ${isActive ? 'active' : ''} ${isToday ? 'is-today' : ''}"
          onclick="openMeetingDetail('${m.id}')"
          role="button" tabindex="0"
          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openMeetingDetail('${m.id}')}"
@@ -224,6 +221,74 @@ function renderMeetingListGroup(label, meetings, selectedId, query = '') {
   `;
 }
 
+// Zugeklappte Monate der Vergangenheit. Bewusst modulweit statt in viewState:
+// der Zustand soll einen Ausflug in eine andere View ueberleben.
+const expandedPastMonths = new Set();
+let seededSelectionId = null;
+
+function togglePastMonth(key) {
+  if (expandedPastMonths.has(key)) expandedPastMonths.delete(key);
+  else expandedPastMonths.add(key);
+  render();
+}
+
+function renderUpcomingMeetingRows(meetings, selectedId, query, today) {
+  let lastMonth = '';
+  return meetings.map(m => {
+    const key = meetingMonthKey(m);
+    const divider = key === lastMonth ? '' : `<div class="meeting-list-month">${meetingMonthLabel(key)}</div>`;
+    lastMonth = key;
+    return divider + renderMeetingListRow(m, m.id === selectedId, query, m.date === today);
+  }).join('');
+}
+
+function renderPastMeetingGroup(key, meetings, selectedId, query, open) {
+  return `
+    <div class="meeting-list-group">
+      <button class="meeting-list-group-label meeting-list-group-toggle ${open ? 'is-open' : ''}"
+        onclick="togglePastMonth('${key}')" aria-expanded="${open ? 'true' : 'false'}">
+        <span class="meeting-list-group-toggle-label">
+          <span class="meeting-list-group-caret" aria-hidden="true">${open ? '&#9662;' : '&#9656;'}</span>
+          ${meetingMonthLabel(key)}
+        </span>
+        <span class="meeting-list-group-count">${meetings.length}</span>
+      </button>
+      ${open ? meetings.map(m => renderMeetingListRow(m, m.id === selectedId, query)).join('') : ''}
+    </div>
+  `;
+}
+
+// Rechte Spalte ohne Auswahl. Statt eines leeren Kastens die naechsten Termine
+// als Sprungziele — damit bleibt das Layout stehen und der erste Klick ist kurz.
+function renderMeetingsDetailPlaceholder(upcoming) {
+  const next = upcoming.slice(0, 4);
+  return `
+    <div class="meetings-empty-panel">
+      <div class="meetings-empty-title">Kein Meeting ausgewählt</div>
+      <div class="meetings-empty-sub">links wählen &mdash; oder direkt weiter:</div>
+      <div class="meetings-empty-quickcards">
+        ${next.map(m => `
+          <button class="meetings-empty-card" onclick="openMeetingDetail('${m.id}')">
+            <span class="meetings-empty-card-label">${m.type === 'oneOnOne' ? '1:1' : (isTeamMeeting(m) ? 'team' : 'mtg')}</span>
+            <span class="meetings-empty-card-title">${meetingDisplayTitle(m)}</span>
+            <span class="meetings-empty-card-date">${meetingRelativeDate(m.date)}</span>
+          </button>
+        `).join('')}
+        <button class="meetings-empty-card meetings-empty-card-new" onclick="openMeetingForm('meeting')">
+          <span class="meetings-empty-card-label">neu</span>
+          <span class="meetings-empty-card-title">+ Meeting</span>
+          <span class="meetings-empty-card-date">ad hoc erfassen</span>
+        </button>
+        <button class="meetings-empty-card meetings-empty-card-new" onclick="openMeetingForm('oneOnOne')">
+          <span class="meetings-empty-card-label">neu</span>
+          <span class="meetings-empty-card-title">+ 1:1</span>
+          <span class="meetings-empty-card-date">mit einer Person</span>
+        </button>
+      </div>
+    </div>
+  `;
+}
+
 function renderMeetings() {
   const filter = viewState.meetingFilter || 'all';
   const range = viewState.meetingRange || 'all';
@@ -250,7 +315,20 @@ function renderMeetings() {
   const oneOnOneCount = data.meetings.filter(m => m.type === 'oneOnOne').length;
   const teamCount = data.meetings.filter(m => isTeamMeeting(m)).length;
   const openFollowupCount = data.meetings.filter(meetingHasOpenFollowups).length;
-  const pastKeys = Object.keys(groups.vergangen).sort((a, b) => b.localeCompare(a));
+  const pastKeys = pastMonthKeys(groups);
+  const pastCount = pastKeys.reduce((sum, key) => sum + groups.vergangen[key].length, 0);
+  // Historie ist standardmaessig zu. Sie geht auf, wenn man sie ausdruecklich
+  // sucht (Suchbegriff, Range-Tab) oder das offene Meeting drin liegt.
+  const pastAlwaysOpen = !!query || range === 'past';
+  // Ein ausgewaehltes Meeting klappt seinen Monat auf — aber nur einmal beim
+  // Wechsel der Auswahl, sonst liesse er sich danach nicht mehr zuklappen.
+  if (selectedId && seededSelectionId !== selectedId) {
+    seededSelectionId = selectedId;
+    pastKeys.forEach(key => {
+      if (groups.vergangen[key].some(m => m.id === selectedId)) expandedPastMonths.add(key);
+    });
+  }
+  const isPastMonthOpen = key => pastAlwaysOpen || expandedPastMonths.has(key);
   const meetingListContent = `
     <div class="meetings-sidebar-controls">
       <div class="meetings-sidebar-head">
@@ -274,12 +352,12 @@ function renderMeetings() {
       </div>
     </div>
     ${ordered.length ? `
-      ${renderMeetingListGroup('heute', groups.heute, selectedId, query)}
-      ${renderMeetingListGroup('nächste 7 tage', groups.diese, selectedId, query)}
-      ${renderMeetingListGroup('nächste 30 tage', groups.monat, selectedId, query)}
-      ${renderMeetingListGroup('später', groups.spaeter, selectedId, query)}
+      ${renderUpcomingMeetingRows(groups.kommend, selectedId, query, today)}
       ${renderMeetingListGroup('ohne datum', groups.ohneDatum, selectedId, query)}
-      ${pastKeys.map(key => renderMeetingListGroup(meetingMonthLabel(key), groups.vergangen[key], selectedId, query)).join('')}
+      ${pastCount ? `
+        <div class="meeting-list-divider">historie <span>${pastCount}</span></div>
+        ${pastKeys.map(key => renderPastMeetingGroup(key, groups.vergangen[key], selectedId, query, isPastMonthOpen(key))).join('')}
+      ` : ''}
     ` : `<div class="meetings-sidebar-empty">${query ? 'keine treffer' : 'keine meetings'}</div>`}
   `;
 
@@ -311,11 +389,11 @@ function renderMeetings() {
     </div>
 
     ${totalCount ? `
-      ${selected ? `
-        <div class="meetings-layout">
-          <aside class="meetings-sidebar card">
-            ${meetingListContent}
-          </aside>
+      <div class="meetings-layout">
+        <aside class="meetings-sidebar card">
+          ${meetingListContent}
+        </aside>
+        ${selected ? `
           <section class="meetings-detail-panel card">
             <div class="meetings-detail-header">
               <div class="meetings-detail-title-row">
@@ -334,12 +412,12 @@ function renderMeetings() {
             </div>
             ${renderMeetingDetailBody(selected)}
           </section>
-        </div>
-      ` : `
-        <section class="meetings-list-panel card">
-          ${meetingListContent}
-        </section>
-      `}
+        ` : `
+          <section class="meetings-detail-panel card">
+            ${renderMeetingsDetailPlaceholder(groups.kommend)}
+          </section>
+        `}
+      </div>
     ` : `
       <div class="empty-state">
         <div class="empty-state-icon">&#128197;</div>
