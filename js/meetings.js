@@ -227,9 +227,13 @@ const expandedPastMonths = new Set();
 let seededSelectionId = null;
 
 function togglePastMonth(key) {
+  const sidebar = document.querySelector('.meetings-sidebar');
+  const scrollTop = sidebar ? sidebar.scrollTop : 0;
   if (expandedPastMonths.has(key)) expandedPastMonths.delete(key);
   else expandedPastMonths.add(key);
   render();
+  const renderedSidebar = document.querySelector('.meetings-sidebar');
+  if (renderedSidebar) renderedSidebar.scrollTop = scrollTop;
 }
 
 function renderUpcomingMeetingRows(meetings, selectedId, query, today) {

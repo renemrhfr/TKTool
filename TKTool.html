@@ -7858,7 +7858,7 @@ body[data-theme="arrakis"] ::selection {
 // ============================================================
 // DATA LAYER — File System Access API
 // ============================================================
-const APP_VERSION = '1.0.41';
+const APP_VERSION = '1.0.42';
 const DATA_FILENAME = 'tktool-data.json';
 const JIRA_SYNC_FILENAME = 'jira-tickets.json';
 const JIRA_QUERY_MAX_RESULTS = 100;
@@ -11329,9 +11329,13 @@ const expandedPastMonths = new Set();
 let seededSelectionId = null;
 
 function togglePastMonth(key) {
+  const sidebar = document.querySelector('.meetings-sidebar');
+  const scrollTop = sidebar ? sidebar.scrollTop : 0;
   if (expandedPastMonths.has(key)) expandedPastMonths.delete(key);
   else expandedPastMonths.add(key);
   render();
+  const renderedSidebar = document.querySelector('.meetings-sidebar');
+  if (renderedSidebar) renderedSidebar.scrollTop = scrollTop;
 }
 
 function renderUpcomingMeetingRows(meetings, selectedId, query, today) {
