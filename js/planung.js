@@ -522,10 +522,22 @@ function renderPlanung() {
   const sort = viewState.planungSort || 'name';
   const rawQuery = viewState.planungQuery || '';
   const blockQuery = rawQuery.trim().toLocaleLowerCase('de-AT');
-  const matchingBlocks = blockQuery ? data.blocks.filter(block => blockMatchesPlanungQuery(block, blockQuery)) : data.blocks;
+  const personFilter = planungPersonFilter();
+  const queryBlocks = blockQuery ? data.blocks.filter(block => blockMatchesPlanungQuery(block, blockQuery)) : data.blocks;
+  // Personenfilter zieht durch alle Panels — sonst zeigt die Zeile eine Person,
+  // die Liste darunter aber weiter das ganze Team.
+  const matchingBlocks = personFilter ? queryBlocks.filter(block => block.personId === personFilter) : queryBlocks;
   const matchingPersonIds = new Set(matchingBlocks.map(block => block.personId));
 
-  const team = data.persons.filter(p => p.type !== 'kontakt' && (!blockQuery || matchingPersonIds.has(p.id)));
+  // Auswahlliste bleibt vollstaendig, auch wenn gerade gefiltert wird.
+  const filterablePersons = data.persons
+    .filter(p => p.type !== 'kontakt')
+    .slice()
+    .sort((a, b) => a.name.localeCompare(b.name, 'de-AT'));
+
+  const team = data.persons.filter(p => p.type !== 'kontakt'
+    && (!personFilter || p.id === personFilter)
+    && (!blockQuery || matchingPersonIds.has(p.id)));
   const withCap = team.map(p => {
     const isSupport = personSupportInMonth(p, month);
     const cap = personCapacity(p.id, start, end);
@@ -562,7 +574,8 @@ function renderPlanung() {
   ` : '';
   // Bottleneck-Blick: alles, was gerade bei QA/Review haengt — quer ueber das
   // Team, weil sich genau da der Stau zeigt, den die Einzelansicht verbirgt.
-  const waiting = jiraHandoverBlocks(null).sort((a, b) => (a.end || '').localeCompare(b.end || ''));
+  // Nur wenn explizit auf eine Person gefiltert wird, zieht das auch hier durch.
+  const waiting = jiraHandoverBlocks(personFilter || null).sort((a, b) => (a.end || '').localeCompare(b.end || ''));
   const waitingByStatus = {};
   for (const b of waiting) {
     const st = (jiraStatusForBlock(b) || {}).status || '';
@@ -656,6 +669,12 @@ function renderPlanung() {
             <button class="filter-btn ${planungShowWeekends() ? 'active' : ''}" onclick="togglePlanungWeekends()" title="Samstag/Sonntag ein-/ausblenden">sa/so</button>
             ${overdueChip}
             ${handoverChip}
+            <select class="filter-btn planung-person-filter ${personFilter ? 'active' : ''}"
+              title="Nur einen Mitarbeiter anzeigen"
+              onchange="setPlanungPerson(this.value)">
+              <option value=""${personFilter ? '' : ' selected'}>alle mitarbeiter</option>
+              ${filterablePersons.map(p => `<option value="${esc(p.id)}"${personFilter === p.id ? ' selected' : ''}>${esc(p.name)}</option>`).join('')}
+            </select>
           </div>
           <div class="view-search planung-search">
             <input id="planungSearchInput" type="search"
@@ -733,6 +752,19 @@ function resetPlanungWindow() {
   viewState.planungWeekOffset = 0;
   viewState.planungExtraPastWeeks = 0;
   viewState.planungExtraFutureWeeks = 0;
+  render();
+}
+
+// Leerer String = ganzes Team. Verweist der Filter auf eine geloeschte Person,
+// faellt er still auf "alle" zurueck.
+function planungPersonFilter() {
+  const id = viewState.planungPerson || '';
+  if (!id) return '';
+  return (data.persons || []).some(p => p.id === id && p.type !== 'kontakt') ? id : '';
+}
+
+function setPlanungPerson(id) {
+  viewState.planungPerson = id || '';
   render();
 }
 
@@ -1104,25 +1136,19 @@ function openJiraDriftMenu(personId) {
       ${rows.join('')}
     </div>` : '';
 
-  const unplanned = drift.unplanned.map(t => {
-    const url = jiraUrl(t.key);
-    const key = url
-      ? `<a class="jira-ticket-key" href="${esc(url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${esc(t.key)}</a>`
-      : `<span class="jira-ticket-key">${esc(t.key)}</span>`;
-    return `
+  const unplanned = drift.unplanned.map(t => `
       <div class="jira-drift-row">
-        ${key}
+        ${jiraKeyLink(t.key)}
         <span class="jira-drift-text" title="${esc(t.summary || '')}">${esc(t.summary || '')}</span>
         <span class="jira-status-chip jira-status-${esc(t.statusCategory || 'new')}">${esc((t.status || '').toLowerCase())}</span>
         <button class="btn btn-sm btn-primary" type="button"
           onclick="quickPlanJiraTicket('${person.id}','${esc(t.key)}')"
           title="Block ab heute anlegen">+ block</button>
-      </div>`;
-  });
+      </div>`);
 
   const stale = drift.stale.map(b => `
     <div class="jira-drift-row">
-      <span class="jira-ticket-key">${esc(b.jiraRef)}</span>
+      ${jiraKeyLink(b.jiraRef)}
       <span class="jira-drift-text" title="${esc(b.label || '')}">${esc(b.label || '(ohne Label)')}</span>
       <span class="jira-drift-note">ticket nicht mehr offen</span>
       <button class="btn btn-sm btn-secondary" type="button"
@@ -1134,7 +1160,7 @@ function openJiraDriftMenu(personId) {
     const current = jiraSummaryForKey(b.jiraRef);
     return `
       <div class="jira-drift-row">
-        <span class="jira-ticket-key">${esc(b.jiraRef)}</span>
+        ${jiraKeyLink(b.jiraRef)}
         <span class="jira-drift-text jira-drift-rename" title="${esc(b.label || '')} → ${esc(current)}">
           <s>${esc(b.label || '')}</s> ${esc(current)}
         </span>

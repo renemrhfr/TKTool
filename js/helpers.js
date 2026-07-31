@@ -43,6 +43,17 @@ function jiraUrl(ref) {
   return (/\/browse$/.test(base) ? base : base + '/browse') + '/' + encodeURIComponent(ref);
 }
 
+// Ticket-Key als Chip — verlinkt, sobald eine Base-URL konfiguriert ist.
+// stopPropagation, weil die Chips in klickbaren Zeilen sitzen.
+function jiraKeyLink(ref) {
+  const key = String(ref || '').trim();
+  if (!key) return '';
+  const url = jiraUrl(key);
+  return url
+    ? `<a class="jira-ticket-key" href="${esc(url)}" target="_blank" rel="noopener" title="${esc(key)} in Jira öffnen" onclick="event.stopPropagation()">${esc(key)}</a>`
+    : `<span class="jira-ticket-key">${esc(key)}</span>`;
+}
+
 function jiraMd(ref) {
   const url = jiraUrl(ref);
   return url ? `[${ref}](${url})` : ref;
