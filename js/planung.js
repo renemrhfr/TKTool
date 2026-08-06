@@ -1130,21 +1130,35 @@ function openJiraDriftMenu(personId) {
   const drift = jiraDriftForPerson(person);
   if (!drift || !drift.hasDrift) { closeOverlay(); return; }
 
-  const section = (title, rows) => rows.length ? `
+  // count separat, weil gruppierte Zeilen mehr Tickets tragen als es Eintraege gibt
+  const section = (title, rows, count) => rows.length ? `
     <div class="jira-drift-group">
-      <div class="jira-drift-head">${title} &middot; ${rows.length}</div>
+      <div class="jira-drift-head">${title} &middot; ${count === undefined ? rows.length : count}</div>
       ${rows.join('')}
     </div>` : '';
 
-  const unplanned = drift.unplanned.map(t => `
+  // Gruppiert wird nur, was hier auch steht: ist der Auftrag laengst verplant,
+  // taucht er nicht auf und seine Subtasks bleiben flach.
+  const driftRow = node => {
+    const t = node.ticket;
+    const row = `
       <div class="jira-drift-row">
         ${jiraKeyLink(t.key)}
         <span class="jira-drift-text" title="${esc(t.summary || '')}">${esc(t.summary || '')}</span>
+        ${node.children.length ? jiraGroupToggle(node) : ''}
         <span class="jira-status-chip jira-status-${esc(t.statusCategory || 'new')}">${esc((t.status || '').toLowerCase())}</span>
         <button class="btn btn-sm btn-primary" type="button"
           onclick="quickPlanJiraTicket('${person.id}','${esc(t.key)}')"
           title="Block ab heute anlegen">+ block</button>
-      </div>`);
+      </div>`;
+    if (!node.children.length) return row;
+    return `
+      <div class="jira-ticket-group ${isJiraGroupOpen(t.key) ? 'is-open' : ''}">
+        ${row}
+        <div class="jira-ticket-children">${node.children.map(driftRow).join('')}</div>
+      </div>`;
+  };
+  const unplanned = groupJiraTickets(drift.unplanned).map(driftRow);
 
   const stale = drift.stale.map(b => `
     <div class="jira-drift-row">
@@ -1177,7 +1191,7 @@ function openJiraDriftMenu(personId) {
     </div>
     <div class="modal-body">
       <div class="form-hint" style="margin-bottom:10px">Stand: ${esc(jiraSyncAgeLabel() || 'unbekannt')}</div>
-      ${section('ohne block', unplanned)}
+      ${section('ohne block', unplanned, drift.unplanned.length)}
       ${section('block veraltet', stale)}
       ${section('titel geändert', renamed)}
     </div>

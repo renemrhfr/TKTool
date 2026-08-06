@@ -1,7 +1,7 @@
 // ============================================================
 // DATA LAYER — File System Access API
 // ============================================================
-const APP_VERSION = '1.0.43';
+const APP_VERSION = '1.0.44';
 const DATA_FILENAME = 'tktool-data.json';
 const JIRA_SYNC_FILENAME = 'jira-tickets.json';
 const JIRA_QUERY_MAX_RESULTS = 100;
@@ -632,6 +632,10 @@ function jiraSnapshotFromResponse(parsed) {
         priority: f.priority ? String(f.priority.name || '') : '',
         type: f.issuetype ? String(f.issuetype.name || '') : '',
         updated: String(f.updated || ''),
+        // Traegt in Jira Cloud beide Beziehungen: Subtask -> Auftrag und
+        // Auftrag -> Epic. Gruppiert wird spaeter nur, wenn der Parent
+        // derselben Person gehoert, siehe groupJiraTickets().
+        parentKey: f.parent ? String(f.parent.key || '').toUpperCase() : '',
       });
     }
     if (refKeys.has(key.toUpperCase())) {

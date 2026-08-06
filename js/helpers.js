@@ -566,6 +566,76 @@ function jiraTicketsForPerson(person) {
   return Array.isArray(tickets) ? tickets.filter(t => !isJiraStatusExcluded(t.status)) : [];
 }
 
+// --- Ticket-Gruppierung ---------------------------------------------
+// Entwickler legen sich unter ihrem Auftragsticket Subtasks an, dadurch steht
+// in der Liste der Auftrag *und* jeder Subtask. Zusammengefasst wird rein
+// strukturell: ein Ticket rutscht unter ein anderes, wenn dessen Key sein
+// Parent ist *und* der Parent in derselben Liste steht, also derselben Person
+// gehoert. Haengt der Parent woanders — allen voran das Sammel-Epic
+// "Tagesgeschaeft", das niemandem zugewiesen ist — bleiben die Tickets flach:
+// die haben inhaltlich nichts miteinander zu tun. Bewusst ohne Sonderfall auf
+// Ticket-Typ oder Key, das waere Policy in einer Anzeigefunktion.
+//
+// Ergebnis ist ein Baum aus { ticket, children }; die Reihenfolge der
+// uebergebenen Liste bleibt auf jeder Ebene erhalten.
+function groupJiraTickets(tickets) {
+  const list = Array.isArray(tickets) ? tickets : [];
+  const nodes = new Map();
+  for (const t of list) {
+    const key = String(t.key || '').trim().toUpperCase();
+    if (key && !nodes.has(key)) nodes.set(key, { ticket: t, children: [] });
+  }
+  const roots = [];
+  for (const t of list) {
+    const key = String(t.key || '').trim().toUpperCase();
+    const node = nodes.get(key);
+    if (!node || node.ticket !== t) continue;
+    const parentKey = String(t.parentKey || '').trim().toUpperCase();
+    const parent = parentKey && parentKey !== key ? nodes.get(parentKey) : null;
+    if (parent) parent.children.push(node);
+    else roots.push(node);
+  }
+  return roots;
+}
+
+// Alles unterhalb eines Knotens, ueber alle Ebenen — das ist die Zahl, die am
+// zugeklappten Kopf steht.
+function jiraGroupSize(node) {
+  return node.children.reduce((sum, child) => sum + 1 + jiraGroupSize(child), 0);
+}
+
+// Aufgeklappte Gruppen. Modulweit wie expandedPastMonths in meetings.js: der
+// Zustand soll einen Ausflug in eine andere View ueberleben. Default ist zu —
+// dichter geht es nicht, und genau darum ging es bei der Gruppierung.
+const expandedJiraGroups = new Set();
+
+function isJiraGroupOpen(key) {
+  return expandedJiraGroups.has(String(key || '').toUpperCase());
+}
+
+// Klappt ohne render(): die Liste steckt einmal im Team-Tab und einmal im
+// Drift-Modal, und ein render() wuerde das Modal nicht mit aufbauen. Die Menge
+// wird trotzdem gepflegt, damit ein spaeterer Neuaufbau den Stand kennt.
+function toggleJiraGroup(el, key) {
+  const name = String(key || '').toUpperCase();
+  const group = el.closest('.jira-ticket-group');
+  if (!group) return;
+  const open = !group.classList.contains('is-open');
+  group.classList.toggle('is-open', open);
+  el.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open) expandedJiraGroups.add(name);
+  else expandedJiraGroups.delete(name);
+}
+
+// Der Klapp-Chip am Kopf einer Gruppe: Caret plus Anzahl darunter.
+function jiraGroupToggle(node) {
+  const key = String(node.ticket.key || '').toUpperCase();
+  const count = jiraGroupSize(node);
+  return `<button class="jira-group-toggle" type="button" aria-expanded="${isJiraGroupOpen(key) ? 'true' : 'false'}"
+    title="${count} untergeordnete${count === 1 ? 's' : ''} Ticket${count === 1 ? '' : 's'}"
+    onclick="event.stopPropagation(); toggleJiraGroup(this, '${esc(key)}')"><span class="jira-group-caret" aria-hidden="true"></span>${count}</button>`;
+}
+
 // Alle Tickets aus dem Snapshot als flache Liste (key + summary), fuer die
 // Vorschlagsliste im Block-Formular. Dedupliziert, weil ein Ticket sowohl in
 // assignees als auch in refs stecken kann.
@@ -630,7 +700,7 @@ function jiraQueryUrl() {
 
   const params = new URLSearchParams({
     jql,
-    fields: 'summary,status,priority,issuetype,updated,assignee,resolution',
+    fields: 'summary,status,priority,issuetype,updated,assignee,resolution,parent',
     maxResults: String(JIRA_QUERY_MAX_RESULTS),
   });
   return `${base}/rest/api/3/search/jql?${params}`;
