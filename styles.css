@@ -4831,6 +4831,27 @@ button.tf-metric {
 .tl-block-done { opacity: 0.45; }
 .tl-block-done .tl-block-label { text-decoration: line-through; }
 .tl-block-check { flex: 0 0 auto; font-weight: 700; }
+
+/* Zusammengefasste Bloecke: der Sammelbalken traegt die gestapelte Kante, damit
+   man sieht, dass darunter mehr liegt. Nicht ziehbar, daher kein resize-Cursor. */
+.tl-block-group {
+  cursor: pointer;
+  box-shadow: 0 2px 0 -1px var(--bg), 0 3px 0 -1px currentColor;
+}
+.tl-block-group-count {
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.22);
+}
+.tl-block-group-count.is-open { cursor: pointer; }
+.tl-block-group-count.is-open:hover { background: rgba(0, 0, 0, 0.38); }
+/* Kinder einer aufgeklappten Gruppe: eingerueckte Kante statt eigener Farbe,
+   die Typ-Farbe soll erhalten bleiben. */
+.tl-block-group-child { border-left: 3px solid rgba(0, 0, 0, 0.28); }
 .tl-block-overdue { box-shadow: 0 0 0 2px var(--danger); }
 .tl-block-swatch-overdue {
   background: transparent;
@@ -5671,40 +5692,6 @@ button.jira-sync-stamp.jira-sync-stamp-toolbar {
   min-width: 0;
 }
 .jira-ticket-row:last-child { border-bottom: none; }
-/* Zugeklappte Ticket-Gruppe: der Auftrag steht, die Subtasks liegen darunter.
-   Gruppiert wird nur, wenn der Parent derselben Person gehoert. */
-.jira-ticket-children { display: none; }
-.jira-ticket-group.is-open > .jira-ticket-children { display: block; }
-.jira-ticket-children > .jira-ticket-row,
-.jira-ticket-children > .jira-ticket-group > .jira-ticket-row,
-.jira-ticket-children > .jira-drift-row,
-.jira-ticket-children > .jira-ticket-group > .jira-drift-row {
-  padding-left: 14px;
-  border-left: 1px solid var(--border);
-  margin-left: 3px;
-}
-.jira-group-toggle {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  font-family: inherit;
-  font-size: 10px;
-  letter-spacing: .05em;
-  padding: 1px 5px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-}
-.jira-group-toggle:hover {
-  color: var(--text);
-  border-color: var(--text-muted);
-}
-.jira-group-caret::before { content: '\25B8'; }
-.jira-ticket-group.is-open > .jira-ticket-row .jira-group-caret::before,
-.jira-ticket-group.is-open > .jira-drift-row .jira-group-caret::before { content: '\25BE'; }
 .jira-ticket-key {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 12px;

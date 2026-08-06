@@ -147,30 +147,6 @@ async function submitJiraImport() {
   }
 }
 
-// Eine Zeile der Ticketliste — mit Kindern wird daraus eine Klapp-Gruppe.
-// Rekursiv, weil Jira Epic > Auftrag > Subtask zulaesst und beide Stufen bei
-// derselben Person liegen koennen.
-function renderJiraTicketNode(node) {
-  const t = node.ticket;
-  const url = jiraUrl(t.key);
-  const keyEl = url
-    ? `<a class="jira-ticket-key" href="${esc(url)}" target="_blank" rel="noopener">${esc(t.key)}</a>`
-    : `<span class="jira-ticket-key">${esc(t.key)}</span>`;
-  const row = `
-    <div class="jira-ticket-row">
-      ${keyEl}
-      <span class="jira-ticket-summary" title="${esc(t.summary || '')}">${esc(t.summary || '')}</span>
-      ${node.children.length ? jiraGroupToggle(node) : ''}
-      <span class="jira-status-chip jira-status-${esc(t.statusCategory || 'new')}">${esc((t.status || '').toLowerCase())}</span>
-    </div>`;
-  if (!node.children.length) return row;
-  return `
-    <div class="jira-ticket-group ${isJiraGroupOpen(t.key) ? 'is-open' : ''}">
-      ${row}
-      <div class="jira-ticket-children">${node.children.map(renderJiraTicketNode).join('')}</div>
-    </div>`;
-}
-
 function renderPersonJiraBlock(person) {
   if (!jiraSyncData) {
     return `
@@ -203,7 +179,19 @@ function renderPersonJiraBlock(person) {
       </div>
       ${tickets.length ? `
         <div class="jira-ticket-list">
-          ${groupJiraTickets(tickets).map(renderJiraTicketNode).join('')}
+          ${tickets.map(t => {
+            const url = jiraUrl(t.key);
+            const keyEl = url
+              ? `<a class="jira-ticket-key" href="${esc(url)}" target="_blank" rel="noopener">${esc(t.key)}</a>`
+              : `<span class="jira-ticket-key">${esc(t.key)}</span>`;
+            return `
+              <div class="jira-ticket-row">
+                ${keyEl}
+                <span class="jira-ticket-summary" title="${esc(t.summary || '')}">${esc(t.summary || '')}</span>
+                <span class="jira-status-chip jira-status-${esc(t.statusCategory || 'new')}">${esc((t.status || '').toLowerCase())}</span>
+              </div>
+            `;
+          }).join('')}
         </div>
       ` : '<div class="team-empty-copy">Keine offenen Tickets assigned</div>'}
     </div>

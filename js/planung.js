@@ -177,6 +177,91 @@ function personCapacity(personId, winStart, winEnd) {
 // ============================================================
 // TIMELINE RENDERER
 // ============================================================
+// ============================================================
+// JIRA-HIERARCHIE IN DER TIMELINE
+// ============================================================
+// Entwickler legen sich unter ihrem Auftragsticket Subtasks an und jedes davon
+// wird ein eigener Block — bei fuenf Subtasks ist die Zeile fuenf Lanes hoch,
+// obwohl es *eine* Sache ist. Zusammengefasst wird rein strukturell: ein Block
+// haengt unter einem anderen, wenn sein Ticket laut Jira unter dessen Ticket
+// haengt *und* beide Bloecke derselben Person gehoeren. Ein Parent, auf den
+// kein Block dieser Person zeigt — allen voran das Sammel-Epic
+// "Tagesgeschaeft" — bildet keine Gruppe: die Themen darunter haben nichts
+// miteinander zu tun. Bewusst ohne Sonderfall auf Ticket-Typ oder Key.
+const expandedBlockGroups = new Set();
+
+function blockGroupKey(personId, ref) {
+  return personId + ':' + String(ref || '').toUpperCase();
+}
+
+function toggleBlockGroup(personId, ref) {
+  const key = blockGroupKey(personId, ref);
+  if (expandedBlockGroups.has(key)) expandedBlockGroups.delete(key);
+  else expandedBlockGroups.add(key);
+  render();
+}
+
+// Nimmt die gelayouteten Block-Eintraege einer Person und liefert die Einheiten,
+// die tatsaechlich gezeichnet werden: einzelne Bloecke, zugeklappte Gruppen
+// (ein Balken ueber die gesamte Spanne) oder aufgeklappte Gruppen (Kopf plus
+// Kinder als eigene Bloecke).
+function groupPersonBlocks(entries, personId) {
+  const refOf = e => String((e.b && e.b.jiraRef) || '').trim().toUpperCase();
+  const byRef = new Map();
+  for (const e of entries) {
+    const ref = refOf(e);
+    if (ref && !byRef.has(ref)) byRef.set(ref, e);
+  }
+
+  // Bis zum obersten Ticket hochlaufen, auf das diese Person auch einen Block
+  // hat. Damit faellt Epic > Auftrag > Subtask auf eine Ebene zusammen, statt
+  // verschachtelte Balken zu erzeugen. Der Zaehler kappt Ringe.
+  const rootRefOf = ref => {
+    let cur = ref;
+    for (let i = 0; i < 10; i++) {
+      const parentRef = jiraParentKeyForRef(cur);
+      if (!parentRef || parentRef === cur || !byRef.has(parentRef)) return cur;
+      cur = parentRef;
+    }
+    return cur;
+  };
+
+  const buckets = new Map();
+  const loose = [];
+  for (const e of entries) {
+    const ref = refOf(e);
+    // Zwei Bloecke auf dasselbe Ticket: nur der erste traegt die Gruppe.
+    if (!ref || byRef.get(ref) !== e) { loose.push(e); continue; }
+    const root = rootRefOf(ref);
+    if (!buckets.has(root)) buckets.set(root, []);
+    buckets.get(root).push(e);
+  }
+
+  const units = loose.map(e => ({ ...e }));
+  for (const [root, members] of buckets) {
+    const head = members.find(e => refOf(e) === root);
+    if (!head || members.length < 2) { units.push(...members.map(e => ({ ...e }))); continue; }
+    const children = members.filter(e => e !== head);
+    const group = { ref: root, count: children.length, members };
+    // Wird ein Block angesprungen (Suche, Dashboard), muss seine Gruppe auf —
+    // sonst haengt highlightPlanungBlock an einem Element, das es nicht gibt.
+    const holdsHighlight = viewState.planungHighlightBlockId
+      && members.some(e => e.b.id === viewState.planungHighlightBlockId);
+    if (holdsHighlight || expandedBlockGroups.has(blockGroupKey(personId, root))) {
+      units.push({ ...head, groupOpen: group });
+      units.push(...children.map(e => ({ ...e, groupChild: root })));
+    } else {
+      units.push({
+        ...head,
+        sIdx: Math.min(...members.map(e => e.sIdx)),
+        eIdx: Math.max(...members.map(e => e.eIdx)),
+        group,
+      });
+    }
+  }
+  return units;
+}
+
 function renderTimeline({ personIds, startDate, endDate, options = {} }) {
   const {
     weekendsOnly = false,
@@ -292,8 +377,11 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
     const jiraDrift = jiraDriftForPerson(person);
     const staleBlockIds = jiraDrift ? new Set(jiraDrift.stale.map(sb => sb.id)) : new Set();
 
+    const units = groupPersonBlocks(personBlocks, pid)
+      .sort((a, b) => (a.sIdx - b.sIdx) || ((b.eIdx - b.sIdx) - (a.eIdx - a.sIdx)));
+
     const laneEnds = [];
-    const laidOutBlocks = personBlocks.map(entry => {
+    const laidOutBlocks = units.map(entry => {
       let lane = laneEnds.findIndex(endIdx => entry.sIdx > endIdx);
       if (lane < 0) {
         lane = laneEnds.length;
@@ -311,39 +399,74 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
     const trackHeight = laneCount * laneSize + Math.max(0, laneCount - 1) * laneGap + trackPadding * 2;
     const trackMetrics = `data-cols="${cols}" style="--tl-track-height:${trackHeight}px;--tl-lane-size:${laneSize}px;--tl-lane-gap:${laneGap}px"`;
 
-    const blocksHtml = laidOutBlocks.map(({ b, sIdx, eIdx, lane }) => {
-      const sISO = b.start < startDate ? startDate : b.start;
-      const eISO = b.end > endDate ? endDate : b.end;
-      const isSingleDay = sISO === eISO;
+    const blocksHtml = laidOutBlocks.map(unit => {
+      const { b, sIdx, eIdx, lane } = unit;
+      // Ein zugeklappter Sammelbalken traegt die Zustaende aller Mitglieder,
+      // ein normaler Block nur seinen eigenen — dieselbe Rechnung, andere Menge.
+      const members = unit.group ? unit.group.members.map(e => e.b) : [b];
+      const openMembers = members.filter(m => !m.done);
+      const allDone = openMembers.length === 0;
+      const isSingleDay = sIdx === eIdx;
       const classes = ['tl-block', `tl-block-${b.typ}`];
       if (viewState.planungHighlightBlockId === b.id) classes.push('tl-block-highlight');
       if (isSingleDay) classes.push('tl-block-single');
-      if (b.done) classes.push('tl-block-done');
-      else if (isBlockOverdue(b)) classes.push('tl-block-overdue');
-      if (staleBlockIds.has(b.id)) classes.push('tl-block-jira-stale');
-      const jiraState = b.jiraRef && !b.done ? jiraStatusForBlock(b) : null;
-      const handover = jiraState && isJiraHandoverStatus(jiraState.status) ? jiraState.status : '';
+      if (allDone) classes.push('tl-block-done');
+      else if (openMembers.some(isBlockOverdue)) classes.push('tl-block-overdue');
+      if (members.some(m => staleBlockIds.has(m.id))) classes.push('tl-block-jira-stale');
+      if (unit.group) classes.push('tl-block-group');
+      if (unit.groupChild) classes.push('tl-block-group-child');
+      const stateOf = m => (m.jiraRef && !m.done ? jiraStatusForBlock(m) : null);
+      const jiraState = stateOf(b);
+      // Beim Sammelbalken nur markieren, wenn *alles* Offene woanders liegt —
+      // sonst behauptet der Balken, die Person sei frei, obwohl sie es nicht ist.
+      const handoverOn = openMembers.length > 0 && openMembers.every(m => {
+        const s = stateOf(m);
+        return s && isJiraHandoverStatus(s.status);
+      });
+      const handover = handoverOn ? ((stateOf(openMembers[0]) || {}).status || '') : '';
       if (handover) classes.push('tl-block-handover-on');
       const title = [
         b.label || '(ohne Label)',
         `${formatDate(b.start)}–${formatDate(b.end)}`,
-        b.done ? 'erledigt' : (isBlockOverdue(b) ? 'überfällig — noch nicht erledigt' : ''),
+        allDone ? 'erledigt' : (openMembers.some(isBlockOverdue) ? 'überfällig — noch nicht erledigt' : ''),
         b.jiraRef ? 'Jira: ' + b.jiraRef + (jiraUrl(b.jiraRef) ? ' (Cmd/Strg-Klick öffnet)' : '') : '',
         // Status ist ein Standbild vom letzten Sync — das Alter gehoert dazu.
         jiraState && jiraState.status ? `Status: ${jiraState.status} (Stand: ${jiraSyncAgeLabel() || 'unbekannt'})` : '',
         handover ? '→ wartet woanders — Person ist hier faktisch frei, Puffer für Rückläufer lassen' : '',
-        staleBlockIds.has(b.id) ? '⚠ Jira-Ticket nicht mehr offen (erledigt oder umassigned)' : '',
+        members.some(m => staleBlockIds.has(m.id)) ? '⚠ Jira-Ticket nicht mehr offen (erledigt oder umassigned)' : '',
+        unit.group ? `\n${unit.group.count} untergeordnet — klicken zum Aufklappen:` : '',
+        unit.group ? unit.group.members.filter(e => e.b !== b)
+          .map(e => `· ${e.b.jiraRef ? e.b.jiraRef + ' ' : ''}${e.b.label || '(ohne Label)'}${e.b.done ? ' ✓' : ''}`)
+          .join('\n') : '',
       ].filter(Boolean).join('\n');
       const leftPct = (sIdx / cols) * 100;
       const widthPct = ((eIdx - sIdx + 1) / cols) * 100;
       const topPx = trackPadding + lane * (laneSize + laneGap);
-      return `<div class="${classes.join(' ')}"
-        style="left:${leftPct}%;width:${widthPct}%;top:${topPx}px;height:${laneSize}px"
+      const geometry = `style="left:${leftPct}%;width:${widthPct}%;top:${topPx}px;height:${laneSize}px"`;
+
+      // Der Sammelbalken ist bewusst nicht ziehbar: ein Zug muesste alle
+      // Bloecke darunter mitnehmen, und das ueberblickt niemand mehr. Klick
+      // klappt auf, drinnen verschiebt man einzeln.
+      if (unit.group) {
+        return `<div class="${classes.join(' ')}" ${geometry}
+          title="${esc(title)}"
+          onclick="event.stopPropagation();toggleBlockGroup('${pid}','${esc(unit.group.ref)}')"
+          onpointerdown="event.stopPropagation()">
+          ${allDone ? '<span class="tl-block-check">&#x2713;</span>' : ''}<span class="tl-block-label">${esc(b.label || b.typ)}</span><span class="tl-block-group-count">+${unit.group.count}</span>
+        </div>`;
+      }
+
+      const collapseBadge = unit.groupOpen
+        ? `<span class="tl-block-group-count is-open" title="Gruppe zuklappen"
+            onclick="event.stopPropagation();toggleBlockGroup('${pid}','${esc(unit.groupOpen.ref)}')"
+            onpointerdown="event.stopPropagation()">&#8722;${unit.groupOpen.count}</span>`
+        : '';
+      return `<div class="${classes.join(' ')}" ${geometry}
         data-block-id="${b.id}"
         title="${esc(title)}"
         onclick="event.stopPropagation();if(_suppressNextBlockClick)return;if((event.metaKey||event.ctrlKey)&&openBlockJira('${b.id}'))return;openBlockForm('${b.id}')"
         onpointerdown="onBlockPointerDown(event,'${b.id}')">
-        ${b.done ? '<span class="tl-block-check">&#x2713;</span>' : ''}${handover ? `<span class="tl-block-handover">${esc(handover.toLowerCase())}</span>` : ''}<span class="tl-block-label">${esc(b.label || b.typ)}</span>
+        ${b.done ? '<span class="tl-block-check">&#x2713;</span>' : ''}${handover ? `<span class="tl-block-handover">${esc(handover.toLowerCase())}</span>` : ''}<span class="tl-block-label">${esc(b.label || b.typ)}</span>${collapseBadge}
       </div>`;
     }).join('');
 
@@ -1130,35 +1253,21 @@ function openJiraDriftMenu(personId) {
   const drift = jiraDriftForPerson(person);
   if (!drift || !drift.hasDrift) { closeOverlay(); return; }
 
-  // count separat, weil gruppierte Zeilen mehr Tickets tragen als es Eintraege gibt
-  const section = (title, rows, count) => rows.length ? `
+  const section = (title, rows) => rows.length ? `
     <div class="jira-drift-group">
-      <div class="jira-drift-head">${title} &middot; ${count === undefined ? rows.length : count}</div>
+      <div class="jira-drift-head">${title} &middot; ${rows.length}</div>
       ${rows.join('')}
     </div>` : '';
 
-  // Gruppiert wird nur, was hier auch steht: ist der Auftrag laengst verplant,
-  // taucht er nicht auf und seine Subtasks bleiben flach.
-  const driftRow = node => {
-    const t = node.ticket;
-    const row = `
+  const unplanned = drift.unplanned.map(t => `
       <div class="jira-drift-row">
         ${jiraKeyLink(t.key)}
         <span class="jira-drift-text" title="${esc(t.summary || '')}">${esc(t.summary || '')}</span>
-        ${node.children.length ? jiraGroupToggle(node) : ''}
         <span class="jira-status-chip jira-status-${esc(t.statusCategory || 'new')}">${esc((t.status || '').toLowerCase())}</span>
         <button class="btn btn-sm btn-primary" type="button"
           onclick="quickPlanJiraTicket('${person.id}','${esc(t.key)}')"
           title="Block ab heute anlegen">+ block</button>
-      </div>`;
-    if (!node.children.length) return row;
-    return `
-      <div class="jira-ticket-group ${isJiraGroupOpen(t.key) ? 'is-open' : ''}">
-        ${row}
-        <div class="jira-ticket-children">${node.children.map(driftRow).join('')}</div>
-      </div>`;
-  };
-  const unplanned = groupJiraTickets(drift.unplanned).map(driftRow);
+      </div>`);
 
   const stale = drift.stale.map(b => `
     <div class="jira-drift-row">
@@ -1191,7 +1300,7 @@ function openJiraDriftMenu(personId) {
     </div>
     <div class="modal-body">
       <div class="form-hint" style="margin-bottom:10px">Stand: ${esc(jiraSyncAgeLabel() || 'unbekannt')}</div>
-      ${section('ohne block', unplanned, drift.unplanned.length)}
+      ${section('ohne block', unplanned)}
       ${section('block veraltet', stale)}
       ${section('titel geändert', renamed)}
     </div>
