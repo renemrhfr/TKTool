@@ -4847,6 +4847,17 @@ button.tf-metric {
   border-radius: 3px;
   background: rgba(0, 0, 0, 0.22);
 }
+/* Liegt hinter den Bloecken und faengt keine Klicks ab. */
+.tl-group-band {
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: 5px;
+  margin: -2px -3px;
+  padding: 2px 3px;
+  background: color-mix(in srgb, var(--text) 7%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 12%, transparent);
+}
 .tl-block-group-count.is-open { cursor: pointer; }
 .tl-block-group-count.is-open:hover { background: rgba(0, 0, 0, 0.38); }
 /* Kinder einer aufgeklappten Gruppe: eingerueckte Kante statt eigener Farbe,

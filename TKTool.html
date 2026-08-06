@@ -4984,6 +4984,17 @@ button.tf-metric {
   border-radius: 3px;
   background: rgba(0, 0, 0, 0.22);
 }
+/* Liegt hinter den Bloecken und faengt keine Klicks ab. */
+.tl-group-band {
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: 5px;
+  margin: -2px -3px;
+  padding: 2px 3px;
+  background: color-mix(in srgb, var(--text) 7%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 12%, transparent);
+}
 .tl-block-group-count.is-open { cursor: pointer; }
 .tl-block-group-count.is-open:hover { background: rgba(0, 0, 0, 0.38); }
 /* Kinder einer aufgeklappten Gruppe: eingerueckte Kante statt eigener Farbe,
@@ -7893,7 +7904,7 @@ body[data-theme="arrakis"] ::selection {
 // ============================================================
 // DATA LAYER — File System Access API
 // ============================================================
-const APP_VERSION = '1.0.45';
+const APP_VERSION = '1.0.46';
 const DATA_FILENAME = 'tktool-data.json';
 const JIRA_SYNC_FILENAME = 'jira-tickets.json';
 const JIRA_QUERY_MAX_RESULTS = 100;
@@ -14919,8 +14930,17 @@ function groupPersonBlocks(entries, personId) {
     const holdsHighlight = viewState.planungHighlightBlockId
       && members.some(e => e.b.id === viewState.planungHighlightBlockId);
     if (holdsHighlight || expandedBlockGroups.has(blockGroupKey(personId, root))) {
-      units.push({ ...head, groupOpen: group });
-      units.push(...children.map(e => ({ ...e, groupChild: root })));
+      // Aufgeklappt bleibt die Gruppe *eine* Einheit fuer den Lane-Packer —
+      // sonst fuellt der die Luecken zwischen den Subtasks mit fremden Bloecken
+      // auf und unter dem Auftrag steht dann alles Moegliche.
+      units.push({
+        ...head,
+        sIdx: Math.min(...members.map(e => e.sIdx)),
+        eIdx: Math.max(...members.map(e => e.eIdx)),
+        groupOpen: group,
+        head,
+        children,
+      });
     } else {
       units.push({
         ...head,
@@ -15051,17 +15071,51 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
     const units = groupPersonBlocks(personBlocks, pid)
       .sort((a, b) => (a.sIdx - b.sIdx) || ((b.eIdx - b.sIdx) - (a.eIdx - a.sIdx)));
 
+    // Lane-Vergabe. Einzelne Bloecke greifen wie bisher die erste freie Lane.
+    // Eine aufgeklappte Gruppe braucht dagegen *zusammenhaengende* Lanes ueber
+    // ihre gesamte Spanne reserviert — nur so stehen Auftrag und Subtasks als
+    // Block untereinander und nicht mit Fremdem dazwischen.
     const laneEnds = [];
-    const laidOutBlocks = units.map(entry => {
-      let lane = laneEnds.findIndex(endIdx => entry.sIdx > endIdx);
-      if (lane < 0) {
-        lane = laneEnds.length;
-        laneEnds.push(entry.eIdx);
-      } else {
-        laneEnds[lane] = entry.eIdx;
+    const laneFree = (lane, sIdx) => laneEnds[lane] === undefined || sIdx > laneEnds[lane];
+    const firstFreeLane = (sIdx, span) => {
+      for (let lane = 0; ; lane++) {
+        let ok = true;
+        for (let i = 0; i < span; i++) if (!laneFree(lane + i, sIdx)) { ok = false; break; }
+        if (ok) return lane;
       }
-      return { ...entry, lane };
-    });
+    };
+    const laidOutBlocks = [];
+    for (const entry of units) {
+      if (!entry.groupOpen) {
+        const lane = firstFreeLane(entry.sIdx, 1);
+        laneEnds[lane] = entry.eIdx;
+        laidOutBlocks.push({ ...entry, lane });
+        continue;
+      }
+      // Innerhalb der Gruppe nochmal greedy packen: der Auftrag oben, die
+      // Subtasks darunter so dicht wie es ihre Zeiten zulassen.
+      const inner = [];
+      const innerEnds = [];
+      for (const member of [entry.head, ...entry.children]) {
+        let lane = innerEnds.findIndex(end => member.sIdx > end);
+        if (lane < 0) { lane = innerEnds.length; innerEnds.push(member.eIdx); }
+        else innerEnds[lane] = member.eIdx;
+        inner.push({ member, lane });
+      }
+      const base = firstFreeLane(entry.sIdx, innerEnds.length);
+      for (let i = 0; i < innerEnds.length; i++) laneEnds[base + i] = entry.eIdx;
+      laidOutBlocks.push({
+        ...entry, lane: base, bandLanes: innerEnds.length, isBand: true,
+      });
+      for (const { member, lane } of inner) {
+        laidOutBlocks.push({
+          ...member,
+          lane: base + lane,
+          groupOpen: member === entry.head ? entry.groupOpen : undefined,
+          groupChild: member === entry.head ? undefined : entry.groupOpen.ref,
+        });
+      }
+    }
 
     const occupiedLaneCount = laneEnds.length;
     const laneCount = insertLane
@@ -15072,6 +15126,13 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
 
     const blocksHtml = laidOutBlocks.map(unit => {
       const { b, sIdx, eIdx, lane } = unit;
+      // Hinterlegte Flaeche der aufgeklappten Gruppe — macht sichtbar, was
+      // zusammengehoert, ohne den Bloecken selbst Farbe wegzunehmen.
+      if (unit.isBand) {
+        const height = unit.bandLanes * laneSize + (unit.bandLanes - 1) * laneGap;
+        return `<div class="tl-group-band"
+          style="left:${(sIdx / cols) * 100}%;width:${((eIdx - sIdx + 1) / cols) * 100}%;top:${trackPadding + lane * (laneSize + laneGap)}px;height:${height}px"></div>`;
+      }
       // Ein zugeklappter Sammelbalken traegt die Zustaende aller Mitglieder,
       // ein normaler Block nur seinen eigenen — dieselbe Rechnung, andere Menge.
       const members = unit.group ? unit.group.members.map(e => e.b) : [b];
@@ -15096,11 +15157,20 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
       });
       const handover = handoverOn ? ((stateOf(openMembers[0]) || {}).status || '') : '';
       if (handover) classes.push('tl-block-handover-on');
+      // Immer anzeigen, wenn Jira einen Parent kennt — auch wenn er keiner
+      // Gruppe entspricht. Titel nur, wenn der Snapshot ihn kennt.
+      const parentRef = b.jiraRef ? jiraParentKeyForRef(b.jiraRef) : '';
+      const parentSummary = parentRef ? jiraSummaryForKey(parentRef) : '';
+      const parentLabel = parentRef ? parentRef + (parentSummary ? ' — ' + parentSummary : '') : '';
       const title = [
         b.label || '(ohne Label)',
         `${formatDate(b.start)}–${formatDate(b.end)}`,
         allDone ? 'erledigt' : (openMembers.some(isBlockOverdue) ? 'überfällig — noch nicht erledigt' : ''),
         b.jiraRef ? 'Jira: ' + b.jiraRef + (jiraUrl(b.jiraRef) ? ' (Cmd/Strg-Klick öffnet)' : '') : '',
+        // Der Parent steht sonst nirgends: haengt er nicht bei derselben Person,
+        // bildet er ja bewusst keine Gruppe — dann ist der Tooltip die einzige
+        // Stelle, an der man das Sammel-Epic ueberhaupt sieht.
+        parentLabel ? '↳ unter ' + parentLabel : '',
         // Status ist ein Standbild vom letzten Sync — das Alter gehoert dazu.
         jiraState && jiraState.status ? `Status: ${jiraState.status} (Stand: ${jiraSyncAgeLabel() || 'unbekannt'})` : '',
         handover ? '→ wartet woanders — Person ist hier faktisch frei, Puffer für Rückläufer lassen' : '',
