@@ -137,11 +137,18 @@ async function submitJiraImport() {
     const count = Object.values(snapshot.assignees || {}).reduce((sum, list) => sum + list.length, 0);
     closeOverlay();
     render();
-    if (snapshot.truncated) {
-      toast(`${count} Tickets eingespielt — Jira hat mehr, als in eine Antwort passt`);
-    } else {
-      toast(`${count} Tickets eingespielt`);
-    }
+    const d = snapshot.diff || {};
+    const parts = [];
+    if (d.added) parts.push(`${d.added} neu`);
+    if (d.retitled) parts.push(`${d.retitled} umbenannt`);
+    if (d.restatused) parts.push(`${d.restatused} Status`);
+    if (d.gone) parts.push(`${d.gone} weg`);
+    const summary = d.first
+      ? `${count} Tickets eingespielt`
+      : parts.length
+        ? `${parts.join(', ')} (${count} Tickets)`
+        : `Keine Änderungen (${count} Tickets)`;
+    toast(snapshot.truncated ? `${summary} — Jira hat mehr, als in eine Antwort passt` : summary);
   } catch (error) {
     toast(error.message || 'Einspielen fehlgeschlagen');
   }

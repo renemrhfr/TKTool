@@ -1,7 +1,7 @@
 // ============================================================
 // DATA LAYER — File System Access API
 // ============================================================
-const APP_VERSION = '1.0.46';
+const APP_VERSION = '1.0.47';
 const DATA_FILENAME = 'tktool-data.json';
 const JIRA_SYNC_FILENAME = 'jira-tickets.json';
 const JIRA_QUERY_MAX_RESULTS = 100;
@@ -680,9 +680,37 @@ async function importJiraJson(text) {
     throw new Error('Das ist kein gültiges JSON — beim Kopieren etwas abgeschnitten?');
   }
   const snapshot = jiraSnapshotFromResponse(parsed);
+  const diff = jiraSnapshotDiff(jiraSyncData, snapshot);
   await writeJiraSync(snapshot);
+  // Nur fuer den Toast, absichtlich erst nach dem Schreiben — der Diff
+  // gehoert nicht in jira-tickets.json.
+  snapshot.diff = diff;
   jiraSyncData = snapshot;
   return snapshot;
+}
+
+// Was hat sich gegenueber dem letzten Snapshot geaendert? Grob genug fuer
+// eine Meldung: neu, Titel geaendert, Status geaendert, weg (erledigt oder
+// umassigned).
+function jiraSnapshotDiff(prev, next) {
+  const flat = snap => {
+    const map = new Map();
+    for (const list of Object.values((snap && snap.assignees) || {})) {
+      for (const t of list) map.set(t.key, t);
+    }
+    return map;
+  };
+  const before = flat(prev);
+  const after = flat(next);
+  const diff = { added: 0, retitled: 0, restatused: 0, gone: 0, first: !prev };
+  for (const [key, t] of after) {
+    const old = before.get(key);
+    if (!old) { diff.added++; continue; }
+    if ((old.summary || '') !== (t.summary || '')) diff.retitled++;
+    if ((old.status || '') !== (t.status || '')) diff.restatused++;
+  }
+  for (const key of before.keys()) if (!after.has(key)) diff.gone++;
+  return diff;
 }
 
 // Liest jira-tickets.json neu ein (z.B. nachdem ein anderes Geraet den

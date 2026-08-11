@@ -271,6 +271,21 @@ function groupPersonBlocks(entries, personId) {
   return units;
 }
 
+// Haengt an dieser Einheit nur noch Wartendes? Dieselbe Rechnung wie die
+// Handover-Markierung am Balken: alles Offene muss woanders liegen, sonst
+// beschaeftigt die Einheit die Person weiterhin.
+function isWaitingUnit(unit) {
+  const entries = unit.group ? unit.group.members
+    : unit.groupOpen ? [unit.head, ...unit.children]
+    : [unit];
+  const open = entries.map(e => e.b).filter(m => !m.done);
+  if (!open.length) return false;
+  return open.every(m => {
+    const s = m.jiraRef ? jiraStatusForBlock(m) : null;
+    return !!(s && isJiraHandoverStatus(s.status));
+  });
+}
+
 function renderTimeline({ personIds, startDate, endDate, options = {} }) {
   const {
     weekendsOnly = false,
@@ -394,21 +409,22 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
     // ihre gesamte Spanne reserviert — nur so stehen Auftrag und Subtasks als
     // Block untereinander und nicht mit Fremdem dazwischen.
     const laneEnds = [];
+    let laneFloor = 0;
     const laneFree = (lane, sIdx) => laneEnds[lane] === undefined || sIdx > laneEnds[lane];
     const firstFreeLane = (sIdx, span) => {
-      for (let lane = 0; ; lane++) {
+      for (let lane = laneFloor; ; lane++) {
         let ok = true;
         for (let i = 0; i < span; i++) if (!laneFree(lane + i, sIdx)) { ok = false; break; }
         if (ok) return lane;
       }
     };
     const laidOutBlocks = [];
-    for (const entry of units) {
+    const placeUnit = entry => {
       if (!entry.groupOpen) {
         const lane = firstFreeLane(entry.sIdx, 1);
         laneEnds[lane] = entry.eIdx;
         laidOutBlocks.push({ ...entry, lane });
-        continue;
+        return;
       }
       // Innerhalb der Gruppe nochmal greedy packen: der Auftrag oben, die
       // Subtasks darunter so dicht wie es ihre Zeiten zulassen.
@@ -433,7 +449,17 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
           groupChild: member === entry.head ? undefined : entry.groupOpen.ref,
         });
       }
-    }
+    };
+
+    // Was nur noch woanders haengt, gehoert nach unten: oben stehen die
+    // Bloecke, die die Person wirklich beschaeftigen, darunter das Wartende.
+    // Erst alles Aktive packen, dann die Lane-Untergrenze auf die belegten
+    // Lanes setzen — so rutscht kein Wartendes mehr in eine Luecke oben.
+    const active = units.filter(u => !isWaitingUnit(u));
+    const waitingUnits = units.filter(isWaitingUnit);
+    active.forEach(placeUnit);
+    if (waitingUnits.length) laneFloor = laneEnds.length;
+    waitingUnits.forEach(placeUnit);
 
     const occupiedLaneCount = laneEnds.length;
     const laneCount = insertLane
@@ -719,7 +745,7 @@ function renderPlanung() {
 
   const team = data.persons.filter(p => p.type !== 'kontakt'
     && (!personFilter || p.id === personFilter)
-    && (!blockQuery || matchingPersonIds.has(p.id)));
+    && (!blockQuery || matchingPersonIds.has(p.id) || personNameMatchesPlanungQuery(p.id, blockQuery)));
   const withCap = team.map(p => {
     const isSupport = personSupportInMonth(p, month);
     const cap = personCapacity(p.id, start, end);
@@ -860,7 +886,7 @@ function renderPlanung() {
           </div>
           <div class="view-search planung-search">
             <input id="planungSearchInput" type="search"
-              placeholder="grep: label, jira-ref, notiz..."
+              placeholder="grep: mitarbeiter, label, jira-ref, notiz..."
               value="${esc(rawQuery)}" oninput="setPlanungQuery(this.value)">
           </div>
           <div class="overview-actions planung-actions">
@@ -889,8 +915,19 @@ function renderPlanung() {
   `;
 }
 
+// Der grep trifft auch Mitarbeiternamen: dann zaehlen alle Bloecke dieser
+// Person mit. Ab 2 Zeichen, damit ein einzelner Buchstabe nicht das halbe
+// Team einsammelt und den grep wirkungslos macht.
+function personNameMatchesPlanungQuery(personId, query) {
+  if (!query || query.length < 2) return false;
+  const person = data.persons.find(p => p.id === personId);
+  return !!person && person.type !== 'kontakt'
+    && person.name.toLocaleLowerCase('de-AT').includes(query);
+}
+
 function blockMatchesPlanungQuery(block, query) {
   if (!query) return true;
+  if (personNameMatchesPlanungQuery(block.personId, query)) return true;
   return [block.label, block.jiraRef, block.notiz]
     .filter(Boolean)
     .some(value => String(value).toLocaleLowerCase('de-AT').includes(query));
