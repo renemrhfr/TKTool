@@ -353,6 +353,9 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
   const laneGap = 4;
   const trackPadding = 4;
   const minLanes = 2;
+  // Ab so vielen Lanes wird eine Personenzeile zu hoch fuer den Ueberblick —
+  // dann fallen wir aufs dichte Packen zurueck.
+  const MAX_STACKED_LANES = 8;
 
   const rowsHtml = personIds.map(pid => {
     const person = data.persons.find(p => p.id === pid);
@@ -404,10 +407,9 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
     const units = groupPersonBlocks(personBlocks, pid)
       .sort((a, b) => (a.sIdx - b.sIdx) || ((b.eIdx - b.sIdx) - (a.eIdx - a.sIdx)));
 
-    // Lane-Vergabe. Einzelne Bloecke greifen wie bisher die erste freie Lane.
-    // Eine aufgeklappte Gruppe braucht dagegen *zusammenhaengende* Lanes ueber
-    // ihre gesamte Spanne reserviert — nur so stehen Auftrag und Subtasks als
-    // Block untereinander und nicht mit Fremdem dazwischen.
+    // Lane-Vergabe in drei festen Baendern: oben die Tickets mit Subtasks,
+    // darunter die einzelnen Bloecke, ganz unten das nur noch Wartende. Kein
+    // Band rutscht in eine Luecke des Bandes darueber.
     const laneEnds = [];
     let laneFloor = 0;
     const laneFree = (lane, sIdx) => laneEnds[lane] === undefined || sIdx > laneEnds[lane];
@@ -418,6 +420,24 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
         if (ok) return lane;
       }
     };
+    // Innerhalb einer aufgeklappten Gruppe: Auftrag oben, Subtasks darunter so
+    // dicht wie es ihre Zeiten zulassen.
+    const innerLayoutOf = entry => {
+      const inner = [];
+      const innerEnds = [];
+      // Der Auftrag selbst spannt immer ueber alle seine Subtasks — aufgeklappt
+      // wie zugeklappt dieselbe Dauer.
+      const head = { ...entry.head, sIdx: entry.sIdx, eIdx: entry.eIdx, isHead: true };
+      for (const member of [head, ...entry.children]) {
+        let lane = innerEnds.findIndex(end => member.sIdx > end);
+        if (lane < 0) { lane = innerEnds.length; innerEnds.push(member.eIdx); }
+        else innerEnds[lane] = member.eIdx;
+        inner.push({ member, lane });
+      }
+      return { inner, laneCount: innerEnds.length };
+    };
+    const laneSpanOf = u => (u.groupOpen ? innerLayoutOf(u).laneCount : 1);
+
     const laidOutBlocks = [];
     const placeUnit = entry => {
       if (!entry.groupOpen) {
@@ -426,40 +446,48 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
         laidOutBlocks.push({ ...entry, lane });
         return;
       }
-      // Innerhalb der Gruppe nochmal greedy packen: der Auftrag oben, die
-      // Subtasks darunter so dicht wie es ihre Zeiten zulassen.
-      const inner = [];
-      const innerEnds = [];
-      for (const member of [entry.head, ...entry.children]) {
-        let lane = innerEnds.findIndex(end => member.sIdx > end);
-        if (lane < 0) { lane = innerEnds.length; innerEnds.push(member.eIdx); }
-        else innerEnds[lane] = member.eIdx;
-        inner.push({ member, lane });
-      }
-      const base = firstFreeLane(entry.sIdx, innerEnds.length);
-      for (let i = 0; i < innerEnds.length; i++) laneEnds[base + i] = entry.eIdx;
+      // Eine aufgeklappte Gruppe braucht *zusammenhaengende* Lanes ueber ihre
+      // gesamte Spanne — nur so stehen Auftrag und Subtasks als Block
+      // untereinander und nicht mit Fremdem dazwischen.
+      const { inner, laneCount: innerLanes } = innerLayoutOf(entry);
+      const base = firstFreeLane(entry.sIdx, innerLanes);
+      for (let i = 0; i < innerLanes; i++) laneEnds[base + i] = entry.eIdx;
       laidOutBlocks.push({
-        ...entry, lane: base, bandLanes: innerEnds.length, isBand: true,
+        ...entry, lane: base, bandLanes: innerLanes, isBand: true,
       });
       for (const { member, lane } of inner) {
         laidOutBlocks.push({
           ...member,
           lane: base + lane,
-          groupOpen: member === entry.head ? entry.groupOpen : undefined,
-          groupChild: member === entry.head ? undefined : entry.groupOpen.ref,
+          groupOpen: member.isHead ? entry.groupOpen : undefined,
+          groupChild: member.isHead ? undefined : entry.groupOpen.ref,
         });
       }
     };
 
-    // Was nur noch woanders haengt, gehoert nach unten: oben stehen die
-    // Bloecke, die die Person wirklich beschaeftigen, darunter das Wartende.
-    // Erst alles Aktive packen, dann die Lane-Untergrenze auf die belegten
-    // Lanes setzen — so rutscht kein Wartendes mehr in eine Luecke oben.
-    const active = units.filter(u => !isWaitingUnit(u));
+    const isParentUnit = u => !!(u.group || u.groupOpen);
     const waitingUnits = units.filter(isWaitingUnit);
-    active.forEach(placeUnit);
-    if (waitingUnits.length) laneFloor = laneEnds.length;
-    waitingUnits.forEach(placeUnit);
+    const activeUnits = units.filter(u => !isWaitingUnit(u));
+    const tiers = [
+      activeUnits.filter(isParentUnit),
+      activeUnits.filter(u => !isParentUnit(u)),
+      waitingUnits,
+    ];
+
+    // Normalfall: jede Einheit bekommt ihre eigene Zeile, auch wenn daneben
+    // Platz waere — das ist ruhiger zu lesen als greedy gepacktes Gedraenge.
+    // Erst wenn die Zeile dadurch zu hoch wuerde, wird wieder dicht gepackt.
+    const stackedLanes = units.reduce((sum, u) => sum + laneSpanOf(u), 0);
+    const stackEachUnit = stackedLanes <= MAX_STACKED_LANES;
+
+    for (const tier of tiers) {
+      if (!tier.length) continue;
+      laneFloor = laneEnds.length;
+      for (const unit of tier) {
+        if (stackEachUnit) laneFloor = laneEnds.length;
+        placeUnit(unit);
+      }
+    }
 
     const occupiedLaneCount = laneEnds.length;
     const laneCount = insertLane
@@ -597,8 +625,9 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
                   jiraDrift.unplanned.length ? `${jiraDrift.unplanned.length} Ticket${jiraDrift.unplanned.length === 1 ? '' : 's'} ohne Block: ${jiraDrift.unplanned.map(t => t.key).join(', ')}` : '',
                   jiraDrift.stale.length ? `${jiraDrift.stale.length} Block${jiraDrift.stale.length === 1 ? '' : 's'} veraltet: ${jiraDrift.stale.map(sb => sb.jiraRef).join(', ')}` : '',
                   jiraDrift.renamed.length ? `${jiraDrift.renamed.length} Titel geändert: ${jiraDrift.renamed.map(sb => sb.jiraRef).join(', ')}` : '',
+                  jiraDrift.expired.length ? `${jiraDrift.expired.length} Block${jiraDrift.expired.length === 1 ? '' : 's'} abgelaufen, Ticket offen: ${jiraDrift.expired.map(sb => sb.jiraRef).join(', ')}` : '',
                   '— klicken zum Übernehmen',
-                ].filter(Boolean).join('\n'))}">jira ±${jiraDrift.unplanned.length + jiraDrift.stale.length + jiraDrift.renamed.length}</button>` : ''}
+                ].filter(Boolean).join('\n'))}">jira ±${jiraDrift.unplanned.length + jiraDrift.stale.length + jiraDrift.renamed.length + jiraDrift.expired.length}</button>` : ''}
             </div>
           </div>
           ${capInline}
@@ -1389,6 +1418,21 @@ function openJiraDriftMenu(personId) {
       </div>`;
   });
 
+  // Block abgelaufen, Ticket laeuft weiter: verlaengern statt einen zweiten
+  // Block auf denselben Key anzulegen.
+  const expired = drift.expired.map(b => `
+    <div class="jira-drift-row">
+      ${jiraKeyLink(b.jiraRef)}
+      <span class="jira-drift-text" title="${esc(b.label || '')}">${esc(b.label || '(ohne Label)')}</span>
+      <span class="jira-drift-note">bis ${esc(formatDate(b.end || b.start))}</span>
+      <button class="btn btn-sm btn-secondary" type="button"
+        onclick="extendJiraDriftBlock('${b.id}')"
+        title="Ende auf Freitag dieser Woche setzen">+1 woche</button>
+      <button class="btn btn-sm btn-secondary" type="button"
+        onclick="resolveStaleJiraBlock('${b.id}')"
+        title="Block als erledigt markieren">&#x2713; erledigt</button>
+    </div>`);
+
   document.getElementById('modal').innerHTML = `
     <div class="modal-header">
       <span class="modal-title">Jira &mdash; ${esc(person.name)}</span>
@@ -1397,6 +1441,7 @@ function openJiraDriftMenu(personId) {
     <div class="modal-body">
       <div class="form-hint" style="margin-bottom:10px">Stand: ${esc(jiraSyncAgeLabel() || 'unbekannt')}</div>
       ${section('ohne block', unplanned)}
+      ${section('block abgelaufen', expired)}
       ${section('block veraltet', stale)}
       ${section('titel geändert', renamed)}
     </div>
@@ -1415,10 +1460,30 @@ function refreshJiraDriftMenu(personId) {
   else closeOverlay();
 }
 
+// Wie "+1 woche" in der Ueberfaellig-Liste, nur bleibt das Drift-Menue offen.
+function extendJiraDriftBlock(blockId) {
+  const b = data.blocks.find(x => x.id === blockId);
+  if (!b || isBlockParked(b)) return;
+  const friday = toISO(addDays(startOfWeek(parseISO(todayStr())), 4));
+  b.end = friday > todayStr() ? friday : todayStr();
+  toast(`${b.jiraRef || 'Block'} bis ${formatDate(b.end)} verlängert`);
+  refreshJiraDriftMenu(b.personId);
+}
+
 function quickPlanJiraTicket(personId, key) {
   const person = data.persons.find(p => p.id === personId);
   if (!person) return;
   const ref = String(key || '').trim().toUpperCase();
+  // Doppelte Absicherung gegen zwei Bloecke auf demselben Ticket: der Drift
+  // zaehlt abgelaufene Bloecke zwar schon als verplant, aber der Klick darf
+  // auch aus einem veralteten Menue heraus nichts Doppeltes anlegen.
+  const existing = data.blocks.find(b =>
+    b.personId === personId && !b.done && String(b.jiraRef || '').trim().toUpperCase() === ref);
+  if (existing) {
+    toast(`${ref} hat schon einen Block`);
+    refreshJiraDriftMenu(personId);
+    return;
+  }
   const summary = jiraSummaryForKey(ref);
   const today = todayStr();
   data.blocks.push({

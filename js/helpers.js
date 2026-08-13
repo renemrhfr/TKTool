@@ -662,11 +662,20 @@ function jiraDriftForPerson(person) {
   const tickets = jiraTicketsForPerson(person);
   if (tickets === null) return null;
   const today = todayStr();
-  const activeBlocks = (data.blocks || []).filter(b =>
-    b.personId === person.id && !b.done && b.jiraRef && (b.end || b.start || '') >= today);
-  const plannedKeys = new Set(activeBlocks.map(b => b.jiraRef.trim().toUpperCase()));
+  // Offen ist offen, egal ob das Enddatum schon durch ist. Sonst gilt ein
+  // abgelaufener Block als "nicht verplant" und "+ block" legt denselben
+  // Ticket-Block ein zweites Mal an — der Block gehoert verlaengert, nicht
+  // dupliziert.
+  const openBlocks = (data.blocks || []).filter(b =>
+    b.personId === person.id && !b.done && b.jiraRef);
+  const activeBlocks = openBlocks.filter(b => (b.end || b.start || '') >= today);
+  const plannedKeys = new Set(openBlocks.map(b => b.jiraRef.trim().toUpperCase()));
   const openKeys = new Set(tickets.map(t => String(t.key || '').toUpperCase()));
   const unplanned = tickets.filter(t => !plannedKeys.has(String(t.key || '').toUpperCase()));
+  // Ticket laeuft in Jira noch, der Block ist aber abgelaufen: eigene Sorte
+  // Drift mit eigener Aktion (verlaengern) statt eines zweiten Blocks.
+  const expired = openBlocks.filter(b =>
+    (b.end || b.start || '') < today && openKeys.has(b.jiraRef.trim().toUpperCase()));
   const refs = (jiraSyncData && jiraSyncData.refs) || {};
   const refByKey = {};
   for (const k of Object.keys(refs)) refByKey[k.trim().toUpperCase()] = refs[k];
@@ -696,7 +705,8 @@ function jiraDriftForPerson(person) {
     unplanned,
     stale,
     renamed,
-    hasDrift: unplanned.length > 0 || stale.length > 0 || renamed.length > 0,
+    expired,
+    hasDrift: unplanned.length > 0 || stale.length > 0 || renamed.length > 0 || expired.length > 0,
   };
 }
 
