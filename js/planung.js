@@ -271,6 +271,65 @@ function groupPersonBlocks(entries, personId) {
   return units;
 }
 
+// Ein Kopfblock deckt in der Timeline die Spanne seiner Kinder mit ab — das war
+// bisher reine Darstellung. Die gespeicherten Daten blieben kurz, und sobald das
+// echte Ende durch war, galt der Auftrag als ueberfaellig, obwohl darunter noch
+// gearbeitet wird (und wanderte in die Jira-Drift). Deshalb ziehen wir hier die
+// Daten selbst nach: dieselbe Rechnung wie im Renderer, Kopf eingeschlossen —
+// die Spanne waechst also nur, ein zurueckgezogenes Kind schrumpft den Auftrag
+// nicht wieder. Liefert die Zahl der geaenderten Bloecke.
+function syncParentBlockSpans(blocks) {
+  const refOf = b => String((b && b.jiraRef) || '').trim().toUpperCase();
+  const byPerson = new Map();
+  for (const b of blocks || []) {
+    // Ohne Ticket keine Hierarchie, ohne Datum keine Spanne: geparkte Bloecke
+    // bleiben geparkt, auch als Kopf.
+    if (!b.personId || !refOf(b) || isBlockParked(b)) continue;
+    if (!byPerson.has(b.personId)) byPerson.set(b.personId, []);
+    byPerson.get(b.personId).push(b);
+  }
+
+  let changed = 0;
+  for (const personBlocks of byPerson.values()) {
+    const byRef = new Map();
+    for (const b of personBlocks) if (!byRef.has(refOf(b))) byRef.set(refOf(b), b);
+
+    // Identisch zu groupPersonBlocks: bis zum obersten Ticket hoch, auf das
+    // diese Person auch einen Block hat. Der Zaehler kappt Ringe.
+    const rootRefOf = ref => {
+      let cur = ref;
+      for (let i = 0; i < 10; i++) {
+        const parentRef = jiraParentKeyForRef(cur);
+        if (!parentRef || parentRef === cur || !byRef.has(parentRef)) return cur;
+        cur = parentRef;
+      }
+      return cur;
+    };
+
+    const buckets = new Map();
+    for (const b of personBlocks) {
+      const ref = refOf(b);
+      if (byRef.get(ref) !== b) continue; // zweiter Block auf dasselbe Ticket
+      const root = rootRefOf(ref);
+      if (!buckets.has(root)) buckets.set(root, []);
+      buckets.get(root).push(b);
+    }
+
+    for (const [root, members] of buckets) {
+      if (members.length < 2) continue;
+      const head = members.find(b => refOf(b) === root);
+      if (!head) continue;
+      const start = members.reduce((min, b) => (b.start < min ? b.start : min), head.start);
+      const end = members.reduce((max, b) => (b.end > max ? b.end : max), head.end);
+      if (head.start === start && head.end === end) continue;
+      head.start = start;
+      head.end = end;
+      changed++;
+    }
+  }
+  return changed;
+}
+
 // Haengt an dieser Einheit nur noch Wartendes? Dieselbe Rechnung wie die
 // Handover-Markierung am Balken: alles Offene muss woanders liegen, sonst
 // beschaeftigt die Einheit die Person weiterhin.

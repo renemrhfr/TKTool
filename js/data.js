@@ -1,7 +1,7 @@
 // ============================================================
 // DATA LAYER — File System Access API
 // ============================================================
-const APP_VERSION = '1.0.48';
+const APP_VERSION = '1.0.50';
 const DATA_FILENAME = 'tktool-data.json';
 const JIRA_SYNC_FILENAME = 'jira-tickets.json';
 const JIRA_QUERY_MAX_RESULTS = 100;
@@ -768,6 +768,12 @@ async function loadData() {
     await cacheData(store);
   }
   await loadJiraSync();
+  // Erst mit dem Jira-Snapshot ist die Hierarchie bekannt. Was sich daraus
+  // ergibt, wird gleich festgeschrieben — sonst haengt es bis zur naechsten
+  // beliebigen Aenderung nur in der Anzeige.
+  if (typeof syncParentBlockSpans === 'function' && syncParentBlockSpans(data.blocks)) {
+    saveData(data);
+  }
   return data;
 }
 
@@ -1293,6 +1299,9 @@ async function runCleanup(monthsByGroup) {
 }
 
 function saveData(d) {
+  // Kopfbloecke tragen die Spanne ihrer Kinder. Haengt hier statt an den
+  // einzelnen Aufrufern, damit die Invariante keine Aenderung verpasst.
+  if (typeof syncParentBlockSpans === 'function') syncParentBlockSpans(d && d.blocks);
   const store = prepareLocalChanges(d, localSnapshot, deletedRecords);
   adoptStore(store);
   const snapshot = cloneData(store);

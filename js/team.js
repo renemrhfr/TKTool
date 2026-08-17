@@ -134,6 +134,11 @@ async function submitJiraImport() {
   if (!text) return;
   try {
     const snapshot = await importJiraJson(text);
+    // Ein Sync kann neue Eltern-Kind-Beziehungen mitbringen: Kopfbloecke
+    // nachziehen, bevor die Drift gegen die alten Spannen rechnet.
+    if (typeof syncParentBlockSpans === 'function' && syncParentBlockSpans(data.blocks)) {
+      saveData(data);
+    }
     const count = Object.values(snapshot.assignees || {}).reduce((sum, list) => sum + list.length, 0);
     closeOverlay();
     render();
