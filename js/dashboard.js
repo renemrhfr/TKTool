@@ -230,7 +230,8 @@ function renderDashboardReviewAction() {
 
 // Muss zur max-height von .tf-blocks-list passen: so viele Zeilen stehen ohne
 // Scrollen da, der Rest wird als "+n" angekuendigt.
-const TF_VISIBLE_BLOCKS = 3;
+const TF_VISIBLE_BLOCKS = 10;
+let openTeamFocusPersonId = null;
 
 function ticketCountLabel(count) {
   return `${count} ${count === 1 ? 'ticket' : 'tickets'}`;
@@ -276,6 +277,43 @@ function teamFocusBlockHandoverStatus(block) {
   return ref && isJiraHandoverStatus(ref.status) ? String(ref.status || '') : '';
 }
 
+function teamFocusWaitingBlocks(entry) {
+  return entry.activeBlocks.filter(block => teamFocusBlockHandoverStatus(block));
+}
+
+function teamFocusWorkingBlocks(entry) {
+  return [
+    ...entry.overdueBlocks.map(block => ({ block, kind: 'overdue' })),
+    ...entry.activeBlocks.filter(block => !teamFocusBlockHandoverStatus(block)).map(block => ({ block, kind: 'active' })),
+    ...entry.upcomingBlocks.map(block => ({ block, kind: 'upcoming' })),
+  ];
+}
+
+function teamFocusBlocks(entry) {
+  const working = teamFocusWorkingBlocks(entry);
+  const waiting = teamFocusWaitingBlocks(entry).map(block => ({ block, kind: 'active' }));
+  const upcomingIndex = working.findIndex(({ kind }) => kind === 'upcoming');
+  if (upcomingIndex < 0) return [...working, ...waiting];
+  return [...working.slice(0, upcomingIndex), ...waiting, ...working.slice(upcomingIndex)];
+}
+
+function toggleTeamFocusCard(personId) {
+  openTeamFocusPersonId = openTeamFocusPersonId === personId ? null : personId;
+  document.querySelectorAll('.tf-card[data-person-id]').forEach(card => {
+    const open = card.dataset.personId === openTeamFocusPersonId;
+    const personName = card.dataset.personName || 'Teammitglied';
+    card.classList.toggle('tf-card-open', open);
+    const toggle = card.querySelector('.tf-card-toggle');
+    const detail = card.querySelector('.tf-card-detail');
+    if (toggle) {
+      toggle.setAttribute('aria-expanded', String(open));
+      toggle.setAttribute('aria-label', `Tickets von ${personName} ${open ? 'einklappen' : 'ausklappen'}`);
+      toggle.title = `Tickets ${open ? 'einklappen' : 'ausklappen'}`;
+    }
+    if (detail) detail.hidden = !open;
+  });
+}
+
 // Woran die Person arbeitet und was als naechstes kommt. Ein Klick fuehrt in
 // die Planung.
 function renderTeamFocusBlockRow(block, kind) {
@@ -305,23 +343,17 @@ function renderTeamFocusBlockRow(block, kind) {
   `;
 }
 
-// Alle Bloecke, aber ab dem vierten scrollt die Liste in sich. So zieht ein
-// Teammitglied mit sieben Bloecken die Nachbarkarte nicht in die Laenge, und
-// trotzdem geht nichts verloren. Laufende stehen vor kommenden.
+// Alle Bloecke der aufgeklappten Person. Bis zu zehn bleiben direkt sichtbar;
+// darueber scrollt nur die Liste. Laufende stehen vor kommenden.
 function renderTeamFocusBlocks(entry) {
   // Ueberfaellige zuerst: sie sind das einzige, was hier eine Handlung
   // erzwingt, und wuerden sonst im Scrollbereich verschwinden.
-  const blocks = [
-    ...entry.overdueBlocks.map(block => ({ block, kind: 'overdue' })),
-    ...entry.activeBlocks.map(block => ({ block, kind: 'active' })),
-    ...entry.upcomingBlocks.map(block => ({ block, kind: 'upcoming' })),
-  ];
+  const blocks = teamFocusBlocks(entry);
   const empty = entry.absenceToday
     ? `${esc(teamFocusAbsenceLabel(entry.absenceToday))} · nichts geplant`
     : 'nichts geplant';
-  // Drei Zeilen sind sichtbar. Dass darunter noch etwas liegt, sieht man sonst
-  // erst beim Scrollen — der Hinweis steht deshalb unten am Schnitt, wo man
-  // hinschaut, nicht oben in der Kopfzeile.
+  // Dass unter den ersten zehn noch etwas liegt, sieht man sonst erst beim
+  // Scrollen — der Hinweis steht deshalb unten am Schnitt.
   const hidden = Math.max(0, blocks.length - TF_VISIBLE_BLOCKS);
   return `
     <div class="tf-blocks${hidden ? ' tf-blocks-more' : ''}">
@@ -360,11 +392,17 @@ function renderTeamFocusJiraMetric(entry) {
     drift.stale.length ? `Veraltet: ${drift.stale.map(b => `${b.label || b.jiraRef} (${b.jiraRef})`).join(', ')}` : '',
   ].filter(Boolean).join('\n');
   const jiraSig = drift.stale.length ? 'tf-sig-bad' : drift.unplanned.length ? 'tf-sig-warn' : 'tf-sig-ok';
+  const jiraValue = drift.stale.length && drift.unplanned.length ? 'abweichungen'
+    : drift.stale.length ? `${drift.stale.length} ${drift.stale.length === 1 ? 'block' : 'blocks'} veraltet`
+    : drift.unplanned.length ? `${drift.unplanned.length} nicht eingeplant`
+    : 'synchron';
+  const jiraTicketTotal = entry.jiraTickets.length ? ticketCountLabel(entry.jiraTickets.length) : 'keine tickets';
+  const jiraNote = drift.stale.length && drift.unplanned.length ? driftParts.join(' · ') : jiraTicketTotal;
   return `
     <button class="tf-metric tf-metric-action ${jiraSig}" type="button" onclick="event.preventDefault(); event.stopPropagation(); openPersonById('${entry.person.id}')" title="${esc(`Jira-Tickets von ${entry.person.name} ansehen (Stand: ${jiraSyncAgeLabel() || 'unbekannt'})${driftDetail ? '\n' + driftDetail : ''}`)}">
       <span class="tf-metric-label">Jira</span>
-      <span class="tf-metric-value">${entry.jiraTickets.length ? ticketCountLabel(entry.jiraTickets.length) : 'keine tickets'}</span>
-      ${driftParts.length ? `<span class="tf-metric-note">${driftParts.join(' · ')}</span>` : ''}
+      <span class="tf-metric-value">${esc(jiraValue)}</span>
+      <span class="tf-metric-note">${esc(jiraNote)}</span>
     </button>`;
 }
 
@@ -430,6 +468,10 @@ function renderReviews() {
     })
     .sort((a, b) => comparePersonsByName(a.person, b.person));
 
+  if (openTeamFocusPersonId && !peopleAttention.some(entry => entry.person.id === openTeamFocusPersonId)) {
+    openTeamFocusPersonId = null;
+  }
+
   return `
     <div class="section-header">
       ${renderDashboardLinks()}
@@ -445,23 +487,41 @@ function renderReviews() {
         ${peopleAttention.length ? peopleAttention.map(entry => {
           const cardStateClass = entry.absenceToday ? 'absent' : entry.attentionLevel;
           const supportThisMonth = personSupportInMonth(entry.person, currentMonthLabel);
+          const workingBlocks = teamFocusWorkingBlocks(entry);
+          const waitingBlocks = teamFocusWaitingBlocks(entry);
+          const open = entry.person.id === openTeamFocusPersonId;
+          const detailId = `team-focus-${entry.person.id}`;
           return `
-          <div class="tf-card tf-card-${cardStateClass}">
-            <div class="tf-card-head">
-              <button class="tf-person-link" type="button" onclick="openPersonById('${entry.person.id}')" title="Teammitglied öffnen">
-                ${personAvatar(entry.person, 'md', { absent: !!entry.absenceToday, ...teamFocusAttentionBadge(entry) })}
-              </button>
-              <div class="tf-name-line">
-                <button class="review-row-title tf-name-link" type="button" onclick="openPersonById('${entry.person.id}')" title="Teammitglied öffnen">${esc(entry.person.name)}</button>
-                ${supportThisMonth ? `<span class="tl-sup-badge" title="Support ${esc(formatMonth(currentMonthLabel))}">sup</span>` : ''}
-                ${entry.absenceToday ? `<span class="tf-absent-mark" title="${esc(`${entry.absenceToday.label || 'Abwesend'} · ${formatDate(entry.absenceToday.start)} – ${formatDate(entry.absenceToday.end)}`)}">${esc(teamFocusAbsenceLabel(entry.absenceToday))}</span>` : ''}
+          <div class="tf-card tf-card-${cardStateClass}${open ? ' tf-card-open' : ''}" data-person-id="${esc(entry.person.id)}" data-person-name="${esc(entry.person.name)}">
+            <div class="tf-card-summary" onclick="toggleTeamFocusCard('${entry.person.id}')">
+              <div class="tf-card-head">
+                <button class="tf-person-link" type="button" onclick="event.stopPropagation(); openPersonById('${entry.person.id}')" title="Teammitglied öffnen">
+                  ${personAvatar(entry.person, 'md', { absent: !!entry.absenceToday, ...teamFocusAttentionBadge(entry) })}
+                </button>
+                <div class="tf-name-line">
+                  <button class="review-row-title tf-name-link" type="button" onclick="event.stopPropagation(); openPersonById('${entry.person.id}')" title="Teammitglied öffnen">${esc(entry.person.name)}</button>
+                  ${supportThisMonth ? `<span class="tl-sup-badge" title="Support ${esc(formatMonth(currentMonthLabel))}">sup</span>` : ''}
+                  ${entry.absenceToday ? `<span class="tf-absent-mark" title="${esc(`${entry.absenceToday.label || 'Abwesend'} · ${formatDate(entry.absenceToday.start)} – ${formatDate(entry.absenceToday.end)}`)}">${esc(teamFocusAbsenceLabel(entry.absenceToday))}</span>` : ''}
+                </div>
               </div>
+              <div class="tf-metric-row">
+                ${renderTeamFocusOneOnOneMetric(entry)}
+                ${renderTeamFocusJiraMetric(entry)}
+              </div>
+              <div class="tf-work-metric">
+                <span class="tf-metric-label">Arbeitet an</span>
+                <span class="tf-metric-value">${workingBlocks.length}</span>
+                ${waitingBlocks.length ? `
+                <span class="tf-metric-label tf-work-waiting" title="Wartet in Review, QA oder einem anderen Übergabestatus">Wartet</span>
+                <span class="tf-metric-value tf-work-waiting" title="Wartet in Review, QA oder einem anderen Übergabestatus">${waitingBlocks.length}</span>` : ''}
+              </div>
+              <button class="tf-card-toggle" type="button" aria-expanded="${open}" aria-controls="${esc(detailId)}" onclick="event.stopPropagation(); toggleTeamFocusCard('${entry.person.id}')" title="Tickets ${open ? 'einklappen' : 'ausklappen'}" aria-label="Tickets von ${esc(entry.person.name)} ${open ? 'einklappen' : 'ausklappen'}">
+                <span aria-hidden="true">⌄</span>
+              </button>
             </div>
-            <div class="tf-metric-row">
-              ${renderTeamFocusJiraMetric(entry)}
-              ${renderTeamFocusOneOnOneMetric(entry)}
+            <div class="tf-card-detail" id="${esc(detailId)}"${open ? '' : ' hidden'}>
+              ${renderTeamFocusBlocks(entry)}
             </div>
-            ${renderTeamFocusBlocks(entry)}
           </div>`;
         }).join('') : '<div style="color:var(--text-muted);font-size:14px">Keine Teammitglieder vorhanden</div>'}
         </div>

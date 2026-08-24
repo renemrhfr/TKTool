@@ -2590,19 +2590,16 @@ textarea,
   align-items: start;
 }
 
-/* Bei fuenf bis sieben Leuten passen die Karten nebeneinander — dann steht
-   alles gleichzeitig da und niemand muss aufklappen. */
+/* Teamfokus nutzt die ganze Breite; die fuenf Personen stehen als kompakte
+   Zeilen untereinander. */
 .review-team-focus-card {
   grid-column: 1 / -1;
 }
 
-/* Bewusst kein align-items:start — die Karten einer Reihe ziehen sich auf
-   dieselbe Hoehe, sonst franst das Raster bei unterschiedlich vielen
-   Bloecken aus. */
 .review-team-focus-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 8px;
+  grid-template-columns: 1fr;
+  gap: 6px;
 }
 
 .dashboard-links {
@@ -2843,14 +2840,10 @@ textarea,
   white-space: nowrap;
 }
 
-/* Kopf, Kacheln, Blockliste: die Kacheln stehen bei jeder Karte auf derselben
-   Hoehe, die Blockliste darunter nimmt den Rest und scrollt bei Bedarf. */
+/* Alle Teammitglieder bleiben als kompakte Zeilen sichtbar. Nur die aktuell
+   gewaehlte Person klappt ihre Blockliste auf. */
 .tf-card {
-  display: grid;
-  grid-template-rows: auto auto 1fr;
-  gap: 8px;
   min-width: 0;
-  padding: 8px;
   border: 1px solid var(--border);
   border-left-width: 3px;
   background: var(--surface);
@@ -2859,6 +2852,64 @@ textarea,
 
 .tf-card:hover {
   border-color: color-mix(in srgb, var(--accent) 38%, var(--border));
+}
+
+.tf-card-summary {
+  display: grid;
+  grid-template-columns: minmax(190px, 1.3fr) minmax(280px, 1.7fr) minmax(110px, .65fr) 30px;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 7px 8px;
+  cursor: pointer;
+}
+
+.tf-card-summary:hover .tf-card-toggle {
+  color: var(--accent);
+}
+
+.tf-card-open .tf-card-summary {
+  border-bottom: 1px solid var(--border);
+}
+
+.tf-card-detail {
+  min-width: 0;
+  padding: 8px 8px 9px 47px;
+}
+
+.tf-card-detail[hidden] {
+  display: none;
+}
+
+.tf-card-toggle {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.tf-card-toggle:hover,
+.tf-card-toggle:focus-visible {
+  border-color: var(--border);
+  background: var(--bg-elev);
+  color: var(--accent);
+}
+
+.tf-card-toggle span {
+  display: inline-block;
+  transition: transform 140ms ease;
+}
+
+.tf-card-toggle[aria-expanded="true"] span {
+  transform: rotate(180deg);
 }
 
 .tf-card-head {
@@ -2881,7 +2932,8 @@ textarea,
 
 .tf-card-absent .tf-name-link,
 .tf-card-absent .tf-blocks,
-.tf-card-absent .tf-metric-row {
+.tf-card-absent .tf-metric-row,
+.tf-card-absent .tf-work-metric {
   filter: grayscale(1);
   opacity: 0.62;
 }
@@ -3183,7 +3235,28 @@ textarea,
 .tf-metric-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
+  gap: 0;
+}
+
+.tf-metric-row > .tf-metric:only-child {
+  grid-column: 1 / -1;
+}
+
+.tf-work-metric {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 9px;
+  min-width: 0;
+  padding: 5px 7px;
+}
+
+.tf-work-metric .tf-metric-value {
+  text-align: right;
+}
+
+.tf-work-metric .tf-metric-label.tf-work-waiting,
+.tf-work-metric .tf-metric-value.tf-work-waiting {
+  color: color-mix(in srgb, var(--warning) 82%, var(--text));
 }
 
 .tf-blocks {
@@ -3239,13 +3312,14 @@ textarea,
   100% { opacity: 0; }
 }
 
-/* Drei Zeilen plus ein angeschnittener Rest: der Schnitt ist die halbe
-   Scroll-Ansage, den Rest macht der Verlauf aus .tf-blocks-more. */
+/* Bis zu zehn Bloecke bleiben sichtbar. Fuer Ausreisser darueber kuendigen
+   Verlauf und Hinweis den Scrollbereich an. */
 .tf-blocks-list {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   align-content: start;
   gap: 3px;
-  max-height: 94px;
+  max-height: 320px;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
@@ -3288,7 +3362,7 @@ textarea,
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 5px 8px 5px 0;
+  padding: 7px 8px 7px 0;
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--bg-elev) 78%, var(--surface));
   color: inherit;
@@ -3347,7 +3421,7 @@ textarea,
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -3378,8 +3452,8 @@ textarea,
 }
 
 
-/* Label und Wert stehen in einer Zeile: die Kachel ist eine Kennzahl, kein
-   Absatz — zwei Zeilen statt drei sparen pro Karte rund 14px. */
+/* Jira und 1:1 lesen sich wie ruhige Statuszeilen. Farbe und Text tragen den
+   Zustand; zusaetzliche Kaesten oder Statussymbole waeren nur Rauschen. */
 .tf-metric {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -3387,13 +3461,18 @@ textarea,
   align-items: baseline;
   gap: 2px 6px;
   min-width: 0;
-  padding: 5px 7px;
-  border: 1px solid var(--border);
-  border-left-width: 3px;
-  background: color-mix(in srgb, var(--bg-elev) 78%, var(--surface));
+  padding: 4px 12px 4px 0;
+  border: 0;
+  background: transparent;
 }
 
 .tf-metric-note { grid-column: 1 / -1; }
+
+.tf-metric-row > .tf-metric:first-child,
+.tf-metric + .tf-metric {
+  padding-left: 13px;
+  border-left: 1px dashed color-mix(in srgb, var(--border) 82%, transparent);
+}
 
 button.tf-metric {
   width: 100%;
@@ -3404,7 +3483,6 @@ button.tf-metric {
 }
 
 .tf-metric-action:hover {
-  border-color: color-mix(in srgb, var(--accent) 52%, var(--border));
   background: var(--interactive-hover-bg);
 }
 
@@ -3444,18 +3522,15 @@ button.tf-metric {
 }
 
 .tf-sig-ok {
-  border-color: color-mix(in srgb, var(--success) 42%, var(--border));
-  background: color-mix(in srgb, var(--success) 7%, var(--bg-elev));
+  color: var(--success);
 }
 
 .tf-sig-warn {
-  border-color: color-mix(in srgb, var(--warning) 48%, var(--border));
-  background: color-mix(in srgb, var(--warning) 10%, var(--bg-elev));
+  color: var(--warning);
 }
 
 .tf-sig-bad {
-  border-color: color-mix(in srgb, var(--danger) 50%, var(--border));
-  background: color-mix(in srgb, var(--danger) 10%, var(--bg-elev));
+  color: var(--danger);
 }
 
 .tf-sig-ok .tf-metric-value { color: color-mix(in srgb, var(--success) 72%, var(--text)); }
@@ -5972,6 +6047,7 @@ a.jira-ticket-key:hover { text-decoration: underline; }
   .meetings-sidebar-controls { position: static; }
   .meeting-list-row[data-peek]:hover::after { display: none; }
   .oneonone-carryover-grid { grid-template-columns: 1fr; }
+  .tf-card-summary { grid-template-columns: minmax(160px, .9fr) minmax(240px, 1.35fr) minmax(100px, .55fr) 30px; }
 }
 
 @media (max-width: 640px) {
@@ -6002,7 +6078,11 @@ a.jira-ticket-key:hover { text-decoration: underline; }
   .oneonone-carryover-signal .badge { justify-self: start; }
   .oneonone-carryover-text { grid-column: 1 / -1; }
   .notes-page-head .overview-toolbar { grid-template-columns: 1fr; }
-  .tf-metric-row { grid-template-columns: 1fr; }
+  .tf-card-summary { grid-template-columns: minmax(0, 1fr) 30px; }
+  .tf-card-summary .tf-metric-row { grid-column: 1 / -1; grid-row: 2; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tf-card-summary .tf-work-metric { grid-column: 1 / -1; grid-row: 3; }
+  .tf-card-detail { padding-left: 8px; }
+  .tf-blocks-list { grid-template-columns: 1fr; }
   .review-row-side { align-items: flex-start; min-width: 0; }
   .team-detail-stats { grid-template-columns: 1fr; }
   .team-detail-topline { align-items: flex-start; }
