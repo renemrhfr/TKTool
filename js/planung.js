@@ -345,6 +345,15 @@ function isWaitingUnit(unit) {
   });
 }
 
+// Ein einzelner Planungsblock gehoert zum Uebergabe-Filter, wenn sein
+// Jira-Ticket in einem der unter "Status — wartet woanders" gewaehlten Status
+// steht. Ohne Jira-Stand bleibt der Block sichtbar.
+function isPlanungHandoverBlock(block) {
+  if (!block || !block.jiraRef) return false;
+  const state = jiraStatusForBlock(block);
+  return !!(state && isJiraHandoverStatus(state.status));
+}
+
 function renderTimeline({ personIds, startDate, endDate, options = {} }) {
   const {
     weekendsOnly = false,
@@ -356,6 +365,7 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
     insertLane = false,
     showCapacity = true,
     blockQuery = '',
+    hideHandover = false,
   } = options;
   const start = parseISO(startDate);
   const end = parseISO(endDate);
@@ -440,7 +450,12 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
 
     // Blocks
     const personBlocks = data.blocks
-      .filter(b => b.personId === pid && !isBlockParked(b) && b.end >= startDate && b.start <= endDate && blockMatchesPlanungQuery(b, blockQuery))
+      .filter(b => b.personId === pid
+        && !isBlockParked(b)
+        && b.end >= startDate
+        && b.start <= endDate
+        && blockMatchesPlanungQuery(b, blockQuery)
+        && (!hideHandover || !isPlanungHandoverBlock(b)))
       .map(b => {
         const sISO = b.start < startDate ? startDate : b.start;
         const eISO = b.end > endDate ? endDate : b.end;
@@ -819,7 +834,11 @@ function renderPlanung() {
   const rawQuery = viewState.planungQuery || '';
   const blockQuery = rawQuery.trim().toLocaleLowerCase('de-AT');
   const personFilter = planungPersonFilter();
-  const queryBlocks = blockQuery ? data.blocks.filter(block => blockMatchesPlanungQuery(block, blockQuery)) : data.blocks;
+  const hideHandover = !!viewState.planungHideHandover;
+  const queriedBlocks = blockQuery ? data.blocks.filter(block => blockMatchesPlanungQuery(block, blockQuery)) : data.blocks;
+  const filterScopeBlocks = personFilter ? queriedBlocks.filter(block => block.personId === personFilter) : queriedBlocks;
+  const handoverFilterCount = filterScopeBlocks.filter(isPlanungHandoverBlock).length;
+  const queryBlocks = queriedBlocks.filter(block => !hideHandover || !isPlanungHandoverBlock(block));
   // Personenfilter zieht durch alle Panels — sonst zeigt die Zeile eine Person,
   // die Liste darunter aber weiter das ganze Team.
   const matchingBlocks = personFilter ? queryBlocks.filter(block => block.personId === personFilter) : queryBlocks;
@@ -883,6 +902,14 @@ function renderPlanung() {
       title="${esc(['Blöcke, deren Ticket nicht mehr beim Entwickler liegt:',
         ...Object.keys(waitingByStatus).sort().map(st => `${st.toLowerCase()}: ${waitingByStatus[st].length}`),
         `Stand: ${jiraSyncAgeLabel() || 'unbekannt'}`].join('\n'))}">${waiting.length} wartet</button>
+  ` : '';
+  const handoverFilterChip = handoverFilterCount ? `
+    <button class="filter-btn planung-handover-btn ${hideHandover ? 'active' : ''}"
+      onclick="togglePlanungHideHandover()"
+      aria-pressed="${hideHandover ? 'true' : 'false'}"
+      title="Tickets in den unter Status — wartet woanders gewählten Status ${hideHandover ? 'wieder einblenden' : 'ausblenden'}">
+      ${hideHandover ? 'wartende ausgeblendet' : 'wartende ausblenden'} (${handoverFilterCount})
+    </button>
   ` : '';
   const handoverPanel = (waiting.length && viewState.planungShowHandover) ? `
     <div class="planung-overdue-panel">
@@ -965,6 +992,7 @@ function renderPlanung() {
             <button class="filter-btn ${planungShowWeekends() ? 'active' : ''}" onclick="togglePlanungWeekends()" title="Samstag/Sonntag ein-/ausblenden">sa/so</button>
             ${overdueChip}
             ${handoverChip}
+            ${handoverFilterChip}
             <select class="filter-btn planung-person-filter ${personFilter ? 'active' : ''}"
               title="Nur einen Mitarbeiter anzeigen"
               onchange="setPlanungPerson(this.value)">
@@ -991,7 +1019,7 @@ function renderPlanung() {
     ${parkedRow}
     ${searchResults}
 
-    ${personIds.length ? renderTimeline({ personIds, startDate: start, endDate: end, options: { idPrefix: 'planung', supportAnchorMonth: month, insertLane: true, showCapacity: sort === 'frei', showWeekends: planungShowWeekends(), blockQuery } })
+    ${personIds.length ? renderTimeline({ personIds, startDate: start, endDate: end, options: { idPrefix: 'planung', supportAnchorMonth: month, insertLane: true, showCapacity: sort === 'frei', showWeekends: planungShowWeekends(), blockQuery, hideHandover } })
       : `<div class="empty-state"><div class="empty-state-icon">&#128269;</div><div class="empty-state-text">${blockQuery ? 'Keine passenden Blöcke' : 'Keine Teammitglieder'}</div></div>`}
 
     <div class="tl-legend">
@@ -1087,6 +1115,12 @@ function togglePlanungOverdue() {
 
 function togglePlanungHandover() {
   viewState.planungShowHandover = !viewState.planungShowHandover;
+  render();
+}
+
+function togglePlanungHideHandover() {
+  viewState.planungHideHandover = !viewState.planungHideHandover;
+  if (viewState.planungHideHandover) viewState.planungShowHandover = false;
   render();
 }
 
