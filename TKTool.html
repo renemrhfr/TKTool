@@ -3990,6 +3990,29 @@ button.tf-metric {
   margin-bottom: 0;
 }
 
+.meeting-planner-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  margin-bottom: 12px;
+  padding: 7px 8px;
+  border: 1px dashed var(--border);
+  background: var(--bg-elev);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.meeting-planner-note span {
+  color: var(--text-muted);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
 .meeting-status-preview {
   margin-bottom: 12px;
   padding: 8px;
@@ -5231,6 +5254,9 @@ button.tf-metric {
   border-left: 2px solid var(--danger);
 }
 
+.planung-jira-changes-btn { color: var(--text-secondary); }
+.planung-jira-changes-btn:hover { color: var(--text); }
+
 .planung-overdue-panel {
   border: 1px solid var(--border);
   border-left: 2px solid var(--danger);
@@ -6231,6 +6257,95 @@ a.jira-ticket-key:hover { text-decoration: underline; }
   .theme-trigger-label {
     display: none;
   }
+}
+
+/* Work surfaces: hierarchy through spacing, readable states across themes. */
+[hidden] { display: none !important; }
+.header-inner { max-width: 1600px; }
+.header-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.planner-toolbar { display: block; margin-bottom: 16px; }
+.planner-toolbar-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.planner-toolbar .filters { margin: 0; display: flex; gap: 4px; }
+.planner-toolbar-primary { flex-wrap: nowrap; }
+.planner-toolbar-primary > .month-selector { width: auto; flex: 0 0 auto; }
+.planner-toolbar-primary .month-label { white-space: nowrap; }
+.planner-toolbar-primary > .filters { flex: 0 0 auto; flex-wrap: nowrap; }
+.planner-primary-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; flex: 0 0 auto; white-space: nowrap; }
+.planner-toolbar .planung-search { flex: 1 1 220px; }
+.planner-toolbar .month-label { font-variant-numeric: tabular-nums; }
+#planung-timeline { max-height: 68vh; overflow: auto; scroll-padding-top: 62px; }
+#planung-timeline .tl-header { top: 0; z-index: 12; }
+#planung-timeline .tl-person, #planung-timeline .tl-person-head { position: sticky; left: 0; background: var(--bg-elev); z-index: 8; }
+#planung-timeline .tl-person-head { z-index: 13; }
+.tl-person-name, .tl-block-label, .queue-ticket-title, .team-meeting-title { font-family: var(--font-sans); }
+.tl-person-cap { font-variant-numeric: tabular-nums; }
+.tl-cell.tl-support-cell { background: color-mix(in srgb, var(--warning) 5%, var(--surface)); }
+.tl-cell.tl-weekend.tl-support-cell { background: var(--weekend-bg); }
+.tl-block-ticket { --block-tone: var(--timeline-ticket); }
+.tl-block-projekt { --block-tone: var(--timeline-projekt); }
+.tl-block-incident { --block-tone: var(--timeline-incident); }
+.tl-block-abwesenheit { --block-tone: var(--timeline-abwesenheit); }
+.tl-block { background: color-mix(in srgb, var(--block-tone, var(--accent)) 15%, var(--surface)); color: var(--text); border-left: 3px solid var(--block-tone, var(--accent)); box-shadow: none; }
+.tl-block:hover { background: color-mix(in srgb, var(--block-tone, var(--accent)) 25%, var(--surface)); }
+.tl-block.tl-block-handover-on { opacity: 1; background: var(--surface); color: var(--text-secondary); border: 1px dashed var(--border); border-left: 3px solid var(--text-muted); }
+.tl-block-handover { background: var(--bg-elev); color: var(--text-secondary); }
+.tl-block-swatch { border-left: 6px solid var(--block-tone, var(--accent)); }
+.waiting-person-badge { display: block; margin-top: 6px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 2px 5px; font: inherit; font-size: 11px; background: var(--surface); color: var(--text-secondary); border: 1px solid var(--border); border-radius: var(--control-radius); cursor: pointer; }
+.waiting-person-badge:hover { color: var(--text); border-color: var(--accent); }
+.waiting-queue { margin-top: 18px; padding: 0; }
+.waiting-queue > summary { padding: 14px; cursor: pointer; display: flex; align-items: baseline; flex-wrap: wrap; gap: 12px; }
+.waiting-queue > summary::before { content: '▸'; }
+.waiting-queue[open] > summary::before { content: '▾'; }
+.waiting-queue > summary > span, .waiting-queue small { color: var(--text-secondary); }
+.waiting-queue small { margin-left: auto; }
+.waiting-count { font-size: 12px; font-weight: 400; margin-left: 8px; }
+.queue-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 14px; border-top: 1px solid var(--border); }
+.queue-help, .queue-notice { color: var(--text-secondary); font-size: 12px; }
+.queue-notice { padding: 12px 14px; }
+.queue-group { padding: 8px 14px 14px; }
+.queue-group h3 { font-size: 13px; margin: 6px 0; }
+.queue-group h3 span { color: var(--text-muted); margin-left: 6px; }
+.queue-ticket { display: flex; align-items: baseline; gap: 12px; padding: 9px 0; border-bottom: 1px solid color-mix(in srgb, var(--border) 45%, transparent); font-size: 12px; }
+.queue-ticket-title { flex: 1; min-width: 120px; font-size: 14px; overflow-wrap: anywhere; }
+.queue-ticket > a { flex-shrink: 0; }
+.jira-changes { margin-bottom: 12px; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--control-radius); }
+.jira-changes summary { cursor: pointer; color: var(--text-secondary); }
+.dashboard-waiting { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; width: 100%; margin-bottom: 16px; padding: 14px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.dashboard-waiting span:last-child { margin-left: auto; color: var(--text-secondary); }
+.tf-context-heading { font-size: 11px; font-weight: 600; color: var(--text-secondary); margin: 10px 0 4px; }
+.tf-work-metric { gap: 6px; }
+.overlay.overlay-drawer { padding: 0; justify-content: flex-end; }
+.overlay-drawer .modal { height: 100vh; max-height: 100vh; max-width: 480px; border-radius: 0; padding-top: 16px; }
+.notes-workspace { display: grid; grid-template-columns: minmax(180px, 260px) minmax(0, 1fr); gap: 18px; align-items: start; }
+.notes-index { display: grid; gap: 4px; max-height: 72vh; overflow-y: auto; }
+.notes-index-entry { display: grid; gap: 5px; padding: 12px; text-align: left; font: inherit; border: 1px solid transparent; background: transparent; color: var(--text); cursor: pointer; }
+.notes-index-entry.active { background: var(--accent-light); border-color: var(--accent); }
+.notes-index-entry span { font-size: 11px; color: var(--text-secondary); }
+.notes-workspace .note-editor { min-height: 55vh; }
+body[data-theme="daylight"] .card, body[data-theme="nord"] .card { box-shadow: none; }
+body[data-theme="daylight"] .team-section-block, body[data-theme="nord"] .team-section-block { background: transparent; }
+body[data-theme="daylight"] .card-title, body[data-theme="nord"] .card-title { letter-spacing: .025em; }
+button:focus-visible, a:focus-visible, summary:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+@media (max-width: 1000px) {
+  .header-inner { height: auto; min-height: var(--header-height); flex-wrap: wrap; padding: 6px 0; }
+  .header-actions { margin-left: auto; }
+  .queue-ticket { flex-wrap: wrap; }
+  .queue-ticket-title { flex-basis: 50%; }
+}
+@media (max-width: 650px) {
+  .notes-workspace { grid-template-columns: 1fr; }
+  .notes-index { max-height: 180px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0s !important; animation-duration: 0s !important; }
+}
+.planner-toolbar .month-selector { width: auto; flex: 0 1 auto; }
+.planner-toolbar .month-label { min-width: 210px; padding: 0 10px; }
+.oneonone-carryover > summary { cursor: pointer; }
+.oneonone-carryover[open] > summary { margin-bottom: 12px; }
+.overview-board:has(> :nth-child(3):last-child) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 700px) {
+  .overview-board:has(> :nth-child(3):last-child) { grid-template-columns: 1fr; }
 }
 
 </style>
@@ -7903,13 +8018,12 @@ body[data-theme="arrakis"] ::selection {
   <div class="header-inner">
     <div class="logo">tk_</div>
     <nav class="nav" id="nav">
-      <button data-view="reviews" class="active">dashboard</button>
-      <button data-view="overview">todo</button>
+      <button data-view="reviews" class="active">übersicht</button>
       <button data-view="planung">planung</button>
-      <button data-view="notizen">notizen</button>
-      <button data-view="team">team</button>
-      <button data-view="kontakte">kontakte</button>
+      <button data-view="overview">aufgaben</button>
       <button data-view="meetings">meetings</button>
+      <button data-view="team">team</button>
+      <button data-view="notizen" title="Persönliche Notizen (Sudo)">notizen</button>
     </nav>
     <div class="header-search">
       <input
@@ -7984,7 +8098,7 @@ body[data-theme="arrakis"] ::selection {
 // ============================================================
 // DATA LAYER — File System Access API
 // ============================================================
-const APP_VERSION = '1.0.52';
+const APP_VERSION = '1.0.53';
 const DATA_FILENAME = 'tktool-data.json';
 const JIRA_SYNC_FILENAME = 'jira-tickets.json';
 const JIRA_QUERY_MAX_RESULTS = 100;
@@ -8588,7 +8702,7 @@ function jiraSnapshotFromResponse(parsed) {
     .map(p => p.jiraAccountId.trim());
   const today = todayStr();
   const refKeys = new Set((data.blocks || [])
-    .filter(b => !b.done && b.jiraRef && (b.end || b.start || '') >= today)
+    .filter(b => !b.done && b.jiraRef)
     .map(b => b.jiraRef.trim().toUpperCase()));
 
   // Vorbelegen, damit ein Teammitglied ohne Treffer als "keine Tickets"
@@ -8664,6 +8778,7 @@ async function importJiraJson(text) {
   }
   const snapshot = jiraSnapshotFromResponse(parsed);
   const diff = jiraSnapshotDiff(jiraSyncData, snapshot);
+  snapshot.changes = jiraSnapshotChanges(jiraSyncData, snapshot);
   await writeJiraSync(snapshot);
   // Nur fuer den Toast, absichtlich erst nach dem Schreiben — der Diff
   // gehoert nicht in jira-tickets.json.
@@ -8694,6 +8809,31 @@ function jiraSnapshotDiff(prev, next) {
   }
   for (const key of before.keys()) if (!after.has(key)) diff.gone++;
   return diff;
+}
+
+// Persist only the latest import changes, not a second manually maintained log.
+function jiraSnapshotChanges(prev, next) {
+  if (!prev) return [];
+  const flatten = snap => {
+    const map = new Map();
+    for (const [key, value] of Object.entries(snap.refs || {})) map.set(key.toUpperCase(), { key, ...value });
+    for (const list of Object.values(snap.assignees || {})) {
+      for (const ticket of list) map.set(ticket.key.toUpperCase(), ticket);
+    }
+    return map;
+  };
+  const before = flatten(prev), after = flatten(next), changes = [];
+  for (const [key, ticket] of after) {
+    const old = before.get(key);
+    if (!old || old.status === ticket.status) continue;
+    const kind = ticket.statusCategory === 'done' ? 'done'
+      : isJiraHandoverStatus(ticket.status) ? 'waiting'
+      : isJiraHandoverStatus(old.status) ? 'returned' : '';
+    if (kind) changes.push({ key, summary: ticket.summary || old.summary || key,
+      from: old.status, to: ticket.status, kind });
+  }
+  // Missing tickets are not evidence of completion (pagination/reassignment).
+  return changes;
 }
 
 // Liest jira-tickets.json neu ein (z.B. nachdem ein anderes Geraet den
@@ -8751,12 +8891,6 @@ async function loadData() {
     await cacheData(store);
   }
   await loadJiraSync();
-  // Erst mit dem Jira-Snapshot ist die Hierarchie bekannt. Was sich daraus
-  // ergibt, wird gleich festgeschrieben — sonst haengt es bis zur naechsten
-  // beliebigen Aenderung nur in der Anzeige.
-  if (typeof syncParentBlockSpans === 'function' && syncParentBlockSpans(data.blocks)) {
-    saveData(data);
-  }
   return data;
 }
 
@@ -9130,9 +9264,9 @@ const CLEANUP_GROUPS = [
     id: 'blocks',
     key: 'blocks',
     label: 'planungsblöcke',
-    hint: 'nur abgelaufene',
+    hint: 'erledigte Blöcke und vergangene Abwesenheiten',
     defaultMonths: 3,
-    match: r => !!(r.start && r.end),
+    match: r => !!(r.start && r.end && (r.done || r.typ === 'abwesenheit')),
   },
   {
     id: 'markers',
@@ -9282,9 +9416,6 @@ async function runCleanup(monthsByGroup) {
 }
 
 function saveData(d) {
-  // Kopfbloecke tragen die Spanne ihrer Kinder. Haengt hier statt an den
-  // einzelnen Aufrufern, damit die Invariante keine Aenderung verpasst.
-  if (typeof syncParentBlockSpans === 'function') syncParentBlockSpans(d && d.blocks);
   const store = prepareLocalChanges(d, localSnapshot, deletedRecords);
   adoptStore(store);
   const snapshot = cloneData(store);
@@ -9490,16 +9621,39 @@ function jiraParentKeyForRef(ref) {
 
 // Blockiert der Block noch den Entwickler? Offene Bloecke, deren Ticket in
 // einem Uebergabe-Status haengt, zaehlen als "wartet woanders".
+// Waiting is ticket state, independent of the planning calendar.
 function jiraHandoverBlocks(personId) {
+  return (data.blocks || []).filter(b => (!personId || b.personId === personId)
+    && !b.done && isJiraHandoverStatus(jiraStatusForBlock(b)?.status));
+}
+
+function jiraWaitingTickets(personId = null) {
   if (!jiraSyncData) return [];
-  const today = todayStr();
-  return (data.blocks || []).filter(b => {
-    if (personId && b.personId !== personId) return false;
-    if (b.done || !b.jiraRef) return false;
-    if ((b.end || b.start || '') < today) return false;
-    const ref = jiraStatusForBlock(b);
-    return !!(ref && isJiraHandoverStatus(ref.status));
-  });
+  const byKey = new Map();
+  for (const person of data.persons.filter(p => p.type !== 'kontakt')) {
+    for (const ticket of jiraTicketsForPerson(person) || []) {
+      if (!isJiraHandoverStatus(ticket.status) || ticket.statusCategory === 'done') continue;
+      const key = String(ticket.key).trim().toUpperCase();
+      byKey.set(key, { ...ticket, key, personId: person.id });
+    }
+  }
+  for (const block of jiraHandoverBlocks()) {
+    const key = block.jiraRef.trim().toUpperCase();
+    const state = jiraStatusForBlock(block);
+    if (state.statusCategory === 'done') continue;
+    const owner = state.assignee && data.persons.find(p => p.jiraAccountId === state.assignee);
+    const existing = byKey.get(key);
+    if (existing) { existing.blockId = existing.blockId || block.id; continue; }
+    byKey.set(key, { key, summary: state.summary || block.label || key,
+      status: state.status, personId: owner?.id || block.personId, blockId: block.id });
+  }
+  return [...byKey.values()].filter(t => !personId || t.personId === personId)
+    .sort((a, b) => a.status.localeCompare(b.status, 'de') || a.key.localeCompare(b.key, 'de', { numeric: true }));
+}
+
+function jiraBlockResolved(block) {
+  const state = jiraStatusForBlock(block);
+  return state?.statusCategory === 'done';
 }
 
 // Alle je gesehenen Status, damit ausgeschlossene weiterhin waehlbar bleiben —
@@ -9783,7 +9937,7 @@ function openPersonById(id) {
 function openPersonTodos(personId) {
   const person = personById(personId);
   navigate('overview', {
-    month: currentMonth(),
+    overviewScope: 'open',
     overviewLayout: 'list',
     overviewQuery: person?.name || personName(personId),
   });
@@ -9942,7 +10096,7 @@ function jiraQueryUrl() {
     .filter((id, i, all) => all.indexOf(id) === i);
   const today = todayStr();
   const refKeys = (data.blocks || [])
-    .filter(b => !b.done && b.jiraRef && (b.end || b.start || '') >= today)
+    .filter(b => !b.done && b.jiraRef)
     .map(b => b.jiraRef.trim().toUpperCase())
     .filter((key, i, all) => all.indexOf(key) === i);
   if (!accountIds.length && !refKeys.length) return '';
@@ -9983,20 +10137,22 @@ function jiraDriftForPerson(person) {
   // abgelaufener Block als "nicht verplant" und "+ block" legt denselben
   // Ticket-Block ein zweites Mal an — der Block gehoert verlaengert, nicht
   // dupliziert.
+  const effective = new Map((typeof workingPlanBlocks === 'function' ? workingPlanBlocks() : []).map(b => [b.id, b]));
   const openBlocks = (data.blocks || []).filter(b =>
-    b.personId === person.id && !b.done && b.jiraRef);
+    b.personId === person.id && !b.done && b.jiraRef).map(b => effective.get(b.id) || b);
   const activeBlocks = openBlocks.filter(b => (b.end || b.start || '') >= today);
   const plannedKeys = new Set(openBlocks.map(b => b.jiraRef.trim().toUpperCase()));
   const openKeys = new Set(tickets.map(t => String(t.key || '').toUpperCase()));
-  const unplanned = tickets.filter(t => !plannedKeys.has(String(t.key || '').toUpperCase()));
+  const unplanned = tickets.filter(t => !isJiraHandoverStatus(t.status) && !plannedKeys.has(String(t.key || '').toUpperCase()));
   // Ticket laeuft in Jira noch, der Block ist aber abgelaufen: eigene Sorte
   // Drift mit eigener Aktion (verlaengern) statt eines zweiten Blocks.
   const expired = openBlocks.filter(b =>
-    (b.end || b.start || '') < today && openKeys.has(b.jiraRef.trim().toUpperCase()));
+    b.start && b.end && b.end < today && openKeys.has(b.jiraRef.trim().toUpperCase())
+      && !isJiraHandoverStatus(jiraStatusForBlock(b)?.status));
   const refs = (jiraSyncData && jiraSyncData.refs) || {};
   const refByKey = {};
   for (const k of Object.keys(refs)) refByKey[k.trim().toUpperCase()] = refs[k];
-  const stale = activeBlocks.filter(b => {
+  const stale = openBlocks.filter(b => {
     const key = b.jiraRef.trim().toUpperCase();
     if (openKeys.has(key)) return false;
     const ref = refByKey[key];
@@ -10160,7 +10316,7 @@ function navigate(view, state = {}) {
     : state;
   render();
   document.querySelectorAll('#nav button').forEach(b => {
-    b.classList.toggle('active', b.dataset.view === view.split(':')[0]);
+    b.classList.toggle('active', b.dataset.view === (view.startsWith('kontakte') ? 'team' : view.split(':')[0]));
   });
 }
 
@@ -10202,13 +10358,14 @@ function render() {
 // ============================================================
 function renderOverview() {
   const month = viewState.month || currentMonth();
+  const allOpen = viewState.overviewScope !== 'month' && !viewState.month;
   const query = (viewState.overviewQuery || '').trim().toLocaleLowerCase('de-AT');
   const layout = overviewLayout();
   const review = monthReview(month);
   const pastOpenWarning = renderPastOpenItemsWarning();
   const items = data.items
     .filter(i => !isGrowthEntry(i))
-    .filter(i => i.month === month)
+    .filter(i => allOpen ? i.status !== 'done' : i.month === month)
     .filter(i => !query || itemMatchesQuery(i, query));
 
   const todos = items.filter(i => i.status === 'todo').sort(compareByDueDate);
@@ -10223,7 +10380,11 @@ function renderOverview() {
       <div class="overview-toolbar">
         <div class="overview-toolbar-main">
           <div class="overview-toolbar-start">
-            <div class="month-selector">
+            <div class="filters">
+              <button class="filter-btn ${allOpen ? 'active' : ''}" onclick="setOverviewScope('open')">Alle offenen</button>
+              <button class="filter-btn ${!allOpen ? 'active' : ''}" onclick="setOverviewScope('month')">Monatsarchiv</button>
+            </div>
+            <div class="month-selector" ${allOpen ? 'hidden' : ''}>
               <button onclick="changeMonth(-1)">&#8592;</button>
               <span class="month-label">${formatMonth(month)}</span>
               <button onclick="changeMonth(1)">&#8594;</button>
@@ -10233,7 +10394,7 @@ function renderOverview() {
             <input
               id="overviewSearchInput"
               type="search"
-              placeholder="monat filtern..."
+              placeholder="Aufgaben suchen…"
               value="${esc(viewState.overviewQuery || '')}"
               oninput="setOverviewQuery(this.value)"
             >
@@ -10250,7 +10411,7 @@ function renderOverview() {
             <button class="view-toggle-btn ${layout === 'board' ? 'active' : ''}" onclick="setOverviewLayout('board')" role="tab" aria-selected="${layout === 'board'}">board</button>
             <button class="view-toggle-btn ${layout === 'list' ? 'active' : ''}" onclick="setOverviewLayout('list')" role="tab" aria-selected="${layout === 'list'}">list</button>
           </div>
-          <details class="overview-actions-menu">
+          <details class="overview-actions-menu" ${allOpen ? 'hidden' : ''}>
             <summary>monat</summary>
             <div class="overview-actions-menu-panel">
               <button class="btn btn-secondary btn-sm" onclick="openMonthCarryover('${month}')">monat abschliessen</button>
@@ -10258,8 +10419,8 @@ function renderOverview() {
             </div>
           </details>
         </div>
-        ${review ? `<div class="overview-toolbar-secondary">${renderMonthReflectionCard(month)}</div>` : ''}
-        ${pastOpenWarning}
+        ${!allOpen && review ? `<div class="overview-toolbar-secondary">${renderMonthReflectionCard(month)}</div>` : ''}
+        ${!allOpen ? pastOpenWarning : ''}
       </div>
     </div>
 
@@ -10270,7 +10431,7 @@ function renderOverview() {
           ${renderItemSection('backlog', backlog, 'backlog')}
           ${renderItemSection('todo', todos, 'todo')}
           ${renderItemSection('warte auf...', waiting, 'waiting')}
-          ${renderItemSection('erledigt', done, 'done')}
+          ${!allOpen ? renderItemSection('erledigt', done, 'done') : ''}
         </div>
       `}
   `;
@@ -10568,7 +10729,7 @@ function renderTaskTable(items) {
   }));
   return `
     <div class="task-table-sections">
-      ${groups.map(group => `
+      ${groups.filter(group => group.status !== 'done' || viewState.overviewScope === 'month' || viewState.month).map(group => `
         <section class="card task-table-card task-table-section task-table-section-${group.status} drop-target"
           ondragover="onItemDragOver(event)"
           ondragleave="onItemDragLeave(event)"
@@ -10737,6 +10898,13 @@ function overviewLayout() {
   }
 }
 
+function setOverviewScope(scope) {
+  viewState.overviewScope = scope;
+  if (scope === 'open') delete viewState.month;
+  else viewState.month = viewState.month || currentMonth();
+  render();
+}
+
 </script>
 <script data-source="./js/team.js">
 // ============================================================
@@ -10875,11 +11043,6 @@ async function submitJiraImport() {
   if (!text) return;
   try {
     const snapshot = await importJiraJson(text);
-    // Ein Sync kann neue Eltern-Kind-Beziehungen mitbringen: Kopfbloecke
-    // nachziehen, bevor die Drift gegen die alten Spannen rechnet.
-    if (typeof syncParentBlockSpans === 'function' && syncParentBlockSpans(data.blocks)) {
-      saveData(data);
-    }
     const count = Object.values(snapshot.assignees || {}).reduce((sum, list) => sum + list.length, 0);
     closeOverlay();
     render();
@@ -10965,7 +11128,7 @@ function renderTeam() {
     : (teamPersons[0]?.id || null);
   const selectedPerson = selectedId ? data.persons.find(person => person.id === selectedId) : null;
   const selectedItems = selectedPerson ? data.items.filter(item => item.personId === selectedPerson.id) : [];
-  const selectedOpenItems = selectedItems.filter(item => item.status !== 'done').sort(compareByDueDate);
+  const selectedOpenItems = selectedItems.filter(item => item.status !== 'done' && !isGrowthEntry(item)).sort(compareByDueDate);
   const selectedGrowth = selectedItems
     .filter(isGrowthEntry)
     .sort(compareItemsByDateDesc);
@@ -10981,7 +11144,7 @@ function renderTeam() {
     : [];
   return `
     <div class="section-header">
-      <span class="section-title">Team</span>
+      ${renderPeopleTabs(false)}
       <button class="btn btn-primary btn-sm" onclick="openPersonForm(null, 'team')">+ Teammitglied</button>
     </div>
     ${teamPersons.length ? `
@@ -10991,8 +11154,7 @@ function renderTeam() {
             <span class="card-title">Team (${teamPersons.length})</span>
           </div>
         ${teamPersons.map(p => {
-          const itemCount = data.items.filter(i => i.personId === p.id && i.status !== 'done').length;
-          const personJiraTickets = jiraTicketsForPerson(p);
+          const itemCount = data.items.filter(i => i.personId === p.id && i.status !== 'done' && !isGrowthEntry(i)).length;
           const isActive = p.id === selectedId;
           return `
             <div class="team-list-row ${isActive ? 'active' : ''}" onclick="navigate('team', {personId:'${p.id}'})" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();navigate('team', {personId:'${p.id}'})}">
@@ -11007,7 +11169,7 @@ function renderTeam() {
 	                  ${sudo ? `<div class="team-list-push">${p.pushDirection ? esc(p.pushDirection) : '&nbsp;'}</div>` : ''}
 	                  <div class="team-list-meta">
 	                    <span>${itemCount} offen</span>
-	                    ${personJiraTickets !== null ? `<span>&middot; ${personJiraTickets.length} tickets</span>` : ''}
+
                   </div>
                 </div>
               </div>
@@ -11029,9 +11191,7 @@ function renderTeam() {
 	                      <span class="team-detail-meta-label">Fokus</span>
 	                      <strong class="team-detail-focus-value">${selectedPerson.pushDirection ? esc(selectedPerson.pushDirection) : 'Kein Fokus hinterlegt'}</strong>
 	                    </div>` : `<div class="team-detail-focus-line">${sudoLockedPlaceholder('Fokus')}</div>`}
-	                    <div class="team-detail-links">
-	                      ${renderMemberLinkBar(selectedPerson)}
-                    </div>
+
                   </div>
                 </div>
                 <div class="team-detail-actions">
@@ -11042,22 +11202,16 @@ function renderTeam() {
               </div>
             </div>
 
-            <div class="team-section-block team-section-planung">
-              ${renderPersonPlanungCard(selectedPerson)}
-            </div>
-
-            ${renderPersonJiraBlock(selectedPerson)}
-
             <div class="team-detail-grid">
               <div class="team-section-block">
                 <div class="card-header">
-                  <span class="card-title">Offene Items (${selectedOpenItems.length})</span>
+                  <span class="card-title">Offene Aufgaben (${selectedOpenItems.length})</span>
                 </div>
                 ${selectedOpenItems.length ? `
                   <ul class="item-list">
-                    ${selectedOpenItems.slice(0, 8).map(item => renderItem(item, false, { compact: true })).join('')}
+                    ${selectedOpenItems.map(item => renderItem(item, false, { compact: true })).join('')}
                   </ul>
-                ` : '<div class="team-empty-copy">Keine offenen Items</div>'}
+                ` : '<div class="team-empty-copy">Keine offenen Aufgaben</div>'}
               </div>
               <div class="team-section-block">
                 <div class="card-header">
@@ -11124,80 +11278,7 @@ function renderTeam() {
 // ============================================================
 // PERSON DETAIL
 // ============================================================
-function renderPersonDetail() {
-  const p = data.persons.find(p => p.id === viewState.personId);
-  if (!p) return '<div>Person nicht gefunden</div>';
-
-  const items = data.items.filter(i => i.personId === p.id);
-  const openItems = items.filter(i => i.status !== 'done');
-  const meetings = data.meetings.filter(m => m.personId === p.id).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-  const growth = items
-    .filter(isGrowthEntry)
-    .sort(compareItemsByDateDesc);
-  const growthSignal = personGrowthSignal(p.id, 30);
-
-  return `
-    <button class="back-btn" onclick="navigate('team')">&#8592; Zurück</button>
-
-    <div class="person-detail-header">
-      <div class="person-avatar">${p.name.charAt(0).toUpperCase()}</div>
-      <div>
-        <div style="font-size:22px;font-weight:700;display:flex;align-items:center;gap:8px">
-          ${esc(p.name)}
-        </div>
-        ${p.pushDirection ? `<div style="color:var(--text-secondary);font-size:14px;margin-top:2px">Push: ${esc(p.pushDirection)}</div>` : ''}
-        ${renderMemberLinkBar(p)}
-      </div>
-      <div style="margin-left:auto;display:flex;gap:8px">
-        <button class="btn btn-secondary btn-sm" onclick="openPersonForm('${p.id}')">Bearbeiten</button>
-        <button class="btn btn-secondary btn-sm" onclick="openPersonDossierExport('${p.id}')">Dossier .md</button>
-      </div>
-    </div>
-
-    ${renderPersonPlanungCard(p)}
-
-    ${jiraSyncData ? `<div class="card">${renderPersonJiraBlock(p)}</div>` : ''}
-
-    <div class="card">
-      <div class="card-header"><span class="card-title">Offene Items (${openItems.length})</span></div>
-      ${openItems.length ? `<ul class="item-list">${openItems.map(i => renderItem(i)).join('')}</ul>` : '<div style="color:var(--text-muted);font-size:14px">Keine offenen Items</div>'}
-    </div>
-
-    <div class="card">
-      <div class="card-header">
-        <span class="card-title">1:1 Gespräche (${meetings.length})</span>
-        <button class="btn btn-sm btn-secondary" onclick="openMeetingForm('oneOnOne', '${p.id}')">+ 1:1</button>
-      </div>
-      ${meetings.length ? meetings.map(m => `
-        <div class="meeting-card" onclick="navigate('meetings:detail', {meetingId:'${m.id}'})">
-          <div class="meeting-type-icon" style="background:var(--success-light)">&#128172;</div>
-          <div class="meeting-info">
-            <div class="meeting-title">1:1 mit ${esc(p.name)}</div>
-            <div class="meeting-date">${m.date ? formatDate(m.date) : 'ohne Datum'}${meetingItems(m.id).length ? ' · ' + meetingItems(m.id).length + ' Follow-up' + (meetingItems(m.id).length === 1 ? '' : 's') : ''}</div>
-          </div>
-        </div>
-      `).join('') : '<div style="color:var(--text-muted);font-size:14px">Noch keine Gespräche</div>'}
-    </div>
-
-    <div class="card">
-      <div class="card-header">
-        <span class="card-title">growth journal</span>
-        <span style="color:var(--text-muted);font-size:12px">30 Tage · +${growthSignal.highlights} / -${growthSignal.concerns}</span>
-      </div>
-      ${growth.length ? `
-        <div class="growth-list">
-          ${growth.map(i => `
-            <div class="growth-entry growth-${i.type}" onclick="openEditItem('${i.id}')">
-              <span class="growth-date">${formatDateShort(i.date) || '&ndash;'}</span>
-              <span class="badge badge-${i.type}">${itemTypeLabel(i.type)}</span>
-              <span class="growth-text">${esc(i.text)}</span>
-            </div>
-          `).join('')}
-        </div>
-      ` : `<div style="color:var(--text-muted);font-size:14px">Noch keine Highlights oder Concerns f&uuml;r ${esc(p.name)}.</div>`}
-    </div>
-  `;
-}
+function renderPersonDetail() { return renderTeam(); }
 
 // ============================================================
 // KONTAKTE VIEW
@@ -11212,10 +11293,10 @@ function renderKontakte() {
     : (kontakte[0]?.id || null);
   const selectedPerson = selectedId ? data.persons.find(person => person.id === selectedId) : null;
   const selectedItems = selectedPerson ? data.items.filter(item => item.personId === selectedPerson.id) : [];
-  const selectedOpenItems = selectedItems.filter(item => item.status !== 'done').sort(compareByDueDate);
+  const selectedOpenItems = selectedItems.filter(item => item.status !== 'done' && !isGrowthEntry(item)).sort(compareByDueDate);
   return `
     <div class="section-header">
-      <span class="section-title">Kontakte</span>
+      ${renderPeopleTabs(true)}
       <button class="btn btn-primary btn-sm" onclick="openPersonForm(null, 'kontakt')">+ Kontakt</button>
     </div>
     ${kontakte.length ? `
@@ -11225,7 +11306,7 @@ function renderKontakte() {
             <span class="card-title">Kontakte (${kontakte.length})</span>
           </div>
           ${kontakte.map(p => {
-            const itemCount = data.items.filter(i => i.personId === p.id && i.status !== 'done').length;
+            const itemCount = data.items.filter(i => i.personId === p.id && i.status !== 'done' && !isGrowthEntry(i)).length;
             const isActive = p.id === selectedId;
             const openLevel = Math.min(4, itemCount);
             return `
@@ -11263,11 +11344,11 @@ function renderKontakte() {
 	            <div>
 	              <div>
 	                <div class="card-header">
-                  <span class="card-title">Offene Items (${selectedOpenItems.length})</span>
+                  <span class="card-title">Offene Aufgaben (${selectedOpenItems.length})</span>
                 </div>
                 ${selectedOpenItems.length
                   ? `<ul class="item-list">${selectedOpenItems.slice(0, 10).map(item => renderItem(item, false, { compact: true })).join('')}</ul>`
-                  : '<div class="team-empty-copy">Keine offenen Items</div>'}
+                  : '<div class="team-empty-copy">Keine offenen Aufgaben</div>'}
               </div>
 	            </div>
           ` : `
@@ -11311,10 +11392,17 @@ function renderKontaktDetail() {
     </div>
 
     <div class="card">
-      <div class="card-header"><span class="card-title">Offene Items (${openItems.length})</span></div>
-      ${openItems.length ? '<ul class="item-list">' + openItems.map(i => renderItem(i)).join('') + '</ul>' : '<div style="color:var(--text-muted);font-size:14px">Keine offenen Items</div>'}
+      <div class="card-header"><span class="card-title">Offene Aufgaben (${openItems.length})</span></div>
+      ${openItems.length ? '<ul class="item-list">' + openItems.map(i => renderItem(i)).join('') + '</ul>' : '<div style="color:var(--text-muted);font-size:14px">Keine offenen Aufgaben</div>'}
     </div>
 	  `;
+}
+
+function renderPeopleTabs(contacts) {
+  return `<div class="filters" aria-label="Personenbereich">
+    <button class="filter-btn ${!contacts ? 'active' : ''}" onclick="navigate('team')">Team</button>
+    <button class="filter-btn ${contacts ? 'active' : ''}" onclick="navigate('kontakte')">Kontakte</button>
+  </div>`;
 }
 
 </script>
@@ -11365,6 +11453,20 @@ function parsePrepBullets(prep) {
   }
   push();
   return bullets;
+}
+
+// Im Anlege-Formular wird Vorbereitung als Freitext getippt. Damit daraus
+// dieselbe Checkliste wird, die das Meeting selbst rendert, zaehlt hier jede
+// Zeile als eigener Punkt — sonst klebt parsePrepBullets alle Folgezeilen als
+// Fortsetzung an den ersten Punkt. Bereits getippte "- " / "- [x] " bleiben
+// erhalten.
+function prepFromFormText(text) {
+  const bullets = String(text || '')
+    .split('\n')
+    .map(line => line.trim())
+    .filter(Boolean)
+    .flatMap(line => parsePrepBullets(line));
+  return bullets.length ? serializePrepBullets(bullets) : '';
 }
 
 function serializePrepBullets(bullets) {
@@ -11827,11 +11929,11 @@ function renderOneOnOneCarryover(m) {
   const total = carryoverCount(carryover);
   const empty = '<div class="oneonone-carryover-empty">Nichts offen</div>';
   return `
-    <div class="meeting-detail-section meeting-detail-section-emphasis oneonone-carryover">
-      <div class="oneonone-carryover-head">
+    <details class="meeting-detail-section meeting-detail-section-emphasis oneonone-carryover" open>
+      <summary class="oneonone-carryover-head">
         <h3>Übernahme</h3>
         <span class="oneonone-carryover-count">${total} Signale</span>
-      </div>
+      </summary>
       <div class="oneonone-carryover-grid">
         <div class="oneonone-carryover-column oneonone-carryover-column-followups">
           <div class="oneonone-carryover-title">Offene Follow-ups</div>
@@ -11852,7 +11954,7 @@ function renderOneOnOneCarryover(m) {
             : '<div class="oneonone-carryover-empty">Noch keine Signale</div>'}
         </div>
       </div>
-    </div>
+    </details>
   `;
 }
 
@@ -12393,6 +12495,7 @@ function renderNotes() {
     (b.updatedAt || b.createdAt || '').localeCompare(a.updatedAt || a.createdAt || '')
   );
   const notes = allNotes.filter(note => noteMatches(note, query));
+  const selected = notes.find(note => note.id === (viewState.focusNoteId || viewState.selectedNoteId)) || notes[0];
 
   if (!sudo) {
     return `
@@ -12420,8 +12523,12 @@ function renderNotes() {
     <p class="notes-page-intro">Langfristige Pläne, Beobachtungen und Dokumentationen, die keinem einzelnen Todo oder Meeting gehören.</p>
 
     ${notes.length ? `
-      <div class="notes-grid">
-        ${notes.map(note => renderNoteCard(note)).join('')}
+      <div class="notes-workspace">
+        <aside class="notes-index" aria-label="Notizen">
+          ${notes.map(note => `<button class="notes-index-entry ${note.id === selected.id ? 'active' : ''}" onclick="selectNote('${note.id}')">
+            <strong>${esc(note.title || 'Ohne Titel')}</strong><span>${formatNoteUpdatedAt(note.updatedAt)}</span></button>`).join('')}
+        </aside>
+        ${renderNoteCard(selected)}
       </div>
     ` : `
       <div class="empty-state">
@@ -12533,6 +12640,12 @@ function initNotesView() {
   card.scrollIntoView({ behavior: 'smooth', block: 'center' });
   card.querySelector('.note-editor')?.focus({ preventScroll: true });
   viewState.focusNoteId = null;
+}
+
+function selectNote(id) {
+  delete viewState.focusNoteId;
+  viewState.selectedNoteId = id;
+  render();
 }
 
 </script>
@@ -12817,23 +12930,17 @@ function teamFocusBlockHandoverStatus(block) {
 }
 
 function teamFocusWaitingBlocks(entry) {
-  return entry.activeBlocks.filter(block => teamFocusBlockHandoverStatus(block));
+  return jiraWaitingTickets(entry.person.id);
 }
 
 function teamFocusWorkingBlocks(entry) {
-  return [
-    ...entry.overdueBlocks.map(block => ({ block, kind: 'overdue' })),
-    ...entry.activeBlocks.filter(block => !teamFocusBlockHandoverStatus(block)).map(block => ({ block, kind: 'active' })),
-    ...entry.upcomingBlocks.map(block => ({ block, kind: 'upcoming' })),
-  ];
+  return entry.activeBlocks.map(block => ({ block, kind: 'active' }));
 }
 
 function teamFocusBlocks(entry) {
-  const working = teamFocusWorkingBlocks(entry);
-  const waiting = teamFocusWaitingBlocks(entry).map(block => ({ block, kind: 'active' }));
-  const upcomingIndex = working.findIndex(({ kind }) => kind === 'upcoming');
-  if (upcomingIndex < 0) return [...working, ...waiting];
-  return [...working.slice(0, upcomingIndex), ...waiting, ...working.slice(upcomingIndex)];
+  return [...entry.overdueBlocks.map(block => ({ block, kind: 'overdue' })),
+    ...teamFocusWorkingBlocks(entry),
+    ...entry.upcomingBlocks.map(block => ({ block, kind: 'upcoming' }))];
 }
 
 function toggleTeamFocusCard(personId) {
@@ -12897,13 +13004,16 @@ function renderTeamFocusBlocks(entry) {
   return `
     <div class="tf-blocks${hidden ? ' tf-blocks-more' : ''}">
       <div class="tf-blocks-head">
-        <span>Arbeitet an${blocks.length > 1 ? ` <span class="tf-blocks-count">${blocks.length}</span>` : ''}</span>
+        <span>Arbeitskontext${blocks.length > 1 ? ` <span class="tf-blocks-count">${blocks.length}</span>` : ''}</span>
         <button class="tf-blocks-link" type="button" onclick="navigate('planung')">planung öffnen</button>
       </div>
       <div class="tf-blocks-scroll">
         <div class="tf-blocks-list">
           ${blocks.length
-            ? blocks.map(({ block, kind }) => renderTeamFocusBlockRow(block, kind)).join('')
+            ? ['overdue', 'active', 'upcoming'].map(kind => {
+                const rows = blocks.filter(entry => entry.kind === kind);
+                return rows.length ? `<div class="tf-context-heading">${{ overdue: 'Neu einplanen', active: 'Jetzt', upcoming: 'Als Nächstes' }[kind]}</div>${rows.map(({block}) => renderTeamFocusBlockRow(block, kind)).join('')}` : '';
+              }).join('')
             : `<div class="tf-blocks-empty">${empty}</div>`}
         </div>
       </div>
@@ -12938,7 +13048,7 @@ function renderTeamFocusJiraMetric(entry) {
   const jiraTicketTotal = entry.jiraTickets.length ? ticketCountLabel(entry.jiraTickets.length) : 'keine tickets';
   const jiraNote = drift.stale.length && drift.unplanned.length ? driftParts.join(' · ') : jiraTicketTotal;
   return `
-    <button class="tf-metric tf-metric-action ${jiraSig}" type="button" onclick="event.preventDefault(); event.stopPropagation(); openPersonById('${entry.person.id}')" title="${esc(`Jira-Tickets von ${entry.person.name} ansehen (Stand: ${jiraSyncAgeLabel() || 'unbekannt'})${driftDetail ? '\n' + driftDetail : ''}`)}">
+    <button class="tf-metric tf-metric-action ${jiraSig}" type="button" onclick="event.preventDefault(); event.stopPropagation(); navigate('planung',{planungPerson:'${entry.person.id}'})" title="${esc(`Jira-Tickets von ${entry.person.name} ansehen (Stand: ${jiraSyncAgeLabel() || 'unbekannt'})${driftDetail ? '\n' + driftDetail : ''}`)}">
       <span class="tf-metric-label">Jira</span>
       <span class="tf-metric-value">${esc(jiraValue)}</span>
       <span class="tf-metric-note">${esc(jiraNote)}</span>
@@ -13001,8 +13111,7 @@ function renderReviews() {
         person, absenceToday, activeBlocks, overdueBlocks, upcomingBlocks,
         jiraTickets, drift, nextOneOnOne, unscheduledOneOnOne, oneOnOneMissing,
       };
-      entry.attentionScore = teamFocusScore(entry);
-      entry.attentionLevel = entry.attentionScore >= 50 ? 'high' : entry.attentionScore >= 20 ? 'medium' : 'low';
+      entry.attentionLevel = 'low';
       return entry;
     })
     .sort((a, b) => comparePersonsByName(a.person, b.person));
@@ -13017,6 +13126,8 @@ function renderReviews() {
       ${renderDashboardReviewAction()}
     </div>
 
+    ${jiraWaitingTickets().length ? `<button class="dashboard-waiting" onclick="openWaitingQueue()"><strong>Warteschlange · ${jiraWaitingTickets().length} Tickets</strong><span>${esc(waitingStatusCounts(jiraWaitingTickets()))}</span><span>Teamweit ansehen →</span></button>` : ''}
+    ${renderJiraChanges()}
     <div class="review-grid">
       <div class="card review-team-focus-card">
         <div class="card-header">
@@ -13048,8 +13159,10 @@ function renderReviews() {
                 ${renderTeamFocusJiraMetric(entry)}
               </div>
               <div class="tf-work-metric">
-                <span class="tf-metric-label">Arbeitet an</span>
+                <span class="tf-metric-label">Jetzt</span>
                 <span class="tf-metric-value">${workingBlocks.length}</span>
+                <span class="tf-metric-label">Als Nächstes</span><span class="tf-metric-value">${entry.upcomingBlocks.length}</span>
+                ${entry.overdueBlocks.length ? `<button class="filter-btn" onclick="event.stopPropagation();navigate('planung',{planungPerson:'${entry.person.id}',planungShowOverdue:true})">${entry.overdueBlocks.length} neu einplanen</button>` : ''}
                 ${waitingBlocks.length ? `
                 <span class="tf-metric-label tf-work-waiting" title="Wartet in Review, QA oder einem anderen Übergabestatus">Wartet</span>
                 <span class="tf-metric-value tf-work-waiting" title="Wartet in Review, QA oder einem anderen Übergabestatus">${waitingBlocks.length}</span>` : ''}
@@ -13455,7 +13568,8 @@ function openCapture(prefill = {}) {
         <div id="meetingCarryoverPreview">${renderMeetingFormCarryoverPreview(captureMeetingType === 'oneOnOne', selectedPersonId || '', meetingDate)}</div>
         <div class="form-group">
           <label class="form-label">Vorbereitung</label>
-          <textarea class="form-textarea" id="meetingPrep" placeholder="Was möchte ich ansprechen..." rows="3">${esc(prefill.prep || '')}</textarea>
+          <textarea class="form-textarea" id="meetingPrep" placeholder="Was möchte ich ansprechen..." rows="8">${esc(prefill.prep || '')}</textarea>
+          <div class="form-hint">eine zeile = ein punkt, wird zur checkliste</div>
         </div>
       </div>
       <div class="form-row">
@@ -13575,7 +13689,7 @@ function saveCaptureMeeting() {
     date: document.getElementById('meetingDate')?.value || '',
     personId: isOneOnOne ? personId : null,
     participants: [],
-    prep: document.getElementById('meetingPrep')?.value.trim() || '',
+    prep: prepFromFormText(document.getElementById('meetingPrep')?.value),
     notes: '',
   };
 
@@ -13917,7 +14031,8 @@ function openMeetingForm(type, personId) {
       <div id="meetingCarryoverPreview">${renderMeetingFormCarryoverPreview(isOneOnOne, personId || '', initialDate)}</div>
       <div class="form-group">
         <label class="form-label">Vorbereitung</label>
-        <textarea class="form-textarea" id="meetingPrep" placeholder="Was möchte ich ansprechen..."></textarea>
+        <textarea class="form-textarea" id="meetingPrep" placeholder="Was möchte ich ansprechen..." rows="8"></textarea>
+        <div class="form-hint">eine zeile = ein punkt, wird zur checkliste</div>
       </div>
       <button class="btn btn-primary" style="width:100%" onclick="saveMeeting('${type}')">Erstellen &amp; öffnen</button>
     </div>
@@ -13952,7 +14067,12 @@ function renderMeetingFormStatusPreview(dateISO, isOneOnOne, personId, teamMeeti
     });
   }
   if (!teamMeeting) return '';
-  return renderMeetingTeamStatusForDate(dateISO, { inForm: true });
+  // Die ganze Timeline gehoert ins Meeting, nicht ins Anlege-Formular — hier
+  // reicht der Hinweis, dass sie beim Oeffnen dabei ist.
+  const weekStart = startOfWeek(parseISO(dateISO));
+  return `<div class="meeting-planner-note">planner
+    <span>Team-Status KW ${formatDateShort(toISO(weekStart))}–${formatDateShort(toISO(addDays(weekStart, 4)))} ist im Meeting dabei</span>
+  </div>`;
 }
 
 function renderMeetingFormCarryoverPreview(isOneOnOne, personId, dateISO) {
@@ -13993,7 +14113,7 @@ function saveMeeting(type) {
     date: document.getElementById('meetingDate').value,
     personId: isOneOnOne ? personId : null,
     participants: [],
-    prep: document.getElementById('meetingPrep').value.trim(),
+    prep: prepFromFormText(document.getElementById('meetingPrep').value),
     notes: '',
   };
 
@@ -14791,7 +14911,7 @@ function openOverlay() {
 }
 
 function closeOverlay() {
-  document.getElementById('overlay').classList.remove('open');
+  document.getElementById('overlay').classList.remove('open', 'overlay-drawer');
   document.getElementById('modal').className = 'modal';
 }
 
@@ -14966,7 +15086,7 @@ function blockNeedsDone(b) {
   return b.typ !== 'abwesenheit';
 }
 function isBlockOverdue(b) {
-  return !isBlockParked(b) && blockNeedsDone(b) && !b.done && b.end < todayStr();
+  return !isBlockParked(b) && blockNeedsDone(b) && !b.done && !isPlanungHandoverBlock(b) && !jiraBlockResolved(b) && b.end < todayStr();
 }
 
 // --- Overlapping block workdays within [winStart, winEnd] ---
@@ -15012,7 +15132,7 @@ function personSupportInWindow(p, startISO, endISO) {
 // Woran sitzt jemand heute? Abwesenheiten bleiben aussen vor, die sind ein
 // eigener Zustand. Sortiert nach Ende: was zuerst faellig wird, steht vorne.
 function personActiveBlocks(personId, date = todayStr()) {
-  return (data.blocks || [])
+  return workingPlanBlocks()
     .filter(b => b.personId === personId
       && b.typ !== 'abwesenheit'
       && !b.done
@@ -15030,14 +15150,14 @@ function personCurrentBlock(personId, date = todayStr()) {
 // Ansicht heraus, weil das Ende in der Vergangenheit liegt — genau deshalb
 // ist es das ehrlichste "hier stimmt was nicht"-Signal.
 function personOverdueBlocks(personId) {
-  return (data.blocks || [])
+  return workingPlanBlocks()
     .filter(b => b.personId === personId && isBlockOverdue(b))
     .sort((a, b) => a.end.localeCompare(b.end));
 }
 
 // Was danach ansteht, bis zum Ende des gewaehlten Fensters.
 function personUpcomingBlocks(personId, date = todayStr(), until = null) {
-  return (data.blocks || [])
+  return workingPlanBlocks()
     .filter(b => b.personId === personId
       && b.typ !== 'abwesenheit'
       && !b.done
@@ -15050,7 +15170,7 @@ function personUpcomingBlocks(personId, date = todayStr(), until = null) {
 // --- Capacity for a person in a window ---
 function personCapacity(personId, winStart, winEnd) {
   const werktage = workdaysBetween(winStart, winEnd);
-  const blocks = data.blocks.filter(b => b.personId === personId);
+  const blocks = workingPlanBlocks().filter(b => b.personId === personId);
   const allokiert = allocatedWorkdaysInWindow(blocks, winStart, winEnd);
   return { werktage, allokiert, frei: werktage - allokiert };
 }
@@ -15152,63 +15272,27 @@ function groupPersonBlocks(entries, personId) {
   return units;
 }
 
-// Ein Kopfblock deckt in der Timeline die Spanne seiner Kinder mit ab — das war
-// bisher reine Darstellung. Die gespeicherten Daten blieben kurz, und sobald das
-// echte Ende durch war, galt der Auftrag als ueberfaellig, obwohl darunter noch
-// gearbeitet wird (und wanderte in die Jira-Drift). Deshalb ziehen wir hier die
-// Daten selbst nach: dieselbe Rechnung wie im Renderer, Kopf eingeschlossen —
-// die Spanne waechst also nur, ein zurueckgezogenes Kind schrumpft den Auftrag
-// nicht wieder. Liefert die Zahl der geaenderten Bloecke.
-function syncParentBlockSpans(blocks) {
-  const refOf = b => String((b && b.jiraRef) || '').trim().toUpperCase();
-  const byPerson = new Map();
-  for (const b of blocks || []) {
-    // Ohne Ticket keine Hierarchie, ohne Datum keine Spanne: geparkte Bloecke
-    // bleiben geparkt, auch als Kopf.
-    if (!b.personId || !refOf(b) || isBlockParked(b)) continue;
-    if (!byPerson.has(b.personId)) byPerson.set(b.personId, []);
-    byPerson.get(b.personId).push(b);
-  }
-
-  let changed = 0;
-  for (const personBlocks of byPerson.values()) {
-    const byRef = new Map();
-    for (const b of personBlocks) if (!byRef.has(refOf(b))) byRef.set(refOf(b), b);
-
-    // Identisch zu groupPersonBlocks: bis zum obersten Ticket hoch, auf das
-    // diese Person auch einen Block hat. Der Zaehler kappt Ringe.
-    const rootRefOf = ref => {
-      let cur = ref;
-      for (let i = 0; i < 10; i++) {
-        const parentRef = jiraParentKeyForRef(cur);
-        if (!parentRef || parentRef === cur || !byRef.has(parentRef)) return cur;
-        cur = parentRef;
-      }
-      return cur;
-    };
-
-    const buckets = new Map();
-    for (const b of personBlocks) {
-      const ref = refOf(b);
-      if (byRef.get(ref) !== b) continue; // zweiter Block auf dasselbe Ticket
-      const root = rootRefOf(ref);
-      if (!buckets.has(root)) buckets.set(root, []);
-      buckets.get(root).push(b);
-    }
-
-    for (const [root, members] of buckets) {
-      if (members.length < 2) continue;
-      const head = members.find(b => refOf(b) === root);
-      if (!head) continue;
-      const start = members.reduce((min, b) => (b.start < min ? b.start : min), head.start);
-      const end = members.reduce((max, b) => (b.end > max ? b.end : max), head.end);
-      if (head.start === start && head.end === end) continue;
-      head.start = start;
-      head.end = end;
-      changed++;
-    }
-  }
-  return changed;
+// Derive parent spans from active children; never write inferred dates back.
+function workingPlanBlocks() {
+  const active = (data.blocks || []).filter(b => b.typ === 'abwesenheit'
+    || (!b.done && !isPlanungHandoverBlock(b) && !jiraBlockResolved(b)));
+  const memo = new Map();
+  const derive = (block, seen = new Set()) => {
+    if (memo.has(block.id)) return memo.get(block.id);
+    if (seen.has(block.id) || isBlockParked(block)) return block;
+    const next = new Set(seen).add(block.id);
+    const children = block.jiraRef ? active.filter(child => child.id !== block.id
+      && child.personId === block.personId && !isBlockParked(child)
+      && jiraParentKeyForRef(child.jiraRef) === block.jiraRef.trim().toUpperCase()) : [];
+    const spans = children.map(child => derive(child, next));
+    const result = spans.length ? { ...block,
+      start: spans.reduce((value, child) => child.start < value ? child.start : value, spans[0].start),
+      end: spans.reduce((value, child) => child.end > value ? child.end : value, spans[0].end),
+    } : block;
+    memo.set(block.id, result);
+    return result;
+  };
+  return active.map(block => derive(block));
 }
 
 // Haengt an dieser Einheit nur noch Wartendes? Dieselbe Rechnung wie die
@@ -15330,7 +15414,7 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
     }).join('');
 
     // Blocks
-    const personBlocks = data.blocks
+    const personBlocks = (hideHandover ? workingPlanBlocks() : data.blocks)
       .filter(b => b.personId === pid
         && !isBlockParked(b)
         && b.end >= startDate
@@ -15524,6 +15608,8 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
         </div>`;
       }
 
+      const waitingChildren = jiraWaitingTickets(pid).filter(ticket => jiraParentKeyForRef(ticket.key) === String(b.jiraRef || '').toUpperCase()).length;
+      const waitingBadge = waitingChildren ? `<span class="tl-block-group-count" title="Untertickets in der Warteschlange">${waitingChildren} warten</span>` : '';
       const collapseBadge = unit.groupOpen
         ? `<span class="tl-block-group-count is-open" title="Gruppe zuklappen"
             onclick="event.stopPropagation();toggleBlockGroup('${pid}','${esc(unit.groupOpen.ref)}')"
@@ -15534,7 +15620,7 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
         title="${esc(title)}"
         onclick="event.stopPropagation();if(_suppressNextBlockClick)return;if((event.metaKey||event.ctrlKey)&&openBlockJira('${b.id}'))return;openBlockForm('${b.id}')"
         onpointerdown="onBlockPointerDown(event,'${b.id}')">
-        ${b.done ? '<span class="tl-block-check">&#x2713;</span>' : ''}${handover ? `<span class="tl-block-handover">${esc(handover.toLowerCase())}</span>` : ''}<span class="tl-block-label">${esc(b.label || b.typ)}</span>${collapseBadge}
+        ${b.done ? '<span class="tl-block-check">&#x2713;</span>' : ''}${handover ? `<span class="tl-block-handover">${esc(handover.toLowerCase())}</span>` : ''}<span class="tl-block-label">${esc(b.label || b.typ)}</span>${waitingBadge}${collapseBadge}
       </div>`;
     }).join('');
 
@@ -15558,12 +15644,12 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
     // Capacity label (inline in name column)
     let capInline;
     if (isSupport) {
-      capInline = `<span class="tl-person-cap"><span class="tl-cap-support">SUP</span></span>`;
+      capInline = `<span class="tl-person-cap">Support-Rotation</span>`;
     } else if (!showCapacity) {
       capInline = '';
     } else {
       const freiCls = cap.frei < 0 ? 'tl-cap-neg' : '';
-      capInline = `<span class="tl-person-cap" title="${cap.frei} frei von ${cap.werktage} WT"><span class="tl-cap-days ${freiCls}">${cap.frei}/${cap.werktage}</span><span>Frei</span></span>`;
+      capInline = `<span class="tl-person-cap" title="${cap.frei} unverplante Werktage; keine Aussage über tatsächliche Auslastung"><span class="tl-cap-days ${freiCls}">${cap.frei}/${cap.werktage}</span><span>unverplant</span></span>`;
     }
 
     const labelClick = `navigate('team:detail',{personId:'${pid}'})`;
@@ -15586,6 +15672,7 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
             </div>
           </div>
           ${capInline}
+          ${renderPersonWaitingBadge(pid)}
         </div>
         <div class="tl-track-row" style="height:${trackHeight}px">
           <div class="tl-track"
@@ -15640,7 +15727,8 @@ function planungExtraPastWeeks() {
 }
 
 function planungExtraFutureWeeks() {
-  return Math.max(0, parseInt(viewState.planungExtraFutureWeeks || 0, 10) || 0);
+  if (viewState.planungExtraFutureWeeks != null) return Math.max(0, Number(viewState.planungExtraFutureWeeks) || 0);
+  try { return [1, 2, 4].includes(Number(localStorage.getItem('tktool-planung-weeks'))) ? Number(localStorage.getItem('tktool-planung-weeks')) - 1 : 0; } catch { return 0; }
 }
 
 function planungShowWeekends() {
@@ -15672,6 +15760,7 @@ function navigateToPlanungBlock(blockId) {
   navigate('planung', {
     planungWeekOffset: weekOffset,
     planungHighlightBlockId: blockId,
+    planungHideHandover: false,
   });
   setTimeout(() => highlightPlanungBlock(blockId), 0);
 }
@@ -15715,10 +15804,9 @@ function renderPlanung() {
   const rawQuery = viewState.planungQuery || '';
   const blockQuery = rawQuery.trim().toLocaleLowerCase('de-AT');
   const personFilter = planungPersonFilter();
-  const hideHandover = !!viewState.planungHideHandover;
-  const queriedBlocks = blockQuery ? data.blocks.filter(block => blockMatchesPlanungQuery(block, blockQuery)) : data.blocks;
-  const filterScopeBlocks = personFilter ? queriedBlocks.filter(block => block.personId === personFilter) : queriedBlocks;
-  const handoverFilterCount = filterScopeBlocks.filter(isPlanungHandoverBlock).length;
+  const hideHandover = planungHideHandover();
+  const sourceBlocks = hideHandover ? workingPlanBlocks() : data.blocks;
+  const queriedBlocks = blockQuery ? sourceBlocks.filter(block => blockMatchesPlanungQuery(block, blockQuery)) : sourceBlocks;
   const queryBlocks = queriedBlocks.filter(block => !hideHandover || !isPlanungHandoverBlock(block));
   // Personenfilter zieht durch alle Panels — sonst zeigt die Zeile eine Person,
   // die Liste darunter aber weiter das ganze Team.
@@ -15766,46 +15854,7 @@ function renderPlanung() {
   const overdueChip = overdue.length ? `
     <button class="filter-btn planung-overdue-btn ${viewState.planungShowOverdue ? 'active' : ''}"
       onclick="togglePlanungOverdue()"
-      title="Abgelaufene Blöcke, die noch nicht erledigt sind">${overdue.length} offen</button>
-  ` : '';
-  // Bottleneck-Blick: alles, was gerade bei QA/Review haengt — quer ueber das
-  // Team, weil sich genau da der Stau zeigt, den die Einzelansicht verbirgt.
-  // Nur wenn explizit auf eine Person gefiltert wird, zieht das auch hier durch.
-  const waiting = jiraHandoverBlocks(personFilter || null).sort((a, b) => (a.end || '').localeCompare(b.end || ''));
-  const waitingByStatus = {};
-  for (const b of waiting) {
-    const st = (jiraStatusForBlock(b) || {}).status || '';
-    (waitingByStatus[st] = waitingByStatus[st] || []).push(b);
-  }
-  const handoverChip = waiting.length ? `
-    <button class="filter-btn planung-handover-btn ${viewState.planungShowHandover ? 'active' : ''}"
-      onclick="togglePlanungHandover()"
-      title="${esc(['Blöcke, deren Ticket nicht mehr beim Entwickler liegt:',
-        ...Object.keys(waitingByStatus).sort().map(st => `${st.toLowerCase()}: ${waitingByStatus[st].length}`),
-        `Stand: ${jiraSyncAgeLabel() || 'unbekannt'}`].join('\n'))}">${waiting.length} wartet</button>
-  ` : '';
-  const handoverFilterChip = handoverFilterCount ? `
-    <button class="filter-btn planung-handover-btn ${hideHandover ? 'active' : ''}"
-      onclick="togglePlanungHideHandover()"
-      aria-pressed="${hideHandover ? 'true' : 'false'}"
-      title="Tickets in den unter Status — wartet woanders gewählten Status ${hideHandover ? 'wieder einblenden' : 'ausblenden'}">
-      ${hideHandover ? 'wartende ausgeblendet' : 'wartende ausblenden'} (${handoverFilterCount})
-    </button>
-  ` : '';
-  const handoverPanel = (waiting.length && viewState.planungShowHandover) ? `
-    <div class="planung-overdue-panel">
-      ${waiting.map(b => {
-        const st = (jiraStatusForBlock(b) || {}).status || '';
-        return `
-        <div class="planung-overdue-row">
-          <span class="planung-overdue-info" onclick="openBlockForm('${b.id}')" title="Block öffnen">
-            <span class="planung-overdue-person">${esc(personName(b.personId))}</span>
-            <span class="planung-overdue-label">${esc(b.label || b.typ)}</span>
-            <span class="jira-status-chip jira-status-handover">${esc(st.toLowerCase())}</span>
-          </span>
-        </div>`;
-      }).join('')}
-    </div>
+      title="Abgelaufene Blöcke, die noch nicht erledigt sind">${overdue.length} neu einplanen</button>
   ` : '';
   const overduePanel = (overdue.length && viewState.planungShowOverdue) ? `
     <div class="planung-overdue-panel">
@@ -15856,53 +15905,54 @@ function renderPlanung() {
   ` : '';
 
   return `
-    <div class="section-header">
-      <div class="overview-toolbar">
-        <div class="overview-toolbar-main planung-toolbar-main">
-          <div class="month-selector">
-            <button onclick="changePlanungWeek(-1)">&#8592;</button>
-            <button class="btn btn-sm btn-secondary" onclick="extendPlanungPastWeek()" title="Eine Vorwoche mehr anzeigen">+</button>
-            <span class="month-label">${formatDate(start)} – ${formatDate(end)}</span>
-            <button class="btn btn-sm btn-secondary" onclick="extendPlanungFutureWeek()" title="Eine Folgewoche mehr anzeigen">+</button>
-            <button onclick="changePlanungWeek(1)">&#8594;</button>
-            ${(planungWeekOffset() || planungExtraPastWeeks() || planungExtraFutureWeeks()) ? `<button class="btn btn-sm btn-secondary" onclick="resetPlanungWindow()" style="margin-left:8px">Reset</button>` : ''}
-          </div>
-          <div class="planung-sort">
-            <button class="filter-btn ${sort === 'frei' ? 'active' : ''}" onclick="setPlanungSort('frei')">frei</button>
-            <button class="filter-btn ${sort === 'name' ? 'active' : ''}" onclick="setPlanungSort('name')">name</button>
-            <button class="filter-btn ${planungShowWeekends() ? 'active' : ''}" onclick="togglePlanungWeekends()" title="Samstag/Sonntag ein-/ausblenden">sa/so</button>
-            ${overdueChip}
-            ${handoverChip}
-            ${handoverFilterChip}
-            <select class="filter-btn planung-person-filter ${personFilter ? 'active' : ''}"
-              title="Nur einen Mitarbeiter anzeigen"
-              onchange="setPlanungPerson(this.value)">
-              <option value=""${personFilter ? '' : ' selected'}>alle mitarbeiter</option>
-              ${filterablePersons.map(p => `<option value="${esc(p.id)}"${personFilter === p.id ? ' selected' : ''}>${esc(p.name)}</option>`).join('')}
-            </select>
-          </div>
-          <div class="view-search planung-search">
-            <input id="planungSearchInput" type="search"
-              placeholder="grep: mitarbeiter, label, jira-ref, notiz..."
-              value="${esc(rawQuery)}" oninput="setPlanungQuery(this.value)">
-          </div>
-          <div class="overview-actions planung-actions">
-            <button class="jira-sync-stamp jira-sync-stamp-toolbar" type="button" onclick="openJiraImport()" title="Jira-Abfrage öffnen und Antwort einspielen">jira ${jiraSyncAgeLabel() || 'nie'} &#8635;</button>
-            <button class="btn btn-primary btn-sm" onclick="openBlockForm(null)">+ Block</button>
+    <div class="section-header planner-toolbar">
+      <div class="planner-toolbar-row planner-toolbar-primary">
+        <div class="month-selector">
+          <button onclick="changePlanungWeek(-1)" aria-label="Vorige Woche">←</button>
+          <button class="btn btn-secondary btn-sm" onclick="resetPlanungWindow()">Heute</button>
+          <button onclick="changePlanungWeek(1)" aria-label="Nächste Woche">→</button>
+          <span class="month-label">${formatDate(start)} – ${formatDate(end)}</span>
+        </div>
+        <div class="filters" aria-label="Zeitraum">
+          ${[1,2,4].map(n => `<button class="filter-btn ${planungExtraFutureWeeks() === n-1 ? 'active' : ''}" onclick="setPlanungWeeks(${n})" aria-pressed="${planungExtraFutureWeeks() === n-1}">${n} ${n === 1 ? 'Woche' : 'Wochen'}</button>`).join('')}
+        </div>
+        <div class="planner-primary-actions">
+          <button class="jira-sync-stamp" onclick="openJiraImport()">Jira ${jiraSyncAgeLabel() || 'einspielen'} ↻</button>
+          <button class="btn btn-primary btn-sm" onclick="openBlockForm(null)">+ Block</button>
+          <details class="overview-actions-menu"><summary>Mehr</summary><div class="overview-actions-menu-panel">
             <button class="btn btn-secondary btn-sm" onclick="openMarkerForm(null)">+ Marker</button>
-          </div>
+            <button class="btn btn-secondary btn-sm" onclick="openSupportEditor()">Support-Rotation</button>
+            <button class="btn btn-secondary btn-sm" onclick="togglePlanungWeekends()">Wochenende ${planungShowWeekends() ? 'ausblenden' : 'anzeigen'}</button>
+          </div></details>
         </div>
       </div>
+      <div class="planner-toolbar-row">
+        <div class="filters" aria-label="Darstellung">
+          <button class="filter-btn ${hideHandover ? 'active' : ''}" aria-pressed="${hideHandover}" onclick="if(!planungHideHandover())togglePlanungHideHandover()">Arbeitsplan</button>
+          <button class="filter-btn ${!hideHandover ? 'active' : ''}" aria-pressed="${!hideHandover}" onclick="if(planungHideHandover())togglePlanungHideHandover()">Alles</button>
+        </div>
+        <select class="filter-btn" aria-label="Person" onchange="setPlanungPerson(this.value)">
+          <option value="">Alle Teammitglieder</option>
+          ${filterablePersons.map(p => `<option value="${esc(p.id)}" ${personFilter === p.id ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}
+        </select>
+        <select class="filter-btn" aria-label="Sortierung" onchange="setPlanungSort(this.value)">
+          <option value="name" ${sort === 'name' ? 'selected' : ''}>Nach Name</option>
+          <option value="frei" ${sort === 'frei' ? 'selected' : ''}>Nach unverplanten Tagen</option>
+        </select>
+        <div class="view-search planung-search"><input id="planungSearchInput" type="search" aria-label="Planung durchsuchen"
+          placeholder="Person, Thema oder Jira-Key suchen…" value="${esc(rawQuery)}" oninput="setPlanungQuery(this.value)"></div>
+        ${overdueChip}
+        ${renderJiraChangesChip()}
+      </div>
     </div>
-
     ${overduePanel}
-    ${handoverPanel}
     ${parkedRow}
     ${searchResults}
 
-    ${personIds.length ? renderTimeline({ personIds, startDate: start, endDate: end, options: { idPrefix: 'planung', supportAnchorMonth: month, insertLane: true, showCapacity: sort === 'frei', showWeekends: planungShowWeekends(), blockQuery, hideHandover } })
+    ${personIds.length ? renderTimeline({ personIds, startDate: start, endDate: end, options: { idPrefix: 'planung', supportAnchorMonth: month, insertLane: true, showCapacity: true, showWeekends: planungShowWeekends(), blockQuery, hideHandover } })
       : `<div class="empty-state"><div class="empty-state-icon">&#128269;</div><div class="empty-state-text">${blockQuery ? 'Keine passenden Blöcke' : 'Keine Teammitglieder'}</div></div>`}
 
+    ${renderWaitingQueue(personFilter, blockQuery)}
     <div class="tl-legend">
       ${BLOCK_TYPES.map(t => `<span class="tl-legend-item"><span class="tl-block-swatch tl-block-${t.val}"></span>${t.label}</span>`).join('')}
       <span class="tl-legend-item"><span class="tl-legend-today"></span>Heute</span>
@@ -15967,7 +16017,6 @@ function changePlanungWeek(dir) {
 function resetPlanungWindow() {
   viewState.planungWeekOffset = 0;
   viewState.planungExtraPastWeeks = 0;
-  viewState.planungExtraFutureWeeks = 0;
   render();
 }
 
@@ -15981,6 +16030,7 @@ function planungPersonFilter() {
 
 function setPlanungPerson(id) {
   viewState.planungPerson = id || '';
+  delete viewState.planungQueuePerson;
   render();
 }
 
@@ -15999,15 +16049,19 @@ function togglePlanungHandover() {
   render();
 }
 
+function planungHideHandover() {
+  if (typeof viewState.planungHideHandover === 'boolean') return viewState.planungHideHandover;
+  try { return localStorage.getItem('tktool-planung-work-only') !== '0'; } catch { return true; }
+}
 function togglePlanungHideHandover() {
-  viewState.planungHideHandover = !viewState.planungHideHandover;
-  if (viewState.planungHideHandover) viewState.planungShowHandover = false;
+  viewState.planungHideHandover = !planungHideHandover();
+  try { localStorage.setItem('tktool-planung-work-only', viewState.planungHideHandover ? '1' : '0'); } catch {}
   render();
 }
 
 function extendBlockToThisWeek(id) {
   const b = data.blocks.find(x => x.id === id);
-  if (!b || isBlockParked(b)) return;
+  if (!b || isBlockParked(b) || isPlanungHandoverBlock(b)) return;
   const friday = toISO(addDays(startOfWeek(parseISO(todayStr())), 4));
   b.end = friday > todayStr() ? friday : todayStr();
   saveData(data);
@@ -16213,6 +16267,7 @@ function renderMeetingTeamStatus(m) {
 // BLOCK CRUD
 // ============================================================
 function openBlockForm(blockId, prefillPersonId, prefillStart, prefillEnd) {
+  document.getElementById('overlay').classList.toggle('overlay-drawer', currentView === 'planung');
   const b = blockId ? data.blocks.find(x => x.id === blockId) : null;
   const personOpts = data.persons.filter(p => p.type !== 'kontakt')
     .map(p => `<option value="${p.id}" ${((b && b.personId === p.id) || prefillPersonId === p.id) ? 'selected' : ''}>${esc(p.name)}</option>`).join('');
@@ -16436,8 +16491,9 @@ function refreshJiraDriftMenu(personId) {
 
 // Wie "+1 woche" in der Ueberfaellig-Liste, nur bleibt das Drift-Menue offen.
 function extendJiraDriftBlock(blockId) {
+  if (isPlanungHandoverBlock(data.blocks.find(b => b.id === blockId))) return;
   const b = data.blocks.find(x => x.id === blockId);
-  if (!b || isBlockParked(b)) return;
+  if (!b || isBlockParked(b) || isPlanungHandoverBlock(b)) return;
   const friday = toISO(addDays(startOfWeek(parseISO(todayStr())), 4));
   b.end = friday > todayStr() ? friday : todayStr();
   toast(`${b.jiraRef || 'Block'} bis ${formatDate(b.end)} verlängert`);
@@ -16820,6 +16876,124 @@ function exportPersonBlocks(personId, from, to, matchingBlocks) {
   return md;
 }
 
+// Planner preferences and the calendar-independent waiting queue.
+function setPlanungWeeks(weeks) {
+  if (![1, 2, 4].includes(weeks)) return;
+  viewState.planungExtraPastWeeks = 0;
+  viewState.planungExtraFutureWeeks = weeks - 1;
+  try { localStorage.setItem('tktool-planung-weeks', String(weeks)); } catch {}
+  render();
+}
+
+function waitingStatusCounts(tickets) {
+  const counts = new Map();
+  for (const ticket of tickets) counts.set(ticket.status, (counts.get(ticket.status) || 0) + 1);
+  return [...counts].map(([status, count]) => `${status} ${count}`).join(' · ');
+}
+
+function renderPersonWaitingBadge(personId) {
+  const tickets = jiraWaitingTickets(personId);
+  if (!tickets.length) return '';
+  return `<button class="waiting-person-badge" onclick="event.stopPropagation();openWaitingQueue('${personId}')"
+    title="Wartende Tickets unabhängig von der Woche öffnen">${esc(waitingStatusCounts(tickets))}</button>`;
+}
+
+function openWaitingQueue(personId = '') {
+  if (currentView !== 'planung') navigate('planung');
+  viewState.planungQueuePerson = personId;
+  viewState.planungShowHandover = true;
+  render();
+  document.getElementById('waiting-queue')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+function renderWaitingQueue(personFilter = '', query = '') {
+  const selected = viewState.planungQueuePerson || personFilter;
+  const all = jiraWaitingTickets(personFilter);
+  const tickets = jiraWaitingTickets(selected).filter(t => (!personFilter || t.personId === personFilter)
+    && (!query || includesQuery([t.key, t.summary, t.status, personName(t.personId)].join(' '), query)));
+  const groups = new Map();
+  const groupByPerson = viewState.planungQueueGroup === 'person';
+  for (const ticket of tickets) {
+    const group = groupByPerson ? personName(ticket.personId) : ticket.status;
+    if (!groups.has(group)) groups.set(group, []);
+    groups.get(group).push(ticket);
+  }
+  return `<details class="waiting-queue card" id="waiting-queue" ${viewState.planungShowHandover ? 'open' : ''}
+      ontoggle="viewState.planungShowHandover=this.open">
+    <summary><strong>Warteschlange <span class="waiting-count">${tickets.length === all.length ? all.length : `${tickets.length} von ${all.length}`} Tickets</span></strong>
+      <span>${esc(waitingStatusCounts(all)) || (jiraSyncData ? 'Keine wartenden Tickets im Jira-Stand' : 'Noch kein Jira-Stand')}</span>
+      <small>Unabhängig vom Zeitraum · ${esc(jiraSyncAgeLabel() || 'kein Import')}</small></summary>
+    <div class="queue-controls">
+      <span>Gruppieren nach</span>
+      <select class="filter-btn" aria-label="Warteschlange gruppieren" onchange="viewState.planungQueueGroup=this.value;render()">
+        <option value="status" ${!groupByPerson ? 'selected' : ''}>Status</option>
+        <option value="person" ${groupByPerson ? 'selected' : ''}>Person</option>
+      </select>
+      ${viewState.planungQueuePerson ? `<button class="filter-btn" onclick="viewState.planungQueuePerson='';render()">${esc(personName(viewState.planungQueuePerson))} ×</button>` : ''}
+      <span class="queue-help">Kein Wochenwechsel und kein Planungsblock nötig.</span>
+    </div>
+    ${jiraSyncData?.truncated ? '<p class="queue-notice">Jira-Antwort unvollständig — die Anzahl ist möglicherweise zu niedrig.</p>' : ''}
+    ${[...groups].map(([group, rows]) => `<section class="queue-group"><h3>${esc(group)} <span>${rows.length}</span></h3>
+      ${rows.map(t => `<div class="queue-ticket">
+        ${jiraKeyLink(t.key)}<span class="queue-ticket-title">${esc(t.summary || t.key)}</span>
+        <span>${esc(groupByPerson ? t.status : personName(t.personId))}</span>
+        ${t.blockId ? `<button class="btn btn-secondary btn-sm" onclick="openBlockForm('${t.blockId}')">Details</button>` : ''}
+      </div>`).join('')}</section>`).join('') || '<p class="queue-notice">Keine passenden wartenden Tickets.</p>'}
+  </details>`;
+}
+
+const JIRA_CHANGE_LABELS = { waiting: 'In Wartestatus', returned: 'Wieder beim Team', done: 'Erledigt' };
+
+function jiraChangeRows() {
+  const changes = jiraSyncData?.changes || [];
+  return changes.map(change => `<div class="queue-ticket">${jiraKeyLink(change.key)}
+    <span class="queue-ticket-title">${esc(change.summary)}</span><strong>${JIRA_CHANGE_LABELS[change.kind] || 'Statuswechsel'}</strong>
+    <span>${esc(change.from)} → ${esc(change.to)}</span></div>`).join('');
+}
+
+function renderJiraChanges() {
+  const changes = jiraSyncData?.changes || [];
+  if (!changes.length) return '';
+  return `<details class="jira-changes"><summary>Seit letztem Jira-Import · ${changes.length} Statuswechsel</summary>
+    ${jiraChangeRows()}</details>`;
+}
+
+function renderJiraChangesChip() {
+  const changes = jiraSyncData?.changes || [];
+  if (!changes.length) return '';
+  return `<button class="filter-btn planung-jira-changes-btn" onclick="openJiraChangesDrawer()"
+    title="Statuswechsel seit dem letzten Jira-Import">${changes.length} statuswechsel</button>`;
+}
+
+function openJiraChangesDrawer() {
+  const changes = jiraSyncData?.changes || [];
+  if (!changes.length) return;
+  document.getElementById('overlay').classList.add('overlay-drawer');
+  document.getElementById('modal').innerHTML = `
+    <div class="modal-header">
+      <span class="modal-title">Seit letztem Jira-Import</span>
+      <button class="modal-close" onclick="closeOverlay()" aria-label="Schließen">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <p class="queue-help">${changes.length} Statuswechsel · ${esc(jiraSyncAgeLabel() || 'kein Import')}</p>
+      ${jiraChangeRows()}
+    </div>`;
+  openOverlay();
+}
+
+function openSupportEditor() {
+  document.getElementById('modal').innerHTML = `<div class="modal-header"><span class="modal-title">Support-Rotation</span>
+    <button class="modal-close" onclick="closeOverlay()" aria-label="Schließen">×</button></div>
+    <div class="modal-body">${data.persons.filter(p => p.type !== 'kontakt').sort(comparePersonsByName).map(p => `
+      <section class="support-editor"><strong>${esc(p.name)}</strong>
+        <div class="support-months-list">${(p.supportMonate || []).map(month => `<span class="support-month-chip">${formatMonthName(month)}
+          <button onclick="removeSupportMonth('${p.id}','${month}');openSupportEditor()" aria-label="${esc(formatMonthName(month))} entfernen">×</button></span>`).join('')}</div>
+        <div class="support-add"><input type="month" class="form-input" id="supportMonthInput-${p.id}" value="${planungSupportMonth()}" aria-label="Supportmonat für ${esc(p.name)}">
+          <button class="btn btn-secondary btn-sm" onclick="addSupportMonthFromInput('${p.id}');openSupportEditor()">+ Monat</button></div>
+      </section>`).join('')}</div>`;
+  openOverlay();
+}
+
 </script>
 <script data-source="./js/ui.js">
 // ============================================================
@@ -16828,9 +17002,9 @@ function exportPersonBlocks(personId, from, to, matchingBlocks) {
 function getSavedTheme() {
   try {
     const t = localStorage.getItem(THEME_KEY);
-    return THEMES.includes(t) ? t : 'light';
+    return THEMES.includes(t) ? t : 'daylight';
   } catch {
-    return 'light';
+    return 'daylight';
   }
 }
 
@@ -16876,6 +17050,7 @@ function renderThemeMenu() {
   menu.innerHTML = `
     <div class="theme-menu-section" aria-label="Darstellung">
       <div class="theme-menu-label">darstellung</div>
+      <div class="theme-work-options"><span class="theme-action-note">Ruhige Arbeitsfarben: daylight · nord</span></div>
       ${themeOptions}
     </div>
     <div class="theme-menu-divider" aria-hidden="true"></div>

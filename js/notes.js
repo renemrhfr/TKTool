@@ -21,6 +21,7 @@ function renderNotes() {
     (b.updatedAt || b.createdAt || '').localeCompare(a.updatedAt || a.createdAt || '')
   );
   const notes = allNotes.filter(note => noteMatches(note, query));
+  const selected = notes.find(note => note.id === (viewState.focusNoteId || viewState.selectedNoteId)) || notes[0];
 
   if (!sudo) {
     return `
@@ -48,8 +49,12 @@ function renderNotes() {
     <p class="notes-page-intro">Langfristige Pläne, Beobachtungen und Dokumentationen, die keinem einzelnen Todo oder Meeting gehören.</p>
 
     ${notes.length ? `
-      <div class="notes-grid">
-        ${notes.map(note => renderNoteCard(note)).join('')}
+      <div class="notes-workspace">
+        <aside class="notes-index" aria-label="Notizen">
+          ${notes.map(note => `<button class="notes-index-entry ${note.id === selected.id ? 'active' : ''}" onclick="selectNote('${note.id}')">
+            <strong>${esc(note.title || 'Ohne Titel')}</strong><span>${formatNoteUpdatedAt(note.updatedAt)}</span></button>`).join('')}
+        </aside>
+        ${renderNoteCard(selected)}
       </div>
     ` : `
       <div class="empty-state">
@@ -161,4 +166,10 @@ function initNotesView() {
   card.scrollIntoView({ behavior: 'smooth', block: 'center' });
   card.querySelector('.note-editor')?.focus({ preventScroll: true });
   viewState.focusNoteId = null;
+}
+
+function selectNote(id) {
+  delete viewState.focusNoteId;
+  viewState.selectedNoteId = id;
+  render();
 }

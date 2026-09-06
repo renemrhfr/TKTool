@@ -173,16 +173,39 @@ function jiraParentKeyForRef(ref) {
 
 // Blockiert der Block noch den Entwickler? Offene Bloecke, deren Ticket in
 // einem Uebergabe-Status haengt, zaehlen als "wartet woanders".
+// Waiting is ticket state, independent of the planning calendar.
 function jiraHandoverBlocks(personId) {
+  return (data.blocks || []).filter(b => (!personId || b.personId === personId)
+    && !b.done && isJiraHandoverStatus(jiraStatusForBlock(b)?.status));
+}
+
+function jiraWaitingTickets(personId = null) {
   if (!jiraSyncData) return [];
-  const today = todayStr();
-  return (data.blocks || []).filter(b => {
-    if (personId && b.personId !== personId) return false;
-    if (b.done || !b.jiraRef) return false;
-    if ((b.end || b.start || '') < today) return false;
-    const ref = jiraStatusForBlock(b);
-    return !!(ref && isJiraHandoverStatus(ref.status));
-  });
+  const byKey = new Map();
+  for (const person of data.persons.filter(p => p.type !== 'kontakt')) {
+    for (const ticket of jiraTicketsForPerson(person) || []) {
+      if (!isJiraHandoverStatus(ticket.status) || ticket.statusCategory === 'done') continue;
+      const key = String(ticket.key).trim().toUpperCase();
+      byKey.set(key, { ...ticket, key, personId: person.id });
+    }
+  }
+  for (const block of jiraHandoverBlocks()) {
+    const key = block.jiraRef.trim().toUpperCase();
+    const state = jiraStatusForBlock(block);
+    if (state.statusCategory === 'done') continue;
+    const owner = state.assignee && data.persons.find(p => p.jiraAccountId === state.assignee);
+    const existing = byKey.get(key);
+    if (existing) { existing.blockId = existing.blockId || block.id; continue; }
+    byKey.set(key, { key, summary: state.summary || block.label || key,
+      status: state.status, personId: owner?.id || block.personId, blockId: block.id });
+  }
+  return [...byKey.values()].filter(t => !personId || t.personId === personId)
+    .sort((a, b) => a.status.localeCompare(b.status, 'de') || a.key.localeCompare(b.key, 'de', { numeric: true }));
+}
+
+function jiraBlockResolved(block) {
+  const state = jiraStatusForBlock(block);
+  return state?.statusCategory === 'done';
 }
 
 // Alle je gesehenen Status, damit ausgeschlossene weiterhin waehlbar bleiben —
@@ -466,7 +489,7 @@ function openPersonById(id) {
 function openPersonTodos(personId) {
   const person = personById(personId);
   navigate('overview', {
-    month: currentMonth(),
+    overviewScope: 'open',
     overviewLayout: 'list',
     overviewQuery: person?.name || personName(personId),
   });
@@ -625,7 +648,7 @@ function jiraQueryUrl() {
     .filter((id, i, all) => all.indexOf(id) === i);
   const today = todayStr();
   const refKeys = (data.blocks || [])
-    .filter(b => !b.done && b.jiraRef && (b.end || b.start || '') >= today)
+    .filter(b => !b.done && b.jiraRef)
     .map(b => b.jiraRef.trim().toUpperCase())
     .filter((key, i, all) => all.indexOf(key) === i);
   if (!accountIds.length && !refKeys.length) return '';
@@ -666,20 +689,22 @@ function jiraDriftForPerson(person) {
   // abgelaufener Block als "nicht verplant" und "+ block" legt denselben
   // Ticket-Block ein zweites Mal an — der Block gehoert verlaengert, nicht
   // dupliziert.
+  const effective = new Map((typeof workingPlanBlocks === 'function' ? workingPlanBlocks() : []).map(b => [b.id, b]));
   const openBlocks = (data.blocks || []).filter(b =>
-    b.personId === person.id && !b.done && b.jiraRef);
+    b.personId === person.id && !b.done && b.jiraRef).map(b => effective.get(b.id) || b);
   const activeBlocks = openBlocks.filter(b => (b.end || b.start || '') >= today);
   const plannedKeys = new Set(openBlocks.map(b => b.jiraRef.trim().toUpperCase()));
   const openKeys = new Set(tickets.map(t => String(t.key || '').toUpperCase()));
-  const unplanned = tickets.filter(t => !plannedKeys.has(String(t.key || '').toUpperCase()));
+  const unplanned = tickets.filter(t => !isJiraHandoverStatus(t.status) && !plannedKeys.has(String(t.key || '').toUpperCase()));
   // Ticket laeuft in Jira noch, der Block ist aber abgelaufen: eigene Sorte
   // Drift mit eigener Aktion (verlaengern) statt eines zweiten Blocks.
   const expired = openBlocks.filter(b =>
-    (b.end || b.start || '') < today && openKeys.has(b.jiraRef.trim().toUpperCase()));
+    b.start && b.end && b.end < today && openKeys.has(b.jiraRef.trim().toUpperCase())
+      && !isJiraHandoverStatus(jiraStatusForBlock(b)?.status));
   const refs = (jiraSyncData && jiraSyncData.refs) || {};
   const refByKey = {};
   for (const k of Object.keys(refs)) refByKey[k.trim().toUpperCase()] = refs[k];
-  const stale = activeBlocks.filter(b => {
+  const stale = openBlocks.filter(b => {
     const key = b.jiraRef.trim().toUpperCase();
     if (openKeys.has(key)) return false;
     const ref = refByKey[key];

@@ -3,13 +3,14 @@
 // ============================================================
 function renderOverview() {
   const month = viewState.month || currentMonth();
+  const allOpen = viewState.overviewScope !== 'month' && !viewState.month;
   const query = (viewState.overviewQuery || '').trim().toLocaleLowerCase('de-AT');
   const layout = overviewLayout();
   const review = monthReview(month);
   const pastOpenWarning = renderPastOpenItemsWarning();
   const items = data.items
     .filter(i => !isGrowthEntry(i))
-    .filter(i => i.month === month)
+    .filter(i => allOpen ? i.status !== 'done' : i.month === month)
     .filter(i => !query || itemMatchesQuery(i, query));
 
   const todos = items.filter(i => i.status === 'todo').sort(compareByDueDate);
@@ -24,7 +25,11 @@ function renderOverview() {
       <div class="overview-toolbar">
         <div class="overview-toolbar-main">
           <div class="overview-toolbar-start">
-            <div class="month-selector">
+            <div class="filters">
+              <button class="filter-btn ${allOpen ? 'active' : ''}" onclick="setOverviewScope('open')">Alle offenen</button>
+              <button class="filter-btn ${!allOpen ? 'active' : ''}" onclick="setOverviewScope('month')">Monatsarchiv</button>
+            </div>
+            <div class="month-selector" ${allOpen ? 'hidden' : ''}>
               <button onclick="changeMonth(-1)">&#8592;</button>
               <span class="month-label">${formatMonth(month)}</span>
               <button onclick="changeMonth(1)">&#8594;</button>
@@ -34,7 +39,7 @@ function renderOverview() {
             <input
               id="overviewSearchInput"
               type="search"
-              placeholder="monat filtern..."
+              placeholder="Aufgaben suchen…"
               value="${esc(viewState.overviewQuery || '')}"
               oninput="setOverviewQuery(this.value)"
             >
@@ -51,7 +56,7 @@ function renderOverview() {
             <button class="view-toggle-btn ${layout === 'board' ? 'active' : ''}" onclick="setOverviewLayout('board')" role="tab" aria-selected="${layout === 'board'}">board</button>
             <button class="view-toggle-btn ${layout === 'list' ? 'active' : ''}" onclick="setOverviewLayout('list')" role="tab" aria-selected="${layout === 'list'}">list</button>
           </div>
-          <details class="overview-actions-menu">
+          <details class="overview-actions-menu" ${allOpen ? 'hidden' : ''}>
             <summary>monat</summary>
             <div class="overview-actions-menu-panel">
               <button class="btn btn-secondary btn-sm" onclick="openMonthCarryover('${month}')">monat abschliessen</button>
@@ -59,8 +64,8 @@ function renderOverview() {
             </div>
           </details>
         </div>
-        ${review ? `<div class="overview-toolbar-secondary">${renderMonthReflectionCard(month)}</div>` : ''}
-        ${pastOpenWarning}
+        ${!allOpen && review ? `<div class="overview-toolbar-secondary">${renderMonthReflectionCard(month)}</div>` : ''}
+        ${!allOpen ? pastOpenWarning : ''}
       </div>
     </div>
 
@@ -71,7 +76,7 @@ function renderOverview() {
           ${renderItemSection('backlog', backlog, 'backlog')}
           ${renderItemSection('todo', todos, 'todo')}
           ${renderItemSection('warte auf...', waiting, 'waiting')}
-          ${renderItemSection('erledigt', done, 'done')}
+          ${!allOpen ? renderItemSection('erledigt', done, 'done') : ''}
         </div>
       `}
   `;
@@ -369,7 +374,7 @@ function renderTaskTable(items) {
   }));
   return `
     <div class="task-table-sections">
-      ${groups.map(group => `
+      ${groups.filter(group => group.status !== 'done' || viewState.overviewScope === 'month' || viewState.month).map(group => `
         <section class="card task-table-card task-table-section task-table-section-${group.status} drop-target"
           ondragover="onItemDragOver(event)"
           ondragleave="onItemDragLeave(event)"
@@ -536,4 +541,11 @@ function overviewLayout() {
   } catch {
     return 'list';
   }
+}
+
+function setOverviewScope(scope) {
+  viewState.overviewScope = scope;
+  if (scope === 'open') delete viewState.month;
+  else viewState.month = viewState.month || currentMonth();
+  render();
 }

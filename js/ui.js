@@ -4,9 +4,9 @@
 function getSavedTheme() {
   try {
     const t = localStorage.getItem(THEME_KEY);
-    return THEMES.includes(t) ? t : 'light';
+    return THEMES.includes(t) ? t : 'daylight';
   } catch {
-    return 'light';
+    return 'daylight';
   }
 }
 
@@ -52,6 +52,7 @@ function renderThemeMenu() {
   menu.innerHTML = `
     <div class="theme-menu-section" aria-label="Darstellung">
       <div class="theme-menu-label">darstellung</div>
+      <div class="theme-work-options"><span class="theme-action-note">Ruhige Arbeitsfarben: daylight · nord</span></div>
       ${themeOptions}
     </div>
     <div class="theme-menu-divider" aria-hidden="true"></div>

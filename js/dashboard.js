@@ -278,23 +278,17 @@ function teamFocusBlockHandoverStatus(block) {
 }
 
 function teamFocusWaitingBlocks(entry) {
-  return entry.activeBlocks.filter(block => teamFocusBlockHandoverStatus(block));
+  return jiraWaitingTickets(entry.person.id);
 }
 
 function teamFocusWorkingBlocks(entry) {
-  return [
-    ...entry.overdueBlocks.map(block => ({ block, kind: 'overdue' })),
-    ...entry.activeBlocks.filter(block => !teamFocusBlockHandoverStatus(block)).map(block => ({ block, kind: 'active' })),
-    ...entry.upcomingBlocks.map(block => ({ block, kind: 'upcoming' })),
-  ];
+  return entry.activeBlocks.map(block => ({ block, kind: 'active' }));
 }
 
 function teamFocusBlocks(entry) {
-  const working = teamFocusWorkingBlocks(entry);
-  const waiting = teamFocusWaitingBlocks(entry).map(block => ({ block, kind: 'active' }));
-  const upcomingIndex = working.findIndex(({ kind }) => kind === 'upcoming');
-  if (upcomingIndex < 0) return [...working, ...waiting];
-  return [...working.slice(0, upcomingIndex), ...waiting, ...working.slice(upcomingIndex)];
+  return [...entry.overdueBlocks.map(block => ({ block, kind: 'overdue' })),
+    ...teamFocusWorkingBlocks(entry),
+    ...entry.upcomingBlocks.map(block => ({ block, kind: 'upcoming' }))];
 }
 
 function toggleTeamFocusCard(personId) {
@@ -358,13 +352,16 @@ function renderTeamFocusBlocks(entry) {
   return `
     <div class="tf-blocks${hidden ? ' tf-blocks-more' : ''}">
       <div class="tf-blocks-head">
-        <span>Arbeitet an${blocks.length > 1 ? ` <span class="tf-blocks-count">${blocks.length}</span>` : ''}</span>
+        <span>Arbeitskontext${blocks.length > 1 ? ` <span class="tf-blocks-count">${blocks.length}</span>` : ''}</span>
         <button class="tf-blocks-link" type="button" onclick="navigate('planung')">planung öffnen</button>
       </div>
       <div class="tf-blocks-scroll">
         <div class="tf-blocks-list">
           ${blocks.length
-            ? blocks.map(({ block, kind }) => renderTeamFocusBlockRow(block, kind)).join('')
+            ? ['overdue', 'active', 'upcoming'].map(kind => {
+                const rows = blocks.filter(entry => entry.kind === kind);
+                return rows.length ? `<div class="tf-context-heading">${{ overdue: 'Neu einplanen', active: 'Jetzt', upcoming: 'Als Nächstes' }[kind]}</div>${rows.map(({block}) => renderTeamFocusBlockRow(block, kind)).join('')}` : '';
+              }).join('')
             : `<div class="tf-blocks-empty">${empty}</div>`}
         </div>
       </div>
@@ -399,7 +396,7 @@ function renderTeamFocusJiraMetric(entry) {
   const jiraTicketTotal = entry.jiraTickets.length ? ticketCountLabel(entry.jiraTickets.length) : 'keine tickets';
   const jiraNote = drift.stale.length && drift.unplanned.length ? driftParts.join(' · ') : jiraTicketTotal;
   return `
-    <button class="tf-metric tf-metric-action ${jiraSig}" type="button" onclick="event.preventDefault(); event.stopPropagation(); openPersonById('${entry.person.id}')" title="${esc(`Jira-Tickets von ${entry.person.name} ansehen (Stand: ${jiraSyncAgeLabel() || 'unbekannt'})${driftDetail ? '\n' + driftDetail : ''}`)}">
+    <button class="tf-metric tf-metric-action ${jiraSig}" type="button" onclick="event.preventDefault(); event.stopPropagation(); navigate('planung',{planungPerson:'${entry.person.id}'})" title="${esc(`Jira-Tickets von ${entry.person.name} ansehen (Stand: ${jiraSyncAgeLabel() || 'unbekannt'})${driftDetail ? '\n' + driftDetail : ''}`)}">
       <span class="tf-metric-label">Jira</span>
       <span class="tf-metric-value">${esc(jiraValue)}</span>
       <span class="tf-metric-note">${esc(jiraNote)}</span>
@@ -462,8 +459,7 @@ function renderReviews() {
         person, absenceToday, activeBlocks, overdueBlocks, upcomingBlocks,
         jiraTickets, drift, nextOneOnOne, unscheduledOneOnOne, oneOnOneMissing,
       };
-      entry.attentionScore = teamFocusScore(entry);
-      entry.attentionLevel = entry.attentionScore >= 50 ? 'high' : entry.attentionScore >= 20 ? 'medium' : 'low';
+      entry.attentionLevel = 'low';
       return entry;
     })
     .sort((a, b) => comparePersonsByName(a.person, b.person));
@@ -478,6 +474,8 @@ function renderReviews() {
       ${renderDashboardReviewAction()}
     </div>
 
+    ${jiraWaitingTickets().length ? `<button class="dashboard-waiting" onclick="openWaitingQueue()"><strong>Warteschlange · ${jiraWaitingTickets().length} Tickets</strong><span>${esc(waitingStatusCounts(jiraWaitingTickets()))}</span><span>Teamweit ansehen →</span></button>` : ''}
+    ${renderJiraChanges()}
     <div class="review-grid">
       <div class="card review-team-focus-card">
         <div class="card-header">
@@ -509,8 +507,10 @@ function renderReviews() {
                 ${renderTeamFocusJiraMetric(entry)}
               </div>
               <div class="tf-work-metric">
-                <span class="tf-metric-label">Arbeitet an</span>
+                <span class="tf-metric-label">Jetzt</span>
                 <span class="tf-metric-value">${workingBlocks.length}</span>
+                <span class="tf-metric-label">Als Nächstes</span><span class="tf-metric-value">${entry.upcomingBlocks.length}</span>
+                ${entry.overdueBlocks.length ? `<button class="filter-btn" onclick="event.stopPropagation();navigate('planung',{planungPerson:'${entry.person.id}',planungShowOverdue:true})">${entry.overdueBlocks.length} neu einplanen</button>` : ''}
                 ${waitingBlocks.length ? `
                 <span class="tf-metric-label tf-work-waiting" title="Wartet in Review, QA oder einem anderen Übergabestatus">Wartet</span>
                 <span class="tf-metric-value tf-work-waiting" title="Wartet in Review, QA oder einem anderen Übergabestatus">${waitingBlocks.length}</span>` : ''}

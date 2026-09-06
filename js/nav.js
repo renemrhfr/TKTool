@@ -47,7 +47,7 @@ function navigate(view, state = {}) {
     : state;
   render();
   document.querySelectorAll('#nav button').forEach(b => {
-    b.classList.toggle('active', b.dataset.view === view.split(':')[0]);
+    b.classList.toggle('active', b.dataset.view === (view.startsWith('kontakte') ? 'team' : view.split(':')[0]));
   });
 }
 

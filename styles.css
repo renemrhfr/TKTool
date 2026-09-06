@@ -3853,6 +3853,29 @@ button.tf-metric {
   margin-bottom: 0;
 }
 
+.meeting-planner-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  margin-bottom: 12px;
+  padding: 7px 8px;
+  border: 1px dashed var(--border);
+  background: var(--bg-elev);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.meeting-planner-note span {
+  color: var(--text-muted);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
 .meeting-status-preview {
   margin-bottom: 12px;
   padding: 8px;
@@ -5094,6 +5117,9 @@ button.tf-metric {
   border-left: 2px solid var(--danger);
 }
 
+.planung-jira-changes-btn { color: var(--text-secondary); }
+.planung-jira-changes-btn:hover { color: var(--text); }
+
 .planung-overdue-panel {
   border: 1px solid var(--border);
   border-left: 2px solid var(--danger);
@@ -6094,4 +6120,93 @@ a.jira-ticket-key:hover { text-decoration: underline; }
   .theme-trigger-label {
     display: none;
   }
+}
+
+/* Work surfaces: hierarchy through spacing, readable states across themes. */
+[hidden] { display: none !important; }
+.header-inner { max-width: 1600px; }
+.header-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.planner-toolbar { display: block; margin-bottom: 16px; }
+.planner-toolbar-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.planner-toolbar .filters { margin: 0; display: flex; gap: 4px; }
+.planner-toolbar-primary { flex-wrap: nowrap; }
+.planner-toolbar-primary > .month-selector { width: auto; flex: 0 0 auto; }
+.planner-toolbar-primary .month-label { white-space: nowrap; }
+.planner-toolbar-primary > .filters { flex: 0 0 auto; flex-wrap: nowrap; }
+.planner-primary-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; flex: 0 0 auto; white-space: nowrap; }
+.planner-toolbar .planung-search { flex: 1 1 220px; }
+.planner-toolbar .month-label { font-variant-numeric: tabular-nums; }
+#planung-timeline { max-height: 68vh; overflow: auto; scroll-padding-top: 62px; }
+#planung-timeline .tl-header { top: 0; z-index: 12; }
+#planung-timeline .tl-person, #planung-timeline .tl-person-head { position: sticky; left: 0; background: var(--bg-elev); z-index: 8; }
+#planung-timeline .tl-person-head { z-index: 13; }
+.tl-person-name, .tl-block-label, .queue-ticket-title, .team-meeting-title { font-family: var(--font-sans); }
+.tl-person-cap { font-variant-numeric: tabular-nums; }
+.tl-cell.tl-support-cell { background: color-mix(in srgb, var(--warning) 5%, var(--surface)); }
+.tl-cell.tl-weekend.tl-support-cell { background: var(--weekend-bg); }
+.tl-block-ticket { --block-tone: var(--timeline-ticket); }
+.tl-block-projekt { --block-tone: var(--timeline-projekt); }
+.tl-block-incident { --block-tone: var(--timeline-incident); }
+.tl-block-abwesenheit { --block-tone: var(--timeline-abwesenheit); }
+.tl-block { background: color-mix(in srgb, var(--block-tone, var(--accent)) 15%, var(--surface)); color: var(--text); border-left: 3px solid var(--block-tone, var(--accent)); box-shadow: none; }
+.tl-block:hover { background: color-mix(in srgb, var(--block-tone, var(--accent)) 25%, var(--surface)); }
+.tl-block.tl-block-handover-on { opacity: 1; background: var(--surface); color: var(--text-secondary); border: 1px dashed var(--border); border-left: 3px solid var(--text-muted); }
+.tl-block-handover { background: var(--bg-elev); color: var(--text-secondary); }
+.tl-block-swatch { border-left: 6px solid var(--block-tone, var(--accent)); }
+.waiting-person-badge { display: block; margin-top: 6px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 2px 5px; font: inherit; font-size: 11px; background: var(--surface); color: var(--text-secondary); border: 1px solid var(--border); border-radius: var(--control-radius); cursor: pointer; }
+.waiting-person-badge:hover { color: var(--text); border-color: var(--accent); }
+.waiting-queue { margin-top: 18px; padding: 0; }
+.waiting-queue > summary { padding: 14px; cursor: pointer; display: flex; align-items: baseline; flex-wrap: wrap; gap: 12px; }
+.waiting-queue > summary::before { content: '▸'; }
+.waiting-queue[open] > summary::before { content: '▾'; }
+.waiting-queue > summary > span, .waiting-queue small { color: var(--text-secondary); }
+.waiting-queue small { margin-left: auto; }
+.waiting-count { font-size: 12px; font-weight: 400; margin-left: 8px; }
+.queue-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 14px; border-top: 1px solid var(--border); }
+.queue-help, .queue-notice { color: var(--text-secondary); font-size: 12px; }
+.queue-notice { padding: 12px 14px; }
+.queue-group { padding: 8px 14px 14px; }
+.queue-group h3 { font-size: 13px; margin: 6px 0; }
+.queue-group h3 span { color: var(--text-muted); margin-left: 6px; }
+.queue-ticket { display: flex; align-items: baseline; gap: 12px; padding: 9px 0; border-bottom: 1px solid color-mix(in srgb, var(--border) 45%, transparent); font-size: 12px; }
+.queue-ticket-title { flex: 1; min-width: 120px; font-size: 14px; overflow-wrap: anywhere; }
+.queue-ticket > a { flex-shrink: 0; }
+.jira-changes { margin-bottom: 12px; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--control-radius); }
+.jira-changes summary { cursor: pointer; color: var(--text-secondary); }
+.dashboard-waiting { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; width: 100%; margin-bottom: 16px; padding: 14px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.dashboard-waiting span:last-child { margin-left: auto; color: var(--text-secondary); }
+.tf-context-heading { font-size: 11px; font-weight: 600; color: var(--text-secondary); margin: 10px 0 4px; }
+.tf-work-metric { gap: 6px; }
+.overlay.overlay-drawer { padding: 0; justify-content: flex-end; }
+.overlay-drawer .modal { height: 100vh; max-height: 100vh; max-width: 480px; border-radius: 0; padding-top: 16px; }
+.notes-workspace { display: grid; grid-template-columns: minmax(180px, 260px) minmax(0, 1fr); gap: 18px; align-items: start; }
+.notes-index { display: grid; gap: 4px; max-height: 72vh; overflow-y: auto; }
+.notes-index-entry { display: grid; gap: 5px; padding: 12px; text-align: left; font: inherit; border: 1px solid transparent; background: transparent; color: var(--text); cursor: pointer; }
+.notes-index-entry.active { background: var(--accent-light); border-color: var(--accent); }
+.notes-index-entry span { font-size: 11px; color: var(--text-secondary); }
+.notes-workspace .note-editor { min-height: 55vh; }
+body[data-theme="daylight"] .card, body[data-theme="nord"] .card { box-shadow: none; }
+body[data-theme="daylight"] .team-section-block, body[data-theme="nord"] .team-section-block { background: transparent; }
+body[data-theme="daylight"] .card-title, body[data-theme="nord"] .card-title { letter-spacing: .025em; }
+button:focus-visible, a:focus-visible, summary:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+@media (max-width: 1000px) {
+  .header-inner { height: auto; min-height: var(--header-height); flex-wrap: wrap; padding: 6px 0; }
+  .header-actions { margin-left: auto; }
+  .queue-ticket { flex-wrap: wrap; }
+  .queue-ticket-title { flex-basis: 50%; }
+}
+@media (max-width: 650px) {
+  .notes-workspace { grid-template-columns: 1fr; }
+  .notes-index { max-height: 180px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0s !important; animation-duration: 0s !important; }
+}
+.planner-toolbar .month-selector { width: auto; flex: 0 1 auto; }
+.planner-toolbar .month-label { min-width: 210px; padding: 0 10px; }
+.oneonone-carryover > summary { cursor: pointer; }
+.oneonone-carryover[open] > summary { margin-bottom: 12px; }
+.overview-board:has(> :nth-child(3):last-child) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 700px) {
+  .overview-board:has(> :nth-child(3):last-child) { grid-template-columns: 1fr; }
 }

@@ -134,11 +134,6 @@ async function submitJiraImport() {
   if (!text) return;
   try {
     const snapshot = await importJiraJson(text);
-    // Ein Sync kann neue Eltern-Kind-Beziehungen mitbringen: Kopfbloecke
-    // nachziehen, bevor die Drift gegen die alten Spannen rechnet.
-    if (typeof syncParentBlockSpans === 'function' && syncParentBlockSpans(data.blocks)) {
-      saveData(data);
-    }
     const count = Object.values(snapshot.assignees || {}).reduce((sum, list) => sum + list.length, 0);
     closeOverlay();
     render();
@@ -224,7 +219,7 @@ function renderTeam() {
     : (teamPersons[0]?.id || null);
   const selectedPerson = selectedId ? data.persons.find(person => person.id === selectedId) : null;
   const selectedItems = selectedPerson ? data.items.filter(item => item.personId === selectedPerson.id) : [];
-  const selectedOpenItems = selectedItems.filter(item => item.status !== 'done').sort(compareByDueDate);
+  const selectedOpenItems = selectedItems.filter(item => item.status !== 'done' && !isGrowthEntry(item)).sort(compareByDueDate);
   const selectedGrowth = selectedItems
     .filter(isGrowthEntry)
     .sort(compareItemsByDateDesc);
@@ -240,7 +235,7 @@ function renderTeam() {
     : [];
   return `
     <div class="section-header">
-      <span class="section-title">Team</span>
+      ${renderPeopleTabs(false)}
       <button class="btn btn-primary btn-sm" onclick="openPersonForm(null, 'team')">+ Teammitglied</button>
     </div>
     ${teamPersons.length ? `
@@ -250,8 +245,7 @@ function renderTeam() {
             <span class="card-title">Team (${teamPersons.length})</span>
           </div>
         ${teamPersons.map(p => {
-          const itemCount = data.items.filter(i => i.personId === p.id && i.status !== 'done').length;
-          const personJiraTickets = jiraTicketsForPerson(p);
+          const itemCount = data.items.filter(i => i.personId === p.id && i.status !== 'done' && !isGrowthEntry(i)).length;
           const isActive = p.id === selectedId;
           return `
             <div class="team-list-row ${isActive ? 'active' : ''}" onclick="navigate('team', {personId:'${p.id}'})" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();navigate('team', {personId:'${p.id}'})}">
@@ -266,7 +260,7 @@ function renderTeam() {
 	                  ${sudo ? `<div class="team-list-push">${p.pushDirection ? esc(p.pushDirection) : '&nbsp;'}</div>` : ''}
 	                  <div class="team-list-meta">
 	                    <span>${itemCount} offen</span>
-	                    ${personJiraTickets !== null ? `<span>&middot; ${personJiraTickets.length} tickets</span>` : ''}
+
                   </div>
                 </div>
               </div>
@@ -288,9 +282,7 @@ function renderTeam() {
 	                      <span class="team-detail-meta-label">Fokus</span>
 	                      <strong class="team-detail-focus-value">${selectedPerson.pushDirection ? esc(selectedPerson.pushDirection) : 'Kein Fokus hinterlegt'}</strong>
 	                    </div>` : `<div class="team-detail-focus-line">${sudoLockedPlaceholder('Fokus')}</div>`}
-	                    <div class="team-detail-links">
-	                      ${renderMemberLinkBar(selectedPerson)}
-                    </div>
+
                   </div>
                 </div>
                 <div class="team-detail-actions">
@@ -301,22 +293,16 @@ function renderTeam() {
               </div>
             </div>
 
-            <div class="team-section-block team-section-planung">
-              ${renderPersonPlanungCard(selectedPerson)}
-            </div>
-
-            ${renderPersonJiraBlock(selectedPerson)}
-
             <div class="team-detail-grid">
               <div class="team-section-block">
                 <div class="card-header">
-                  <span class="card-title">Offene Items (${selectedOpenItems.length})</span>
+                  <span class="card-title">Offene Aufgaben (${selectedOpenItems.length})</span>
                 </div>
                 ${selectedOpenItems.length ? `
                   <ul class="item-list">
-                    ${selectedOpenItems.slice(0, 8).map(item => renderItem(item, false, { compact: true })).join('')}
+                    ${selectedOpenItems.map(item => renderItem(item, false, { compact: true })).join('')}
                   </ul>
-                ` : '<div class="team-empty-copy">Keine offenen Items</div>'}
+                ` : '<div class="team-empty-copy">Keine offenen Aufgaben</div>'}
               </div>
               <div class="team-section-block">
                 <div class="card-header">
@@ -383,80 +369,7 @@ function renderTeam() {
 // ============================================================
 // PERSON DETAIL
 // ============================================================
-function renderPersonDetail() {
-  const p = data.persons.find(p => p.id === viewState.personId);
-  if (!p) return '<div>Person nicht gefunden</div>';
-
-  const items = data.items.filter(i => i.personId === p.id);
-  const openItems = items.filter(i => i.status !== 'done');
-  const meetings = data.meetings.filter(m => m.personId === p.id).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-  const growth = items
-    .filter(isGrowthEntry)
-    .sort(compareItemsByDateDesc);
-  const growthSignal = personGrowthSignal(p.id, 30);
-
-  return `
-    <button class="back-btn" onclick="navigate('team')">&#8592; Zurück</button>
-
-    <div class="person-detail-header">
-      <div class="person-avatar">${p.name.charAt(0).toUpperCase()}</div>
-      <div>
-        <div style="font-size:22px;font-weight:700;display:flex;align-items:center;gap:8px">
-          ${esc(p.name)}
-        </div>
-        ${p.pushDirection ? `<div style="color:var(--text-secondary);font-size:14px;margin-top:2px">Push: ${esc(p.pushDirection)}</div>` : ''}
-        ${renderMemberLinkBar(p)}
-      </div>
-      <div style="margin-left:auto;display:flex;gap:8px">
-        <button class="btn btn-secondary btn-sm" onclick="openPersonForm('${p.id}')">Bearbeiten</button>
-        <button class="btn btn-secondary btn-sm" onclick="openPersonDossierExport('${p.id}')">Dossier .md</button>
-      </div>
-    </div>
-
-    ${renderPersonPlanungCard(p)}
-
-    ${jiraSyncData ? `<div class="card">${renderPersonJiraBlock(p)}</div>` : ''}
-
-    <div class="card">
-      <div class="card-header"><span class="card-title">Offene Items (${openItems.length})</span></div>
-      ${openItems.length ? `<ul class="item-list">${openItems.map(i => renderItem(i)).join('')}</ul>` : '<div style="color:var(--text-muted);font-size:14px">Keine offenen Items</div>'}
-    </div>
-
-    <div class="card">
-      <div class="card-header">
-        <span class="card-title">1:1 Gespräche (${meetings.length})</span>
-        <button class="btn btn-sm btn-secondary" onclick="openMeetingForm('oneOnOne', '${p.id}')">+ 1:1</button>
-      </div>
-      ${meetings.length ? meetings.map(m => `
-        <div class="meeting-card" onclick="navigate('meetings:detail', {meetingId:'${m.id}'})">
-          <div class="meeting-type-icon" style="background:var(--success-light)">&#128172;</div>
-          <div class="meeting-info">
-            <div class="meeting-title">1:1 mit ${esc(p.name)}</div>
-            <div class="meeting-date">${m.date ? formatDate(m.date) : 'ohne Datum'}${meetingItems(m.id).length ? ' · ' + meetingItems(m.id).length + ' Follow-up' + (meetingItems(m.id).length === 1 ? '' : 's') : ''}</div>
-          </div>
-        </div>
-      `).join('') : '<div style="color:var(--text-muted);font-size:14px">Noch keine Gespräche</div>'}
-    </div>
-
-    <div class="card">
-      <div class="card-header">
-        <span class="card-title">growth journal</span>
-        <span style="color:var(--text-muted);font-size:12px">30 Tage · +${growthSignal.highlights} / -${growthSignal.concerns}</span>
-      </div>
-      ${growth.length ? `
-        <div class="growth-list">
-          ${growth.map(i => `
-            <div class="growth-entry growth-${i.type}" onclick="openEditItem('${i.id}')">
-              <span class="growth-date">${formatDateShort(i.date) || '&ndash;'}</span>
-              <span class="badge badge-${i.type}">${itemTypeLabel(i.type)}</span>
-              <span class="growth-text">${esc(i.text)}</span>
-            </div>
-          `).join('')}
-        </div>
-      ` : `<div style="color:var(--text-muted);font-size:14px">Noch keine Highlights oder Concerns f&uuml;r ${esc(p.name)}.</div>`}
-    </div>
-  `;
-}
+function renderPersonDetail() { return renderTeam(); }
 
 // ============================================================
 // KONTAKTE VIEW
@@ -471,10 +384,10 @@ function renderKontakte() {
     : (kontakte[0]?.id || null);
   const selectedPerson = selectedId ? data.persons.find(person => person.id === selectedId) : null;
   const selectedItems = selectedPerson ? data.items.filter(item => item.personId === selectedPerson.id) : [];
-  const selectedOpenItems = selectedItems.filter(item => item.status !== 'done').sort(compareByDueDate);
+  const selectedOpenItems = selectedItems.filter(item => item.status !== 'done' && !isGrowthEntry(item)).sort(compareByDueDate);
   return `
     <div class="section-header">
-      <span class="section-title">Kontakte</span>
+      ${renderPeopleTabs(true)}
       <button class="btn btn-primary btn-sm" onclick="openPersonForm(null, 'kontakt')">+ Kontakt</button>
     </div>
     ${kontakte.length ? `
@@ -484,7 +397,7 @@ function renderKontakte() {
             <span class="card-title">Kontakte (${kontakte.length})</span>
           </div>
           ${kontakte.map(p => {
-            const itemCount = data.items.filter(i => i.personId === p.id && i.status !== 'done').length;
+            const itemCount = data.items.filter(i => i.personId === p.id && i.status !== 'done' && !isGrowthEntry(i)).length;
             const isActive = p.id === selectedId;
             const openLevel = Math.min(4, itemCount);
             return `
@@ -522,11 +435,11 @@ function renderKontakte() {
 	            <div>
 	              <div>
 	                <div class="card-header">
-                  <span class="card-title">Offene Items (${selectedOpenItems.length})</span>
+                  <span class="card-title">Offene Aufgaben (${selectedOpenItems.length})</span>
                 </div>
                 ${selectedOpenItems.length
                   ? `<ul class="item-list">${selectedOpenItems.slice(0, 10).map(item => renderItem(item, false, { compact: true })).join('')}</ul>`
-                  : '<div class="team-empty-copy">Keine offenen Items</div>'}
+                  : '<div class="team-empty-copy">Keine offenen Aufgaben</div>'}
               </div>
 	            </div>
           ` : `
@@ -570,8 +483,15 @@ function renderKontaktDetail() {
     </div>
 
     <div class="card">
-      <div class="card-header"><span class="card-title">Offene Items (${openItems.length})</span></div>
-      ${openItems.length ? '<ul class="item-list">' + openItems.map(i => renderItem(i)).join('') + '</ul>' : '<div style="color:var(--text-muted);font-size:14px">Keine offenen Items</div>'}
+      <div class="card-header"><span class="card-title">Offene Aufgaben (${openItems.length})</span></div>
+      ${openItems.length ? '<ul class="item-list">' + openItems.map(i => renderItem(i)).join('') + '</ul>' : '<div style="color:var(--text-muted);font-size:14px">Keine offenen Aufgaben</div>'}
     </div>
 	  `;
+}
+
+function renderPeopleTabs(contacts) {
+  return `<div class="filters" aria-label="Personenbereich">
+    <button class="filter-btn ${!contacts ? 'active' : ''}" onclick="navigate('team')">Team</button>
+    <button class="filter-btn ${contacts ? 'active' : ''}" onclick="navigate('kontakte')">Kontakte</button>
+  </div>`;
 }

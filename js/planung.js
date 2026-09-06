@@ -85,7 +85,7 @@ function blockNeedsDone(b) {
   return b.typ !== 'abwesenheit';
 }
 function isBlockOverdue(b) {
-  return !isBlockParked(b) && blockNeedsDone(b) && !b.done && b.end < todayStr();
+  return !isBlockParked(b) && blockNeedsDone(b) && !b.done && !isPlanungHandoverBlock(b) && !jiraBlockResolved(b) && b.end < todayStr();
 }
 
 // --- Overlapping block workdays within [winStart, winEnd] ---
@@ -131,7 +131,7 @@ function personSupportInWindow(p, startISO, endISO) {
 // Woran sitzt jemand heute? Abwesenheiten bleiben aussen vor, die sind ein
 // eigener Zustand. Sortiert nach Ende: was zuerst faellig wird, steht vorne.
 function personActiveBlocks(personId, date = todayStr()) {
-  return (data.blocks || [])
+  return workingPlanBlocks()
     .filter(b => b.personId === personId
       && b.typ !== 'abwesenheit'
       && !b.done
@@ -149,14 +149,14 @@ function personCurrentBlock(personId, date = todayStr()) {
 // Ansicht heraus, weil das Ende in der Vergangenheit liegt — genau deshalb
 // ist es das ehrlichste "hier stimmt was nicht"-Signal.
 function personOverdueBlocks(personId) {
-  return (data.blocks || [])
+  return workingPlanBlocks()
     .filter(b => b.personId === personId && isBlockOverdue(b))
     .sort((a, b) => a.end.localeCompare(b.end));
 }
 
 // Was danach ansteht, bis zum Ende des gewaehlten Fensters.
 function personUpcomingBlocks(personId, date = todayStr(), until = null) {
-  return (data.blocks || [])
+  return workingPlanBlocks()
     .filter(b => b.personId === personId
       && b.typ !== 'abwesenheit'
       && !b.done
@@ -169,7 +169,7 @@ function personUpcomingBlocks(personId, date = todayStr(), until = null) {
 // --- Capacity for a person in a window ---
 function personCapacity(personId, winStart, winEnd) {
   const werktage = workdaysBetween(winStart, winEnd);
-  const blocks = data.blocks.filter(b => b.personId === personId);
+  const blocks = workingPlanBlocks().filter(b => b.personId === personId);
   const allokiert = allocatedWorkdaysInWindow(blocks, winStart, winEnd);
   return { werktage, allokiert, frei: werktage - allokiert };
 }
@@ -271,63 +271,27 @@ function groupPersonBlocks(entries, personId) {
   return units;
 }
 
-// Ein Kopfblock deckt in der Timeline die Spanne seiner Kinder mit ab — das war
-// bisher reine Darstellung. Die gespeicherten Daten blieben kurz, und sobald das
-// echte Ende durch war, galt der Auftrag als ueberfaellig, obwohl darunter noch
-// gearbeitet wird (und wanderte in die Jira-Drift). Deshalb ziehen wir hier die
-// Daten selbst nach: dieselbe Rechnung wie im Renderer, Kopf eingeschlossen —
-// die Spanne waechst also nur, ein zurueckgezogenes Kind schrumpft den Auftrag
-// nicht wieder. Liefert die Zahl der geaenderten Bloecke.
-function syncParentBlockSpans(blocks) {
-  const refOf = b => String((b && b.jiraRef) || '').trim().toUpperCase();
-  const byPerson = new Map();
-  for (const b of blocks || []) {
-    // Ohne Ticket keine Hierarchie, ohne Datum keine Spanne: geparkte Bloecke
-    // bleiben geparkt, auch als Kopf.
-    if (!b.personId || !refOf(b) || isBlockParked(b)) continue;
-    if (!byPerson.has(b.personId)) byPerson.set(b.personId, []);
-    byPerson.get(b.personId).push(b);
-  }
-
-  let changed = 0;
-  for (const personBlocks of byPerson.values()) {
-    const byRef = new Map();
-    for (const b of personBlocks) if (!byRef.has(refOf(b))) byRef.set(refOf(b), b);
-
-    // Identisch zu groupPersonBlocks: bis zum obersten Ticket hoch, auf das
-    // diese Person auch einen Block hat. Der Zaehler kappt Ringe.
-    const rootRefOf = ref => {
-      let cur = ref;
-      for (let i = 0; i < 10; i++) {
-        const parentRef = jiraParentKeyForRef(cur);
-        if (!parentRef || parentRef === cur || !byRef.has(parentRef)) return cur;
-        cur = parentRef;
-      }
-      return cur;
-    };
-
-    const buckets = new Map();
-    for (const b of personBlocks) {
-      const ref = refOf(b);
-      if (byRef.get(ref) !== b) continue; // zweiter Block auf dasselbe Ticket
-      const root = rootRefOf(ref);
-      if (!buckets.has(root)) buckets.set(root, []);
-      buckets.get(root).push(b);
-    }
-
-    for (const [root, members] of buckets) {
-      if (members.length < 2) continue;
-      const head = members.find(b => refOf(b) === root);
-      if (!head) continue;
-      const start = members.reduce((min, b) => (b.start < min ? b.start : min), head.start);
-      const end = members.reduce((max, b) => (b.end > max ? b.end : max), head.end);
-      if (head.start === start && head.end === end) continue;
-      head.start = start;
-      head.end = end;
-      changed++;
-    }
-  }
-  return changed;
+// Derive parent spans from active children; never write inferred dates back.
+function workingPlanBlocks() {
+  const active = (data.blocks || []).filter(b => b.typ === 'abwesenheit'
+    || (!b.done && !isPlanungHandoverBlock(b) && !jiraBlockResolved(b)));
+  const memo = new Map();
+  const derive = (block, seen = new Set()) => {
+    if (memo.has(block.id)) return memo.get(block.id);
+    if (seen.has(block.id) || isBlockParked(block)) return block;
+    const next = new Set(seen).add(block.id);
+    const children = block.jiraRef ? active.filter(child => child.id !== block.id
+      && child.personId === block.personId && !isBlockParked(child)
+      && jiraParentKeyForRef(child.jiraRef) === block.jiraRef.trim().toUpperCase()) : [];
+    const spans = children.map(child => derive(child, next));
+    const result = spans.length ? { ...block,
+      start: spans.reduce((value, child) => child.start < value ? child.start : value, spans[0].start),
+      end: spans.reduce((value, child) => child.end > value ? child.end : value, spans[0].end),
+    } : block;
+    memo.set(block.id, result);
+    return result;
+  };
+  return active.map(block => derive(block));
 }
 
 // Haengt an dieser Einheit nur noch Wartendes? Dieselbe Rechnung wie die
@@ -449,7 +413,7 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
     }).join('');
 
     // Blocks
-    const personBlocks = data.blocks
+    const personBlocks = (hideHandover ? workingPlanBlocks() : data.blocks)
       .filter(b => b.personId === pid
         && !isBlockParked(b)
         && b.end >= startDate
@@ -643,6 +607,8 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
         </div>`;
       }
 
+      const waitingChildren = jiraWaitingTickets(pid).filter(ticket => jiraParentKeyForRef(ticket.key) === String(b.jiraRef || '').toUpperCase()).length;
+      const waitingBadge = waitingChildren ? `<span class="tl-block-group-count" title="Untertickets in der Warteschlange">${waitingChildren} warten</span>` : '';
       const collapseBadge = unit.groupOpen
         ? `<span class="tl-block-group-count is-open" title="Gruppe zuklappen"
             onclick="event.stopPropagation();toggleBlockGroup('${pid}','${esc(unit.groupOpen.ref)}')"
@@ -653,7 +619,7 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
         title="${esc(title)}"
         onclick="event.stopPropagation();if(_suppressNextBlockClick)return;if((event.metaKey||event.ctrlKey)&&openBlockJira('${b.id}'))return;openBlockForm('${b.id}')"
         onpointerdown="onBlockPointerDown(event,'${b.id}')">
-        ${b.done ? '<span class="tl-block-check">&#x2713;</span>' : ''}${handover ? `<span class="tl-block-handover">${esc(handover.toLowerCase())}</span>` : ''}<span class="tl-block-label">${esc(b.label || b.typ)}</span>${collapseBadge}
+        ${b.done ? '<span class="tl-block-check">&#x2713;</span>' : ''}${handover ? `<span class="tl-block-handover">${esc(handover.toLowerCase())}</span>` : ''}<span class="tl-block-label">${esc(b.label || b.typ)}</span>${waitingBadge}${collapseBadge}
       </div>`;
     }).join('');
 
@@ -677,12 +643,12 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
     // Capacity label (inline in name column)
     let capInline;
     if (isSupport) {
-      capInline = `<span class="tl-person-cap"><span class="tl-cap-support">SUP</span></span>`;
+      capInline = `<span class="tl-person-cap">Support-Rotation</span>`;
     } else if (!showCapacity) {
       capInline = '';
     } else {
       const freiCls = cap.frei < 0 ? 'tl-cap-neg' : '';
-      capInline = `<span class="tl-person-cap" title="${cap.frei} frei von ${cap.werktage} WT"><span class="tl-cap-days ${freiCls}">${cap.frei}/${cap.werktage}</span><span>Frei</span></span>`;
+      capInline = `<span class="tl-person-cap" title="${cap.frei} unverplante Werktage; keine Aussage über tatsächliche Auslastung"><span class="tl-cap-days ${freiCls}">${cap.frei}/${cap.werktage}</span><span>unverplant</span></span>`;
     }
 
     const labelClick = `navigate('team:detail',{personId:'${pid}'})`;
@@ -705,6 +671,7 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
             </div>
           </div>
           ${capInline}
+          ${renderPersonWaitingBadge(pid)}
         </div>
         <div class="tl-track-row" style="height:${trackHeight}px">
           <div class="tl-track"
@@ -759,7 +726,8 @@ function planungExtraPastWeeks() {
 }
 
 function planungExtraFutureWeeks() {
-  return Math.max(0, parseInt(viewState.planungExtraFutureWeeks || 0, 10) || 0);
+  if (viewState.planungExtraFutureWeeks != null) return Math.max(0, Number(viewState.planungExtraFutureWeeks) || 0);
+  try { return [1, 2, 4].includes(Number(localStorage.getItem('tktool-planung-weeks'))) ? Number(localStorage.getItem('tktool-planung-weeks')) - 1 : 0; } catch { return 0; }
 }
 
 function planungShowWeekends() {
@@ -791,6 +759,7 @@ function navigateToPlanungBlock(blockId) {
   navigate('planung', {
     planungWeekOffset: weekOffset,
     planungHighlightBlockId: blockId,
+    planungHideHandover: false,
   });
   setTimeout(() => highlightPlanungBlock(blockId), 0);
 }
@@ -834,10 +803,9 @@ function renderPlanung() {
   const rawQuery = viewState.planungQuery || '';
   const blockQuery = rawQuery.trim().toLocaleLowerCase('de-AT');
   const personFilter = planungPersonFilter();
-  const hideHandover = !!viewState.planungHideHandover;
-  const queriedBlocks = blockQuery ? data.blocks.filter(block => blockMatchesPlanungQuery(block, blockQuery)) : data.blocks;
-  const filterScopeBlocks = personFilter ? queriedBlocks.filter(block => block.personId === personFilter) : queriedBlocks;
-  const handoverFilterCount = filterScopeBlocks.filter(isPlanungHandoverBlock).length;
+  const hideHandover = planungHideHandover();
+  const sourceBlocks = hideHandover ? workingPlanBlocks() : data.blocks;
+  const queriedBlocks = blockQuery ? sourceBlocks.filter(block => blockMatchesPlanungQuery(block, blockQuery)) : sourceBlocks;
   const queryBlocks = queriedBlocks.filter(block => !hideHandover || !isPlanungHandoverBlock(block));
   // Personenfilter zieht durch alle Panels — sonst zeigt die Zeile eine Person,
   // die Liste darunter aber weiter das ganze Team.
@@ -885,46 +853,7 @@ function renderPlanung() {
   const overdueChip = overdue.length ? `
     <button class="filter-btn planung-overdue-btn ${viewState.planungShowOverdue ? 'active' : ''}"
       onclick="togglePlanungOverdue()"
-      title="Abgelaufene Blöcke, die noch nicht erledigt sind">${overdue.length} offen</button>
-  ` : '';
-  // Bottleneck-Blick: alles, was gerade bei QA/Review haengt — quer ueber das
-  // Team, weil sich genau da der Stau zeigt, den die Einzelansicht verbirgt.
-  // Nur wenn explizit auf eine Person gefiltert wird, zieht das auch hier durch.
-  const waiting = jiraHandoverBlocks(personFilter || null).sort((a, b) => (a.end || '').localeCompare(b.end || ''));
-  const waitingByStatus = {};
-  for (const b of waiting) {
-    const st = (jiraStatusForBlock(b) || {}).status || '';
-    (waitingByStatus[st] = waitingByStatus[st] || []).push(b);
-  }
-  const handoverChip = waiting.length ? `
-    <button class="filter-btn planung-handover-btn ${viewState.planungShowHandover ? 'active' : ''}"
-      onclick="togglePlanungHandover()"
-      title="${esc(['Blöcke, deren Ticket nicht mehr beim Entwickler liegt:',
-        ...Object.keys(waitingByStatus).sort().map(st => `${st.toLowerCase()}: ${waitingByStatus[st].length}`),
-        `Stand: ${jiraSyncAgeLabel() || 'unbekannt'}`].join('\n'))}">${waiting.length} wartet</button>
-  ` : '';
-  const handoverFilterChip = handoverFilterCount ? `
-    <button class="filter-btn planung-handover-btn ${hideHandover ? 'active' : ''}"
-      onclick="togglePlanungHideHandover()"
-      aria-pressed="${hideHandover ? 'true' : 'false'}"
-      title="Tickets in den unter Status — wartet woanders gewählten Status ${hideHandover ? 'wieder einblenden' : 'ausblenden'}">
-      ${hideHandover ? 'wartende ausgeblendet' : 'wartende ausblenden'} (${handoverFilterCount})
-    </button>
-  ` : '';
-  const handoverPanel = (waiting.length && viewState.planungShowHandover) ? `
-    <div class="planung-overdue-panel">
-      ${waiting.map(b => {
-        const st = (jiraStatusForBlock(b) || {}).status || '';
-        return `
-        <div class="planung-overdue-row">
-          <span class="planung-overdue-info" onclick="openBlockForm('${b.id}')" title="Block öffnen">
-            <span class="planung-overdue-person">${esc(personName(b.personId))}</span>
-            <span class="planung-overdue-label">${esc(b.label || b.typ)}</span>
-            <span class="jira-status-chip jira-status-handover">${esc(st.toLowerCase())}</span>
-          </span>
-        </div>`;
-      }).join('')}
-    </div>
+      title="Abgelaufene Blöcke, die noch nicht erledigt sind">${overdue.length} neu einplanen</button>
   ` : '';
   const overduePanel = (overdue.length && viewState.planungShowOverdue) ? `
     <div class="planung-overdue-panel">
@@ -975,53 +904,54 @@ function renderPlanung() {
   ` : '';
 
   return `
-    <div class="section-header">
-      <div class="overview-toolbar">
-        <div class="overview-toolbar-main planung-toolbar-main">
-          <div class="month-selector">
-            <button onclick="changePlanungWeek(-1)">&#8592;</button>
-            <button class="btn btn-sm btn-secondary" onclick="extendPlanungPastWeek()" title="Eine Vorwoche mehr anzeigen">+</button>
-            <span class="month-label">${formatDate(start)} – ${formatDate(end)}</span>
-            <button class="btn btn-sm btn-secondary" onclick="extendPlanungFutureWeek()" title="Eine Folgewoche mehr anzeigen">+</button>
-            <button onclick="changePlanungWeek(1)">&#8594;</button>
-            ${(planungWeekOffset() || planungExtraPastWeeks() || planungExtraFutureWeeks()) ? `<button class="btn btn-sm btn-secondary" onclick="resetPlanungWindow()" style="margin-left:8px">Reset</button>` : ''}
-          </div>
-          <div class="planung-sort">
-            <button class="filter-btn ${sort === 'frei' ? 'active' : ''}" onclick="setPlanungSort('frei')">frei</button>
-            <button class="filter-btn ${sort === 'name' ? 'active' : ''}" onclick="setPlanungSort('name')">name</button>
-            <button class="filter-btn ${planungShowWeekends() ? 'active' : ''}" onclick="togglePlanungWeekends()" title="Samstag/Sonntag ein-/ausblenden">sa/so</button>
-            ${overdueChip}
-            ${handoverChip}
-            ${handoverFilterChip}
-            <select class="filter-btn planung-person-filter ${personFilter ? 'active' : ''}"
-              title="Nur einen Mitarbeiter anzeigen"
-              onchange="setPlanungPerson(this.value)">
-              <option value=""${personFilter ? '' : ' selected'}>alle mitarbeiter</option>
-              ${filterablePersons.map(p => `<option value="${esc(p.id)}"${personFilter === p.id ? ' selected' : ''}>${esc(p.name)}</option>`).join('')}
-            </select>
-          </div>
-          <div class="view-search planung-search">
-            <input id="planungSearchInput" type="search"
-              placeholder="grep: mitarbeiter, label, jira-ref, notiz..."
-              value="${esc(rawQuery)}" oninput="setPlanungQuery(this.value)">
-          </div>
-          <div class="overview-actions planung-actions">
-            <button class="jira-sync-stamp jira-sync-stamp-toolbar" type="button" onclick="openJiraImport()" title="Jira-Abfrage öffnen und Antwort einspielen">jira ${jiraSyncAgeLabel() || 'nie'} &#8635;</button>
-            <button class="btn btn-primary btn-sm" onclick="openBlockForm(null)">+ Block</button>
+    <div class="section-header planner-toolbar">
+      <div class="planner-toolbar-row planner-toolbar-primary">
+        <div class="month-selector">
+          <button onclick="changePlanungWeek(-1)" aria-label="Vorige Woche">←</button>
+          <button class="btn btn-secondary btn-sm" onclick="resetPlanungWindow()">Heute</button>
+          <button onclick="changePlanungWeek(1)" aria-label="Nächste Woche">→</button>
+          <span class="month-label">${formatDate(start)} – ${formatDate(end)}</span>
+        </div>
+        <div class="filters" aria-label="Zeitraum">
+          ${[1,2,4].map(n => `<button class="filter-btn ${planungExtraFutureWeeks() === n-1 ? 'active' : ''}" onclick="setPlanungWeeks(${n})" aria-pressed="${planungExtraFutureWeeks() === n-1}">${n} ${n === 1 ? 'Woche' : 'Wochen'}</button>`).join('')}
+        </div>
+        <div class="planner-primary-actions">
+          <button class="jira-sync-stamp" onclick="openJiraImport()">Jira ${jiraSyncAgeLabel() || 'einspielen'} ↻</button>
+          <button class="btn btn-primary btn-sm" onclick="openBlockForm(null)">+ Block</button>
+          <details class="overview-actions-menu"><summary>Mehr</summary><div class="overview-actions-menu-panel">
             <button class="btn btn-secondary btn-sm" onclick="openMarkerForm(null)">+ Marker</button>
-          </div>
+            <button class="btn btn-secondary btn-sm" onclick="openSupportEditor()">Support-Rotation</button>
+            <button class="btn btn-secondary btn-sm" onclick="togglePlanungWeekends()">Wochenende ${planungShowWeekends() ? 'ausblenden' : 'anzeigen'}</button>
+          </div></details>
         </div>
       </div>
+      <div class="planner-toolbar-row">
+        <div class="filters" aria-label="Darstellung">
+          <button class="filter-btn ${hideHandover ? 'active' : ''}" aria-pressed="${hideHandover}" onclick="if(!planungHideHandover())togglePlanungHideHandover()">Arbeitsplan</button>
+          <button class="filter-btn ${!hideHandover ? 'active' : ''}" aria-pressed="${!hideHandover}" onclick="if(planungHideHandover())togglePlanungHideHandover()">Alles</button>
+        </div>
+        <select class="filter-btn" aria-label="Person" onchange="setPlanungPerson(this.value)">
+          <option value="">Alle Teammitglieder</option>
+          ${filterablePersons.map(p => `<option value="${esc(p.id)}" ${personFilter === p.id ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}
+        </select>
+        <select class="filter-btn" aria-label="Sortierung" onchange="setPlanungSort(this.value)">
+          <option value="name" ${sort === 'name' ? 'selected' : ''}>Nach Name</option>
+          <option value="frei" ${sort === 'frei' ? 'selected' : ''}>Nach unverplanten Tagen</option>
+        </select>
+        <div class="view-search planung-search"><input id="planungSearchInput" type="search" aria-label="Planung durchsuchen"
+          placeholder="Person, Thema oder Jira-Key suchen…" value="${esc(rawQuery)}" oninput="setPlanungQuery(this.value)"></div>
+        ${overdueChip}
+        ${renderJiraChangesChip()}
+      </div>
     </div>
-
     ${overduePanel}
-    ${handoverPanel}
     ${parkedRow}
     ${searchResults}
 
-    ${personIds.length ? renderTimeline({ personIds, startDate: start, endDate: end, options: { idPrefix: 'planung', supportAnchorMonth: month, insertLane: true, showCapacity: sort === 'frei', showWeekends: planungShowWeekends(), blockQuery, hideHandover } })
+    ${personIds.length ? renderTimeline({ personIds, startDate: start, endDate: end, options: { idPrefix: 'planung', supportAnchorMonth: month, insertLane: true, showCapacity: true, showWeekends: planungShowWeekends(), blockQuery, hideHandover } })
       : `<div class="empty-state"><div class="empty-state-icon">&#128269;</div><div class="empty-state-text">${blockQuery ? 'Keine passenden Blöcke' : 'Keine Teammitglieder'}</div></div>`}
 
+    ${renderWaitingQueue(personFilter, blockQuery)}
     <div class="tl-legend">
       ${BLOCK_TYPES.map(t => `<span class="tl-legend-item"><span class="tl-block-swatch tl-block-${t.val}"></span>${t.label}</span>`).join('')}
       <span class="tl-legend-item"><span class="tl-legend-today"></span>Heute</span>
@@ -1086,7 +1016,6 @@ function changePlanungWeek(dir) {
 function resetPlanungWindow() {
   viewState.planungWeekOffset = 0;
   viewState.planungExtraPastWeeks = 0;
-  viewState.planungExtraFutureWeeks = 0;
   render();
 }
 
@@ -1100,6 +1029,7 @@ function planungPersonFilter() {
 
 function setPlanungPerson(id) {
   viewState.planungPerson = id || '';
+  delete viewState.planungQueuePerson;
   render();
 }
 
@@ -1118,15 +1048,19 @@ function togglePlanungHandover() {
   render();
 }
 
+function planungHideHandover() {
+  if (typeof viewState.planungHideHandover === 'boolean') return viewState.planungHideHandover;
+  try { return localStorage.getItem('tktool-planung-work-only') !== '0'; } catch { return true; }
+}
 function togglePlanungHideHandover() {
-  viewState.planungHideHandover = !viewState.planungHideHandover;
-  if (viewState.planungHideHandover) viewState.planungShowHandover = false;
+  viewState.planungHideHandover = !planungHideHandover();
+  try { localStorage.setItem('tktool-planung-work-only', viewState.planungHideHandover ? '1' : '0'); } catch {}
   render();
 }
 
 function extendBlockToThisWeek(id) {
   const b = data.blocks.find(x => x.id === id);
-  if (!b || isBlockParked(b)) return;
+  if (!b || isBlockParked(b) || isPlanungHandoverBlock(b)) return;
   const friday = toISO(addDays(startOfWeek(parseISO(todayStr())), 4));
   b.end = friday > todayStr() ? friday : todayStr();
   saveData(data);
@@ -1332,6 +1266,7 @@ function renderMeetingTeamStatus(m) {
 // BLOCK CRUD
 // ============================================================
 function openBlockForm(blockId, prefillPersonId, prefillStart, prefillEnd) {
+  document.getElementById('overlay').classList.toggle('overlay-drawer', currentView === 'planung');
   const b = blockId ? data.blocks.find(x => x.id === blockId) : null;
   const personOpts = data.persons.filter(p => p.type !== 'kontakt')
     .map(p => `<option value="${p.id}" ${((b && b.personId === p.id) || prefillPersonId === p.id) ? 'selected' : ''}>${esc(p.name)}</option>`).join('');
@@ -1555,8 +1490,9 @@ function refreshJiraDriftMenu(personId) {
 
 // Wie "+1 woche" in der Ueberfaellig-Liste, nur bleibt das Drift-Menue offen.
 function extendJiraDriftBlock(blockId) {
+  if (isPlanungHandoverBlock(data.blocks.find(b => b.id === blockId))) return;
   const b = data.blocks.find(x => x.id === blockId);
-  if (!b || isBlockParked(b)) return;
+  if (!b || isBlockParked(b) || isPlanungHandoverBlock(b)) return;
   const friday = toISO(addDays(startOfWeek(parseISO(todayStr())), 4));
   b.end = friday > todayStr() ? friday : todayStr();
   toast(`${b.jiraRef || 'Block'} bis ${formatDate(b.end)} verlängert`);
@@ -1937,4 +1873,122 @@ function exportPersonBlocks(personId, from, to, matchingBlocks) {
     md += '\n';
   }
   return md;
+}
+
+// Planner preferences and the calendar-independent waiting queue.
+function setPlanungWeeks(weeks) {
+  if (![1, 2, 4].includes(weeks)) return;
+  viewState.planungExtraPastWeeks = 0;
+  viewState.planungExtraFutureWeeks = weeks - 1;
+  try { localStorage.setItem('tktool-planung-weeks', String(weeks)); } catch {}
+  render();
+}
+
+function waitingStatusCounts(tickets) {
+  const counts = new Map();
+  for (const ticket of tickets) counts.set(ticket.status, (counts.get(ticket.status) || 0) + 1);
+  return [...counts].map(([status, count]) => `${status} ${count}`).join(' · ');
+}
+
+function renderPersonWaitingBadge(personId) {
+  const tickets = jiraWaitingTickets(personId);
+  if (!tickets.length) return '';
+  return `<button class="waiting-person-badge" onclick="event.stopPropagation();openWaitingQueue('${personId}')"
+    title="Wartende Tickets unabhängig von der Woche öffnen">${esc(waitingStatusCounts(tickets))}</button>`;
+}
+
+function openWaitingQueue(personId = '') {
+  if (currentView !== 'planung') navigate('planung');
+  viewState.planungQueuePerson = personId;
+  viewState.planungShowHandover = true;
+  render();
+  document.getElementById('waiting-queue')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+function renderWaitingQueue(personFilter = '', query = '') {
+  const selected = viewState.planungQueuePerson || personFilter;
+  const all = jiraWaitingTickets(personFilter);
+  const tickets = jiraWaitingTickets(selected).filter(t => (!personFilter || t.personId === personFilter)
+    && (!query || includesQuery([t.key, t.summary, t.status, personName(t.personId)].join(' '), query)));
+  const groups = new Map();
+  const groupByPerson = viewState.planungQueueGroup === 'person';
+  for (const ticket of tickets) {
+    const group = groupByPerson ? personName(ticket.personId) : ticket.status;
+    if (!groups.has(group)) groups.set(group, []);
+    groups.get(group).push(ticket);
+  }
+  return `<details class="waiting-queue card" id="waiting-queue" ${viewState.planungShowHandover ? 'open' : ''}
+      ontoggle="viewState.planungShowHandover=this.open">
+    <summary><strong>Warteschlange <span class="waiting-count">${tickets.length === all.length ? all.length : `${tickets.length} von ${all.length}`} Tickets</span></strong>
+      <span>${esc(waitingStatusCounts(all)) || (jiraSyncData ? 'Keine wartenden Tickets im Jira-Stand' : 'Noch kein Jira-Stand')}</span>
+      <small>Unabhängig vom Zeitraum · ${esc(jiraSyncAgeLabel() || 'kein Import')}</small></summary>
+    <div class="queue-controls">
+      <span>Gruppieren nach</span>
+      <select class="filter-btn" aria-label="Warteschlange gruppieren" onchange="viewState.planungQueueGroup=this.value;render()">
+        <option value="status" ${!groupByPerson ? 'selected' : ''}>Status</option>
+        <option value="person" ${groupByPerson ? 'selected' : ''}>Person</option>
+      </select>
+      ${viewState.planungQueuePerson ? `<button class="filter-btn" onclick="viewState.planungQueuePerson='';render()">${esc(personName(viewState.planungQueuePerson))} ×</button>` : ''}
+      <span class="queue-help">Kein Wochenwechsel und kein Planungsblock nötig.</span>
+    </div>
+    ${jiraSyncData?.truncated ? '<p class="queue-notice">Jira-Antwort unvollständig — die Anzahl ist möglicherweise zu niedrig.</p>' : ''}
+    ${[...groups].map(([group, rows]) => `<section class="queue-group"><h3>${esc(group)} <span>${rows.length}</span></h3>
+      ${rows.map(t => `<div class="queue-ticket">
+        ${jiraKeyLink(t.key)}<span class="queue-ticket-title">${esc(t.summary || t.key)}</span>
+        <span>${esc(groupByPerson ? t.status : personName(t.personId))}</span>
+        ${t.blockId ? `<button class="btn btn-secondary btn-sm" onclick="openBlockForm('${t.blockId}')">Details</button>` : ''}
+      </div>`).join('')}</section>`).join('') || '<p class="queue-notice">Keine passenden wartenden Tickets.</p>'}
+  </details>`;
+}
+
+const JIRA_CHANGE_LABELS = { waiting: 'In Wartestatus', returned: 'Wieder beim Team', done: 'Erledigt' };
+
+function jiraChangeRows() {
+  const changes = jiraSyncData?.changes || [];
+  return changes.map(change => `<div class="queue-ticket">${jiraKeyLink(change.key)}
+    <span class="queue-ticket-title">${esc(change.summary)}</span><strong>${JIRA_CHANGE_LABELS[change.kind] || 'Statuswechsel'}</strong>
+    <span>${esc(change.from)} → ${esc(change.to)}</span></div>`).join('');
+}
+
+function renderJiraChanges() {
+  const changes = jiraSyncData?.changes || [];
+  if (!changes.length) return '';
+  return `<details class="jira-changes"><summary>Seit letztem Jira-Import · ${changes.length} Statuswechsel</summary>
+    ${jiraChangeRows()}</details>`;
+}
+
+function renderJiraChangesChip() {
+  const changes = jiraSyncData?.changes || [];
+  if (!changes.length) return '';
+  return `<button class="filter-btn planung-jira-changes-btn" onclick="openJiraChangesDrawer()"
+    title="Statuswechsel seit dem letzten Jira-Import">${changes.length} statuswechsel</button>`;
+}
+
+function openJiraChangesDrawer() {
+  const changes = jiraSyncData?.changes || [];
+  if (!changes.length) return;
+  document.getElementById('overlay').classList.add('overlay-drawer');
+  document.getElementById('modal').innerHTML = `
+    <div class="modal-header">
+      <span class="modal-title">Seit letztem Jira-Import</span>
+      <button class="modal-close" onclick="closeOverlay()" aria-label="Schließen">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <p class="queue-help">${changes.length} Statuswechsel · ${esc(jiraSyncAgeLabel() || 'kein Import')}</p>
+      ${jiraChangeRows()}
+    </div>`;
+  openOverlay();
+}
+
+function openSupportEditor() {
+  document.getElementById('modal').innerHTML = `<div class="modal-header"><span class="modal-title">Support-Rotation</span>
+    <button class="modal-close" onclick="closeOverlay()" aria-label="Schließen">×</button></div>
+    <div class="modal-body">${data.persons.filter(p => p.type !== 'kontakt').sort(comparePersonsByName).map(p => `
+      <section class="support-editor"><strong>${esc(p.name)}</strong>
+        <div class="support-months-list">${(p.supportMonate || []).map(month => `<span class="support-month-chip">${formatMonthName(month)}
+          <button onclick="removeSupportMonth('${p.id}','${month}');openSupportEditor()" aria-label="${esc(formatMonthName(month))} entfernen">×</button></span>`).join('')}</div>
+        <div class="support-add"><input type="month" class="form-input" id="supportMonthInput-${p.id}" value="${planungSupportMonth()}" aria-label="Supportmonat für ${esc(p.name)}">
+          <button class="btn btn-secondary btn-sm" onclick="addSupportMonthFromInput('${p.id}');openSupportEditor()">+ Monat</button></div>
+      </section>`).join('')}</div>`;
+  openOverlay();
 }

@@ -1,7 +1,7 @@
 // ============================================================
 // DATA LAYER — File System Access API
 // ============================================================
-const APP_VERSION = '1.0.52';
+const APP_VERSION = '1.0.53';
 const DATA_FILENAME = 'tktool-data.json';
 const JIRA_SYNC_FILENAME = 'jira-tickets.json';
 const JIRA_QUERY_MAX_RESULTS = 100;
@@ -605,7 +605,7 @@ function jiraSnapshotFromResponse(parsed) {
     .map(p => p.jiraAccountId.trim());
   const today = todayStr();
   const refKeys = new Set((data.blocks || [])
-    .filter(b => !b.done && b.jiraRef && (b.end || b.start || '') >= today)
+    .filter(b => !b.done && b.jiraRef)
     .map(b => b.jiraRef.trim().toUpperCase()));
 
   // Vorbelegen, damit ein Teammitglied ohne Treffer als "keine Tickets"
@@ -681,6 +681,7 @@ async function importJiraJson(text) {
   }
   const snapshot = jiraSnapshotFromResponse(parsed);
   const diff = jiraSnapshotDiff(jiraSyncData, snapshot);
+  snapshot.changes = jiraSnapshotChanges(jiraSyncData, snapshot);
   await writeJiraSync(snapshot);
   // Nur fuer den Toast, absichtlich erst nach dem Schreiben — der Diff
   // gehoert nicht in jira-tickets.json.
@@ -711,6 +712,31 @@ function jiraSnapshotDiff(prev, next) {
   }
   for (const key of before.keys()) if (!after.has(key)) diff.gone++;
   return diff;
+}
+
+// Persist only the latest import changes, not a second manually maintained log.
+function jiraSnapshotChanges(prev, next) {
+  if (!prev) return [];
+  const flatten = snap => {
+    const map = new Map();
+    for (const [key, value] of Object.entries(snap.refs || {})) map.set(key.toUpperCase(), { key, ...value });
+    for (const list of Object.values(snap.assignees || {})) {
+      for (const ticket of list) map.set(ticket.key.toUpperCase(), ticket);
+    }
+    return map;
+  };
+  const before = flatten(prev), after = flatten(next), changes = [];
+  for (const [key, ticket] of after) {
+    const old = before.get(key);
+    if (!old || old.status === ticket.status) continue;
+    const kind = ticket.statusCategory === 'done' ? 'done'
+      : isJiraHandoverStatus(ticket.status) ? 'waiting'
+      : isJiraHandoverStatus(old.status) ? 'returned' : '';
+    if (kind) changes.push({ key, summary: ticket.summary || old.summary || key,
+      from: old.status, to: ticket.status, kind });
+  }
+  // Missing tickets are not evidence of completion (pagination/reassignment).
+  return changes;
 }
 
 // Liest jira-tickets.json neu ein (z.B. nachdem ein anderes Geraet den
@@ -768,12 +794,6 @@ async function loadData() {
     await cacheData(store);
   }
   await loadJiraSync();
-  // Erst mit dem Jira-Snapshot ist die Hierarchie bekannt. Was sich daraus
-  // ergibt, wird gleich festgeschrieben — sonst haengt es bis zur naechsten
-  // beliebigen Aenderung nur in der Anzeige.
-  if (typeof syncParentBlockSpans === 'function' && syncParentBlockSpans(data.blocks)) {
-    saveData(data);
-  }
   return data;
 }
 
@@ -1147,9 +1167,9 @@ const CLEANUP_GROUPS = [
     id: 'blocks',
     key: 'blocks',
     label: 'planungsblöcke',
-    hint: 'nur abgelaufene',
+    hint: 'erledigte Blöcke und vergangene Abwesenheiten',
     defaultMonths: 3,
-    match: r => !!(r.start && r.end),
+    match: r => !!(r.start && r.end && (r.done || r.typ === 'abwesenheit')),
   },
   {
     id: 'markers',
@@ -1299,9 +1319,6 @@ async function runCleanup(monthsByGroup) {
 }
 
 function saveData(d) {
-  // Kopfbloecke tragen die Spanne ihrer Kinder. Haengt hier statt an den
-  // einzelnen Aufrufern, damit die Invariante keine Aenderung verpasst.
-  if (typeof syncParentBlockSpans === 'function') syncParentBlockSpans(d && d.blocks);
   const store = prepareLocalChanges(d, localSnapshot, deletedRecords);
   adoptStore(store);
   const snapshot = cloneData(store);

@@ -46,6 +46,20 @@ function parsePrepBullets(prep) {
   return bullets;
 }
 
+// Im Anlege-Formular wird Vorbereitung als Freitext getippt. Damit daraus
+// dieselbe Checkliste wird, die das Meeting selbst rendert, zaehlt hier jede
+// Zeile als eigener Punkt — sonst klebt parsePrepBullets alle Folgezeilen als
+// Fortsetzung an den ersten Punkt. Bereits getippte "- " / "- [x] " bleiben
+// erhalten.
+function prepFromFormText(text) {
+  const bullets = String(text || '')
+    .split('\n')
+    .map(line => line.trim())
+    .filter(Boolean)
+    .flatMap(line => parsePrepBullets(line));
+  return bullets.length ? serializePrepBullets(bullets) : '';
+}
+
 function serializePrepBullets(bullets) {
   return bullets.map(b => {
     const prefix = b.done ? '- [x] ' : '- ';
@@ -506,11 +520,11 @@ function renderOneOnOneCarryover(m) {
   const total = carryoverCount(carryover);
   const empty = '<div class="oneonone-carryover-empty">Nichts offen</div>';
   return `
-    <div class="meeting-detail-section meeting-detail-section-emphasis oneonone-carryover">
-      <div class="oneonone-carryover-head">
+    <details class="meeting-detail-section meeting-detail-section-emphasis oneonone-carryover" open>
+      <summary class="oneonone-carryover-head">
         <h3>Übernahme</h3>
         <span class="oneonone-carryover-count">${total} Signale</span>
-      </div>
+      </summary>
       <div class="oneonone-carryover-grid">
         <div class="oneonone-carryover-column oneonone-carryover-column-followups">
           <div class="oneonone-carryover-title">Offene Follow-ups</div>
@@ -531,7 +545,7 @@ function renderOneOnOneCarryover(m) {
             : '<div class="oneonone-carryover-empty">Noch keine Signale</div>'}
         </div>
       </div>
-    </div>
+    </details>
   `;
 }
 

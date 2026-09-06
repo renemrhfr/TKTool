@@ -273,7 +273,8 @@ function openCapture(prefill = {}) {
         <div id="meetingCarryoverPreview">${renderMeetingFormCarryoverPreview(captureMeetingType === 'oneOnOne', selectedPersonId || '', meetingDate)}</div>
         <div class="form-group">
           <label class="form-label">Vorbereitung</label>
-          <textarea class="form-textarea" id="meetingPrep" placeholder="Was möchte ich ansprechen..." rows="3">${esc(prefill.prep || '')}</textarea>
+          <textarea class="form-textarea" id="meetingPrep" placeholder="Was möchte ich ansprechen..." rows="8">${esc(prefill.prep || '')}</textarea>
+          <div class="form-hint">eine zeile = ein punkt, wird zur checkliste</div>
         </div>
       </div>
       <div class="form-row">
@@ -393,7 +394,7 @@ function saveCaptureMeeting() {
     date: document.getElementById('meetingDate')?.value || '',
     personId: isOneOnOne ? personId : null,
     participants: [],
-    prep: document.getElementById('meetingPrep')?.value.trim() || '',
+    prep: prepFromFormText(document.getElementById('meetingPrep')?.value),
     notes: '',
   };
 
@@ -735,7 +736,8 @@ function openMeetingForm(type, personId) {
       <div id="meetingCarryoverPreview">${renderMeetingFormCarryoverPreview(isOneOnOne, personId || '', initialDate)}</div>
       <div class="form-group">
         <label class="form-label">Vorbereitung</label>
-        <textarea class="form-textarea" id="meetingPrep" placeholder="Was möchte ich ansprechen..."></textarea>
+        <textarea class="form-textarea" id="meetingPrep" placeholder="Was möchte ich ansprechen..." rows="8"></textarea>
+        <div class="form-hint">eine zeile = ein punkt, wird zur checkliste</div>
       </div>
       <button class="btn btn-primary" style="width:100%" onclick="saveMeeting('${type}')">Erstellen &amp; öffnen</button>
     </div>
@@ -770,7 +772,12 @@ function renderMeetingFormStatusPreview(dateISO, isOneOnOne, personId, teamMeeti
     });
   }
   if (!teamMeeting) return '';
-  return renderMeetingTeamStatusForDate(dateISO, { inForm: true });
+  // Die ganze Timeline gehoert ins Meeting, nicht ins Anlege-Formular — hier
+  // reicht der Hinweis, dass sie beim Oeffnen dabei ist.
+  const weekStart = startOfWeek(parseISO(dateISO));
+  return `<div class="meeting-planner-note">planner
+    <span>Team-Status KW ${formatDateShort(toISO(weekStart))}–${formatDateShort(toISO(addDays(weekStart, 4)))} ist im Meeting dabei</span>
+  </div>`;
 }
 
 function renderMeetingFormCarryoverPreview(isOneOnOne, personId, dateISO) {
@@ -811,7 +818,7 @@ function saveMeeting(type) {
     date: document.getElementById('meetingDate').value,
     personId: isOneOnOne ? personId : null,
     participants: [],
-    prep: document.getElementById('meetingPrep').value.trim(),
+    prep: prepFromFormText(document.getElementById('meetingPrep').value),
     notes: '',
   };
 
@@ -1609,7 +1616,7 @@ function openOverlay() {
 }
 
 function closeOverlay() {
-  document.getElementById('overlay').classList.remove('open');
+  document.getElementById('overlay').classList.remove('open', 'overlay-drawer');
   document.getElementById('modal').className = 'modal';
 }
 
