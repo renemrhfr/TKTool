@@ -45,6 +45,7 @@ function navigate(view, state = {}) {
         ...state,
       }
     : state;
+  resetScrollOnNextRender = true;
   render();
   document.querySelectorAll('#nav button').forEach(b => {
     b.classList.toggle('active', b.dataset.view === (view.startsWith('kontakte') ? 'team' : view.split(':')[0]));
@@ -58,8 +59,48 @@ document.getElementById('nav').addEventListener('click', e => {
 // ============================================================
 // RENDER
 // ============================================================
+
+// render() ersetzt das komplette #app-innerHTML. Ohne das hier verliert
+// jeder Klick (Block aufklappen, draggen, filtern) die Scrollposition --
+// die Seite und Container wie #planung-timeline springen nach oben.
+// Beim Viewwechsel ist oben aber richtig, darum das Flag.
+let resetScrollOnNextRender = false;
+
+function scrollKeyOf(el) {
+  if (el.id) return '#' + CSS.escape(el.id);
+  const cls = Array.from(el.classList).map(c => '.' + CSS.escape(c)).join('');
+  return cls ? el.tagName.toLowerCase() + cls : null;
+}
+
+function captureScrollState() {
+  const snapshot = { window: window.scrollY, elements: [] };
+  const seen = new Map();
+  document.querySelectorAll('#app *').forEach(el => {
+    const key = scrollKeyOf(el);
+    if (!key) return;
+    const index = seen.get(key) || 0;
+    seen.set(key, index + 1);
+    if (el.scrollTop || el.scrollLeft) {
+      snapshot.elements.push({ key, index, top: el.scrollTop, left: el.scrollLeft });
+    }
+  });
+  return snapshot;
+}
+
+function restoreScrollState(snapshot) {
+  snapshot.elements.forEach(({ key, index, top, left }) => {
+    const el = document.querySelectorAll('#app ' + key)[index];
+    if (!el) return;
+    el.scrollTop = top;
+    el.scrollLeft = left;
+  });
+  window.scrollTo(0, snapshot.window);
+}
+
 function render() {
   const app = document.getElementById('app');
+  const scrollState = resetScrollOnNextRender ? null : captureScrollState();
+  resetScrollOnNextRender = false;
   app.dataset.view = currentView.split(':')[0];
   syncGlobalSearchInput();
   switch (currentView) {
@@ -76,6 +117,8 @@ function render() {
     case 'search': app.innerHTML = renderSearch(); break;
     default: app.innerHTML = renderOverview();
   }
+  if (scrollState) restoreScrollState(scrollState);
+  else window.scrollTo(0, 0);
   restoreOverviewSearchFocus();
   restoreMeetingSearchFocus();
   restorePlanungSearchFocus();

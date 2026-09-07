@@ -994,7 +994,7 @@ function restorePlanungSearchFocus() {
   if (!input) { pendingPlanungSearchSelection = null; return; }
   const selection = pendingPlanungSearchSelection;
   pendingPlanungSearchSelection = null;
-  input.focus();
+  input.focus({ preventScroll: true });
   input.setSelectionRange(selection.start, selection.end);
 }
 

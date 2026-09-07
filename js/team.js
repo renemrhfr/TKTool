@@ -282,7 +282,9 @@ function renderTeam() {
 	                      <span class="team-detail-meta-label">Fokus</span>
 	                      <strong class="team-detail-focus-value">${selectedPerson.pushDirection ? esc(selectedPerson.pushDirection) : 'Kein Fokus hinterlegt'}</strong>
 	                    </div>` : `<div class="team-detail-focus-line">${sudoLockedPlaceholder('Fokus')}</div>`}
-
+                    <div class="team-detail-links">
+                      ${renderMemberLinkBar(selectedPerson)}
+                    </div>
                   </div>
                 </div>
                 <div class="team-detail-actions">

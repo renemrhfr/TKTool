@@ -65,7 +65,7 @@ function restoreOverviewSearchFocus() {
   const input = document.getElementById('overviewSearchInput');
   if (!input) return;
   const { start, end } = pendingOverviewSearchSelection;
-  input.focus();
+  input.focus({ preventScroll: true });
   input.setSelectionRange(start ?? input.value.length, end ?? input.value.length);
   pendingOverviewSearchSelection = null;
 }
