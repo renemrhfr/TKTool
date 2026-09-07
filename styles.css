@@ -2856,7 +2856,7 @@ textarea,
 
 .tf-card-summary {
   display: grid;
-  grid-template-columns: minmax(190px, 1.3fr) minmax(280px, 1.7fr) minmax(110px, .65fr) 30px;
+  grid-template-columns: minmax(170px, 1fr) minmax(280px, 1.7fr) minmax(250px, 1fr) 30px;
   align-items: center;
   gap: 8px;
   min-width: 0;
@@ -3243,12 +3243,22 @@ textarea,
 }
 
 .tf-work-metric {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 2px 9px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
   min-width: 0;
-  padding: 5px 7px;
+  padding: 0 7px;
 }
+
+.tf-work-count {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.tf-work-overdue { flex-basis: 100%; text-align: left; }
 
 .tf-work-metric .tf-metric-value {
   text-align: right;
@@ -3719,6 +3729,10 @@ button.tf-metric {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
+}
+
+.oneonone-carryover-grid-single {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .oneonone-carryover-column {
@@ -6175,8 +6189,17 @@ a.jira-ticket-key:hover { text-decoration: underline; }
 .jira-changes summary { cursor: pointer; color: var(--text-secondary); }
 .dashboard-waiting { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; width: 100%; margin-bottom: 16px; padding: 14px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
 .dashboard-waiting span:last-child { margin-left: auto; color: var(--text-secondary); }
-.tf-context-heading { font-size: 11px; font-weight: 600; color: var(--text-secondary); margin: 10px 0 4px; }
-.tf-work-metric { gap: 6px; }
+.tf-plan-group { grid-column: 1 / -1; min-width: 0; padding: 10px 0; }
+.tf-plan-group + .tf-plan-group { border-top: 1px solid var(--section-border); }
+.tf-context-heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; font-size: 11px; color: var(--text-secondary); margin: 0 0 8px; }
+.tf-context-heading strong { color: var(--text); }
+.tf-plan-group-overdue .tf-context-heading strong { color: var(--danger); }
+.tf-plan-group-rows { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
+@media (max-width: 640px) {
+  .tf-plan-group-rows { grid-template-columns: 1fr; }
+  .tf-blocks-head { flex-wrap: wrap; }
+}
+.tf-work-metric { column-gap: 12px; }
 .overlay.overlay-drawer { padding: 0; justify-content: flex-end; }
 .overlay-drawer .modal { height: 100vh; max-height: 100vh; max-width: 480px; border-radius: 0; padding-top: 16px; }
 .notes-workspace { display: grid; grid-template-columns: minmax(180px, 260px) minmax(0, 1fr); gap: 18px; align-items: start; }
@@ -6205,6 +6228,83 @@ button:focus-visible, a:focus-visible, summary:focus-visible, select:focus-visib
 .planner-toolbar .month-selector { width: auto; flex: 0 1 auto; }
 .planner-toolbar .month-label { min-width: 210px; padding: 0 10px; }
 .oneonone-carryover > summary { cursor: pointer; }
+/* Separate work areas from their contents, even in low-contrast themes. */
+body {
+  --section-border: color-mix(in srgb, var(--text) 28%, var(--border));
+  --section-heading-bg: color-mix(in srgb, var(--text) 7%, var(--bg-elev));
+  --section-gutter: color-mix(in srgb, var(--text) 9%, var(--bg));
+}
+.card, .team-section-block {
+  border-color: var(--section-border);
+}
+.card-header {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--section-border);
+  margin-bottom: 16px;
+}
+.planner-toolbar {
+  padding: 14px 16px;
+  background: var(--bg-elev);
+  border: 1px solid var(--section-border);
+  border-radius: var(--radius-md);
+  margin-bottom: 14px;
+}
+.planner-toolbar-primary {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.planner-toolbar-row:last-child { margin-bottom: 0; }
+.planung-parked {
+  padding: 10px 14px;
+  background: var(--section-heading-bg);
+  border: 1px dashed var(--section-border);
+  border-radius: var(--control-radius);
+}
+.planung-parked-head { color: var(--text-secondary); font-weight: 700; }
+.timeline {
+  border-color: var(--section-border);
+  border-radius: var(--radius-md);
+  background: var(--section-gutter);
+}
+.tl-header {
+  background: var(--section-heading-bg);
+  border-bottom: 2px solid var(--section-border);
+}
+.tl-month-cell { font-weight: 700; color: var(--text); }
+.tl-day-cell { color: var(--text-secondary); }
+.tl-body { gap: 12px; background: var(--section-gutter); }
+.tl-row {
+  border-color: var(--section-border);
+  box-shadow: 0 2px 0 color-mix(in srgb, var(--text) 8%, transparent);
+}
+.tl-person {
+  border-right: 2px solid var(--section-border);
+  box-shadow: inset 4px 0 0 color-mix(in srgb, var(--accent) 65%, var(--section-border));
+}
+#planung-timeline .tl-person,
+#planung-timeline .tl-person-head { background: var(--section-heading-bg); }
+#planung-timeline .tl-person:hover { background: var(--interactive-hover-bg); }
+.tl-person-name { font-weight: 700; }
+.tl-person-cap { color: var(--text-secondary); }
+.tl-track { background: var(--surface); }
+.tl-block {
+  border-top-color: color-mix(in srgb, var(--block-tone, var(--accent)) 45%, var(--border));
+  border-right-color: color-mix(in srgb, var(--block-tone, var(--accent)) 45%, var(--border));
+  border-bottom-color: color-mix(in srgb, var(--block-tone, var(--accent)) 45%, var(--border));
+}
+.waiting-queue { margin-top: 24px; border-color: var(--section-border); }
+.waiting-queue > summary { background: var(--section-heading-bg); }
+.waiting-queue[open] > summary { border-bottom: 1px solid var(--section-border); }
+.queue-controls { border-top: 0; padding-top: 12px; padding-bottom: 12px; }
+.queue-group + .queue-group { border-top: 1px solid var(--section-border); }
+.queue-group h3 { padding: 8px 0; }
+@media (max-width: 1000px) {
+  .planner-toolbar-primary { flex-wrap: wrap; }
+}
+@media (max-width: 650px) {
+  .planner-toolbar { padding: 10px; }
+  .planner-primary-actions { margin-left: 0; flex-wrap: wrap; }
+}
 .oneonone-carryover[open] > summary { margin-bottom: 12px; }
 .overview-board:has(> :nth-child(3):last-child) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 @media (max-width: 700px) {

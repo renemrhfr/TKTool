@@ -352,15 +352,17 @@ function renderTeamFocusBlocks(entry) {
   return `
     <div class="tf-blocks${hidden ? ' tf-blocks-more' : ''}">
       <div class="tf-blocks-head">
-        <span>Arbeitskontext${blocks.length > 1 ? ` <span class="tf-blocks-count">${blocks.length}</span>` : ''}</span>
-        <button class="tf-blocks-link" type="button" onclick="navigate('planung')">planung öffnen</button>
+        <span>Geplante Arbeit${blocks.length ? ` <span class="tf-blocks-count">${blocks.length}</span>` : ''}</span>
+        <button class="tf-blocks-link" type="button" onclick="navigate('planung',{planungPerson:'${entry.person.id}'})">Planung von ${esc(entry.person.name)} öffnen →</button>
       </div>
       <div class="tf-blocks-scroll">
         <div class="tf-blocks-list">
           ${blocks.length
             ? ['overdue', 'active', 'upcoming'].map(kind => {
                 const rows = blocks.filter(entry => entry.kind === kind);
-                return rows.length ? `<div class="tf-context-heading">${{ overdue: 'Neu einplanen', active: 'Jetzt', upcoming: 'Als Nächstes' }[kind]}</div>${rows.map(({block}) => renderTeamFocusBlockRow(block, kind)).join('')}` : '';
+                const title = { overdue: 'Neu einplanen', active: 'Aktuell eingeplant', upcoming: 'Danach geplant' }[kind];
+                const description = { overdue: 'Planungszeitraum vorbei · noch offen', active: 'Der geplante Zeitraum umfasst heute', upcoming: 'Nach geplantem Startdatum' }[kind];
+                return rows.length ? `<section class="tf-plan-group tf-plan-group-${kind}"><div class="tf-context-heading"><strong>${title} <span class="tf-blocks-count">${rows.length}</span></strong><span>${description}</span></div><div class="tf-plan-group-rows">${rows.map(({block}) => renderTeamFocusBlockRow(block, kind)).join('')}</div></section>` : '';
               }).join('')
             : `<div class="tf-blocks-empty">${empty}</div>`}
         </div>
@@ -507,13 +509,14 @@ function renderReviews() {
                 ${renderTeamFocusJiraMetric(entry)}
               </div>
               <div class="tf-work-metric">
-                <span class="tf-metric-label">Jetzt</span>
-                <span class="tf-metric-value">${workingBlocks.length}</span>
-                <span class="tf-metric-label">Als Nächstes</span><span class="tf-metric-value">${entry.upcomingBlocks.length}</span>
-                ${entry.overdueBlocks.length ? `<button class="filter-btn" onclick="event.stopPropagation();navigate('planung',{planungPerson:'${entry.person.id}',planungShowOverdue:true})">${entry.overdueBlocks.length} neu einplanen</button>` : ''}
+                <span class="tf-work-count"><span class="tf-metric-label">Jetzt</span>
+                <span class="tf-metric-value">${workingBlocks.length}</span></span>
+                <span class="tf-work-count"><span class="tf-metric-label">Als Nächstes</span><span class="tf-metric-value">${entry.upcomingBlocks.length}</span></span>
                 ${waitingBlocks.length ? `
+                <span class="tf-work-count">
                 <span class="tf-metric-label tf-work-waiting" title="Wartet in Review, QA oder einem anderen Übergabestatus">Wartet</span>
-                <span class="tf-metric-value tf-work-waiting" title="Wartet in Review, QA oder einem anderen Übergabestatus">${waitingBlocks.length}</span>` : ''}
+                <span class="tf-metric-value tf-work-waiting" title="Wartet in Review, QA oder einem anderen Übergabestatus">${waitingBlocks.length}</span></span>` : ''}
+                ${entry.overdueBlocks.length ? `<button class="filter-btn tf-work-overdue" onclick="event.stopPropagation();navigate('planung',{planungPerson:'${entry.person.id}',planungShowOverdue:true})">${entry.overdueBlocks.length} neu einplanen</button>` : ''}
               </div>
               <button class="tf-card-toggle" type="button" aria-expanded="${open}" aria-controls="${esc(detailId)}" onclick="event.stopPropagation(); toggleTeamFocusCard('${entry.person.id}')" title="Tickets ${open ? 'einklappen' : 'ausklappen'}" aria-label="Tickets von ${esc(entry.person.name)} ${open ? 'einklappen' : 'ausklappen'}">
                 <span aria-hidden="true">⌄</span>

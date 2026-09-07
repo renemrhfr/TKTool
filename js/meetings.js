@@ -93,6 +93,21 @@ function openPrepCarryovers(meeting) {
   );
 }
 
+// Reguläre Serien haben keine Person als Anker — offene Punkte kommen deshalb
+// über die Follow-ups der früheren Termine derselben Serie (gleicher Titel).
+function seriesCarryover(meeting) {
+  const empty = { openFollowUps: [], lastMeeting: null, sourceCount: 0 };
+  if (!meeting || meeting.type === 'oneOnOne') return empty;
+  const earlier = earlierMeetingsInSeries(meeting);
+  if (!earlier.length) return empty;
+  const byId = new Map(earlier.map(entry => [entry.id, entry]));
+  const openFollowUps = data.items
+    .filter(item => item.meetingId && byId.has(item.meetingId) && item.status !== 'done')
+    .sort(compareByDueDate);
+  const sourceCount = new Set(openFollowUps.map(item => item.meetingId)).size;
+  return { openFollowUps, lastMeeting: earlier[0], sourceCount };
+}
+
 function meetingRelativeDate(d) {
   if (!d) return '';
   const today = todayStr();
@@ -549,6 +564,35 @@ function renderOneOnOneCarryover(m) {
   `;
 }
 
+function renderSeriesCarryover(m) {
+  if (!m || m.type === 'oneOnOne') return '';
+  const carryover = seriesCarryover(m);
+  if (!carryover.lastMeeting) return '';
+  const count = carryover.openFollowUps.length;
+  const label = count
+    ? `${count} offen aus ${carryover.sourceCount} ${carryover.sourceCount === 1 ? 'Termin' : 'Terminen'}`
+    : 'nichts offen';
+  return `
+    <details class="meeting-detail-section meeting-detail-section-emphasis oneonone-carryover" ${count ? 'open' : ''}>
+      <summary class="oneonone-carryover-head">
+        <h3>Übernahme</h3>
+        <span class="oneonone-carryover-count">${label}</span>
+      </summary>
+      <div class="oneonone-carryover-grid oneonone-carryover-grid-single">
+        <div class="oneonone-carryover-column oneonone-carryover-column-followups">
+          <div class="oneonone-carryover-title">
+            Offene Follow-ups aus früheren Terminen &middot;
+            <button class="prep-carryover-source" onclick="openMeetingDetail('${carryover.lastMeeting.id}')">zuletzt ${formatDate(carryover.lastMeeting.date)}</button>
+          </div>
+          ${count
+            ? `<ul class="item-list oneonone-carryover-list">${carryover.openFollowUps.map(item => renderItem(item, false, { compact: true })).join('')}</ul>`
+            : '<div class="oneonone-carryover-empty">Nichts offen</div>'}
+        </div>
+      </div>
+    </details>
+  `;
+}
+
 function renderMeetingDetailBody(m) {
   const linkedItems = meetingItems(m.id);
   const person = m.personId ? data.persons.find(p => p.id === m.personId) : null;
@@ -585,6 +629,8 @@ function renderMeetingDetailBody(m) {
     ${renderMeetingStatusSection(m)}
 
     ${renderOneOnOneCarryover(m)}
+
+    ${renderSeriesCarryover(m)}
 
     <div class="meeting-detail-section meeting-detail-section-emphasis">
       <h3>Vorbereitung</h3>
