@@ -442,8 +442,22 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
     const jiraDrift = jiraDriftForPerson(person);
     const staleBlockIds = jiraDrift ? new Set(jiraDrift.stale.map(sb => sb.id)) : new Set();
 
+    // Waehrend eines Block-Drags bleibt die Reihenfolge der Einheiten so, wie
+    // sie beim Anfassen war. Sonst schiebt das Kuerzen eines Blocks ihn in der
+    // Start-Sortierung nach hinten und er springt mitten im Ziehen die Lane
+    // runter — man verliert den Block unter der Maus.
+    const frozenLaneKeys = tlFrozenLaneKeysFor(pid);
     const units = groupPersonBlocks(personBlocks, pid)
-      .sort((a, b) => (a.sIdx - b.sIdx) || ((b.eIdx - b.sIdx) - (a.eIdx - a.sIdx)));
+      .sort((a, b) => {
+        if (frozenLaneKeys) {
+          const ia = frozenLaneKeys.get(tlUnitKey(a));
+          const ib = frozenLaneKeys.get(tlUnitKey(b));
+          if (ia !== undefined || ib !== undefined) {
+            return (ia === undefined ? Infinity : ia) - (ib === undefined ? Infinity : ib);
+          }
+        }
+        return (a.sIdx - b.sIdx) || ((b.eIdx - b.sIdx) - (a.eIdx - a.sIdx));
+      });
 
     // Lane-Vergabe in drei festen Baendern: oben die Tickets mit Subtasks,
     // darunter die einzelnen Bloecke, ganz unten das nur noch Wartende. Kein
@@ -600,6 +614,7 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
       // klappt auf, drinnen verschiebt man einzeln.
       if (unit.group) {
         return `<div class="${classes.join(' ')}" ${geometry}
+          data-unit-key="g:${esc(unit.group.ref)}"
           title="${esc(title)}"
           onclick="event.stopPropagation();toggleBlockGroup('${pid}','${esc(unit.group.ref)}')"
           onpointerdown="event.stopPropagation()">
@@ -616,6 +631,7 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
         : '';
       return `<div class="${classes.join(' ')}" ${geometry}
         data-block-id="${b.id}"
+        data-unit-key="${b.id}"
         title="${esc(title)}"
         onclick="event.stopPropagation();if(_suppressNextBlockClick)return;if((event.metaKey||event.ctrlKey)&&openBlockJira('${b.id}'))return;openBlockForm('${b.id}')"
         onpointerdown="onBlockPointerDown(event,'${b.id}')">
@@ -1675,6 +1691,28 @@ function deleteMarker(id) {
 // ============================================================
 let _tlDrag = null;
 let _tlFrozenOrder = null;
+let _tlFrozenLanes = null; // { personId, keys: Map<unitKey, index> }
+
+function tlUnitKey(unit) {
+  return unit.group ? `g:${unit.group.ref}` : unit.b.id;
+}
+
+function tlFrozenLaneKeysFor(personId) {
+  return _tlFrozenLanes && _tlFrozenLanes.personId === personId ? _tlFrozenLanes.keys : null;
+}
+
+// Reihenfolge aus dem gerenderten Track lesen: erst Lane (top), dann Startspalte.
+// Genau die Reihenfolge, in der der Lane-Packer die Einheiten vergeben hat.
+function tlCaptureLaneOrder(personId) {
+  const track = document.querySelector(`.tl-track[data-person-id="${personId}"]`);
+  if (!track) { _tlFrozenLanes = null; return; }
+  const els = Array.from(track.querySelectorAll('[data-unit-key]'))
+    .map(el => ({ key: el.dataset.unitKey, top: parseFloat(el.style.top) || 0, left: parseFloat(el.style.left) || 0 }))
+    .sort((a, b) => (a.top - b.top) || (a.left - b.left));
+  const keys = new Map();
+  els.forEach(({ key }) => { if (!keys.has(key)) keys.set(key, keys.size); });
+  _tlFrozenLanes = { personId, keys };
+}
 
 function _dayIsoFromTrack(trackEl, clientX) {
   const cells = trackEl.querySelectorAll('.tl-track-grid .tl-cell');
@@ -1768,6 +1806,7 @@ function onBlockPointerDown(event, blockId) {
   const startIsoAtDown = _dayIsoFromTrack(track, event.clientX);
   _tlDrag = { mode, blockId, track, downIso: startIsoAtDown, origStart: b.start, origEnd: b.end, moved: false };
   _tlFrozenOrder = Array.from(document.querySelectorAll('.tl-track[data-person-id]')).map(el => el.dataset.personId);
+  tlCaptureLaneOrder(b.personId);
   event.preventDefault();
   event.stopPropagation();
 
@@ -1801,6 +1840,7 @@ function onBlockPointerDown(event, blockId) {
     const moved = _tlDrag && _tlDrag.moved;
     _tlDrag = null;
     _tlFrozenOrder = null;
+    _tlFrozenLanes = null;
     if (moved) {
       _suppressNextBlockClick = true;
       setTimeout(() => { _suppressNextBlockClick = false; }, 100);
