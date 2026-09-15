@@ -199,3 +199,15 @@ const UPDATE_INTERVAL_MS = 8 * 60 * 60 * 1000;
 initUpdateIndicator();
 setTimeout(() => { checkForUpdate({ silent: true }); }, 2500);
 setInterval(() => { checkForUpdate({ silent: true }); }, UPDATE_INTERVAL_MS);
+
+
+// ============================================================
+// B1 — Confirm before deleting Monthly Focus
+// (update.js loads after capture.js; prefer inlining into capture.js when Cloud Agents available)
+// ============================================================
+function deleteFocus(id) {
+  if (!confirm('Focus löschen?')) return;
+  data.focuses = data.focuses.filter(f => f.id !== id);
+  saveData(data);
+  render();
+}
