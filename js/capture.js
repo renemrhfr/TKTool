@@ -1,1 +1,1 @@
-{{file:/workspace/tktool-offline/CONTENT_ONLY.js}}
+PLACEHOLDER
