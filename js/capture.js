@@ -1,1 +1,1 @@
-{{LOAD_FROM:/workspace/tktool-offline/capture.js}}
+PLACEHOLDER_WILL_REPLACE
