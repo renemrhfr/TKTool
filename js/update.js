@@ -199,3 +199,25 @@ const UPDATE_INTERVAL_MS = 8 * 60 * 60 * 1000;
 initUpdateIndicator();
 setTimeout(() => { checkForUpdate({ silent: true }); }, 2500);
 setInterval(() => { checkForUpdate({ silent: true }); }, UPDATE_INTERVAL_MS);
+
+
+// ============================================================
+// B5 — Past-open warning opens ALL open items (not only oldest month)
+// (update.js loads after todo.js; prefer inlining into todo.js when Cloud Agents available)
+// ============================================================
+function renderPastOpenItemsWarning() {
+  const groups = pastOpenItemsByMonth();
+  const months = Object.keys(groups).sort();
+  if (!months.length) return '';
+  const count = months.reduce((sum, month) => sum + groups[month].length, 0);
+  const oldest = months[0];
+  const newest = months[months.length - 1];
+  const rangeLabel = oldest === newest ? formatMonth(oldest) : `${formatMonth(oldest)} - ${formatMonth(newest)}`;
+  return `
+    <button class="overview-lost-items-warning" type="button" onclick="navigate('overview', {overviewScope:'open', overviewLayout:'list'})">
+      <span class="overview-lost-items-mark">!</span>
+      <span>${count} offene Item${count === 1 ? '' : 's'} in Vormonat${months.length === 1 ? '' : 'en'}</span>
+      <span class="overview-lost-items-month">${esc(rangeLabel)}</span>
+    </button>
+  `;
+}
