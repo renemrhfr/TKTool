@@ -11,7 +11,7 @@ function getSavedTheme() {
 }
 
 function applyTheme(theme) {
-  const next = THEMES.includes(theme) ? theme : 'light';
+  const next = THEMES.includes(theme) ? theme : 'daylight';
   document.body.setAttribute('data-theme', next);
   const trigger = document.getElementById('themeTrigger');
   if (trigger) {
@@ -205,8 +205,8 @@ function initThemeEasterEggs() {
   document.body.appendChild(popLayer);
 
   const atmosphereLayer = document.createElement('div');
-  atmosphereLayer.className = 'atmosphere-theme-effects';
   atmosphereLayer.setAttribute('aria-hidden', 'true');
+  atmosphereLayer.className = 'atmosphere-theme-effects';
   atmosphereLayer.innerHTML = `
     <div class="kodama-spores">
       <span class="kodama-spores-layer kodama-spores-far"></span>
