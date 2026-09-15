@@ -1,1 +1,1 @@
-PLACEHOLDER_WILL_REPLACE
+REFER_FILE:/workspace/tktool-offline/capture.js
