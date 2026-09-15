@@ -1,1 +1,1 @@
-PLACEHOLDER_WILL_FAIL
+@/workspace/tktool-offline/_push_content.js
