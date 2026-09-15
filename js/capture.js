@@ -1,1 +1,1 @@
-/workspace/tktool-offline/capture.js
+@/tmp/call_cap_now.json
