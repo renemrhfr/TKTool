@@ -199,3 +199,30 @@ const UPDATE_INTERVAL_MS = 8 * 60 * 60 * 1000;
 initUpdateIndicator();
 setTimeout(() => { checkForUpdate({ silent: true }); }, 2500);
 setInterval(() => { checkForUpdate({ silent: true }); }, UPDATE_INTERVAL_MS);
+
+
+// ============================================================
+// B6 — Import errors via toast (update.js loads after capture.js)
+// ============================================================
+function handleImport(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (imported.items || imported.persons || imported.meetings) {
+        if (confirm('Aktuelle Daten mit Backup ersetzen?')) {
+          data = { ...defaultData(), ...imported };
+          saveData(data);
+          toast('Daten importiert');
+          render();
+        }
+      } else {
+        toast('Ungültiges Backup-Format', 4000, 'error');
+      }
+    } catch { toast('Fehler beim Lesen der Datei', 4000, 'error'); }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
