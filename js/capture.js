@@ -1,1 +1,1 @@
-REFER_FILE:/workspace/tktool-offline/capture.js
+/workspace/tktool-offline/capture.js
