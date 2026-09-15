@@ -202,8 +202,37 @@ setInterval(() => { checkForUpdate({ silent: true }); }, UPDATE_INTERVAL_MS);
 
 
 // ============================================================
-// B6 — Import errors via toast (update.js loads after capture.js)
+// Offline polish overrides (update.js loads last among app scripts)
+// Prefer inlining into capture.js / todo.js when Cloud Agents available.
 // ============================================================
+
+// B1 — Confirm before deleting Monthly Focus
+function deleteFocus(id) {
+  if (!confirm('Focus löschen?')) return;
+  data.focuses = data.focuses.filter(f => f.id !== id);
+  saveData(data);
+  render();
+}
+
+// B5 — Past-open warning opens ALL open items (not only oldest month)
+function renderPastOpenItemsWarning() {
+  const groups = pastOpenItemsByMonth();
+  const months = Object.keys(groups).sort();
+  if (!months.length) return '';
+  const count = months.reduce((sum, month) => sum + groups[month].length, 0);
+  const oldest = months[0];
+  const newest = months[months.length - 1];
+  const rangeLabel = oldest === newest ? formatMonth(oldest) : `${formatMonth(oldest)} - ${formatMonth(newest)}`;
+  return `
+    <button class="overview-lost-items-warning" type="button" onclick="navigate('overview', {overviewScope:'open', overviewLayout:'list'})">
+      <span class="overview-lost-items-mark">!</span>
+      <span>${count} offene Item${count === 1 ? '' : 's'} in Vormonat${months.length === 1 ? '' : 'en'}</span>
+      <span class="overview-lost-items-month">${esc(rangeLabel)}</span>
+    </button>
+  `;
+}
+
+// B6 — Import backup failures via toast (not alert)
 function handleImport(event) {
   const file = event.target.files[0];
   if (!file) return;
