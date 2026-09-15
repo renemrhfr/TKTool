@@ -1,1 +1,1 @@
-@/workspace/tktool-offline/_push_content.js
+file:///workspace/tktool-offline/_push_content.js
