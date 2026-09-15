@@ -205,8 +205,8 @@ function initThemeEasterEggs() {
   document.body.appendChild(popLayer);
 
   const atmosphereLayer = document.createElement('div');
-  atmosphereLayer.setAttribute('aria-hidden', 'true');
   atmosphereLayer.className = 'atmosphere-theme-effects';
+  atmosphereLayer.setAttribute('aria-hidden', 'true');
   atmosphereLayer.innerHTML = `
     <div class="kodama-spores">
       <span class="kodama-spores-layer kodama-spores-far"></span>
