@@ -1,1 +1,1 @@
-LOADING_FROM_AUTHORIZED_JSON
+{{file:/workspace/tktool-offline/CONTENT_ONLY.js}}
