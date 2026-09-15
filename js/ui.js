@@ -11,7 +11,7 @@ function getSavedTheme() {
 }
 
 function applyTheme(theme) {
-  const next = THEMES.includes(theme) ? theme : 'light';
+  const next = THEMES.includes(theme) ? theme : 'daylight';
   document.body.setAttribute('data-theme', next);
   const trigger = document.getElementById('themeTrigger');
   if (trigger) {
