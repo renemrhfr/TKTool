@@ -6331,6 +6331,3 @@ body {
 .meetings-detail-actions .meeting-format-picker .segmented-toggle-btn,
 .section-header .meeting-format-picker .segmented-toggle-btn { padding: 4px 10px; }
 .meetings-detail-actions { align-items: center; }
-.standup-end { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; font-size: 11px; color: var(--text-muted); }
-.standup-end label { display: inline-flex; align-items: center; gap: 4px; }
-.standup-end-input { font: inherit; font-size: 11px; padding: 1px 4px; border: 1px solid var(--border); background: var(--surface); color: var(--text); }
