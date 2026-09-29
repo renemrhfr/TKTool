@@ -5,3 +5,5 @@
   by the pre-commit hook.
 - Make source changes in the split files only. Leave `TKTool.html`
   untouched unless the user explicitly asks to regenerate or edit it.
+- Never put session URLs (e.g. `Claude-Session: https://claude.ai/code/...`)
+  into commit messages, PR descriptions, or any other pushed content.
