@@ -558,14 +558,24 @@ function renderStandupBlock(meeting, b) {
     isBlockBlocked(b) ? `<span class="standup-chip standup-chip-blocked">${esc(blockBlockedLabel(b))}</span>` : '',
     b.overrun ? `<span class="standup-chip standup-chip-overrun">über seit ${formatDateShort(b.plannedEnd)}</span>` : '',
     waiting ? `<span class="standup-chip">${esc(waiting.toLowerCase())}</span>` : '',
-    !b.overrun && !waiting ? `<span class="standup-chip standup-chip-muted">bis ${formatDateShort(b.end)}</span>` : '',
   ].join('');
+  const meetingDate = meeting.date || todayStr();
+  // "Dauert sicher noch eine Woche": das Ende wird ab dem Meetingtag neu
+  // geschaetzt, nicht aufs alte Ende draufgerechnet.
+  const endControls = `
+    <span class="standup-end">
+      <label>bis <input type="date" class="standup-end-input" value="${b.plannedEnd}" min="${b.start}"
+        onchange="setStandupBlockEnd('${meeting.id}','${b.id}',this.value)"></label>
+      ${[1, 2].map(n => `<button class="standup-icon-btn" type="button" title="Ende auf ${formatDate(addWorkdays(meetingDate, 5 * n))} setzen"
+        onclick="setStandupBlockEnd('${meeting.id}','${b.id}','${addWorkdays(meetingDate, 5 * n)}')">noch ${n} W</button>`).join('')}
+    </span>`;
   return `
     <div class="standup-block ${isBlockBlocked(b) ? 'is-blocked' : ''}">
       <div class="standup-block-head">
         <button class="standup-block-title" type="button" onclick="openBlockForm('${b.id}')" title="Block öffnen">${esc(blockDisplayLabel(b))}</button>
         ${key ? jiraKeyLink(key) : ''}
         ${chips}
+        ${endControls}
       </div>
       ${previous ? `<div class="standup-previous">zuletzt ${formatDateShort(previous.date)}: ${esc(previous.text)}</div>` : ''}
       ${own.map(u => `
@@ -628,6 +638,21 @@ function renderStandupRound(m) {
       <h3>Runde <span class="oneonone-carryover-count">${people.length} Personen${blockedCount ? ` · ${blockedCount} blockiert` : ''} · Stand ${esc(jiraSyncAgeLabel() || 'ohne Jira')}</span></h3>
       ${rows}
     </div>`;
+}
+
+// Neue Schaetzung aus dem Standup. Landet zusaetzlich als Update am Block:
+// dreimal verschoben ist eine Information, die man spaeter sehen will.
+function setStandupBlockEnd(meetingId, blockId, iso) {
+  const b = data.blocks.find(x => x.id === blockId);
+  const meeting = data.meetings.find(x => x.id === meetingId);
+  if (!b || !iso || isBlockParked(b)) return;
+  const end = iso < b.start ? b.start : iso;
+  if (end === b.end) return;
+  const before = b.end;
+  b.end = end;
+  addBlockUpdate(blockId, `Ende ${formatDateShort(before)} → ${formatDateShort(end)}`, meetingId, (meeting && meeting.date) || todayStr());
+  toast(`${blockDisplayLabel(b)} bis ${formatDate(end)}`);
+  render();
 }
 
 function setStandupPersonNote(meetingId, personId, value) {
