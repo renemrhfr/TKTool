@@ -214,6 +214,56 @@ function freeFromLabel(iso) {
   return iso <= nextWorkdayOnOrAfter(todayStr()) ? 'frei' : `frei ab ${formatDateShort(iso)}`;
 }
 
+// ============================================================
+// UPDATES UND BLOCKER AM BLOCK
+// ============================================================
+// Was im Standup gesagt wird, gehoert zur Arbeit, nicht zum Termin: am Block
+// haengt ein datiertes Log (updates) und ein Blockiert-Seit. So steht der
+// Stand in der Planung und beim naechsten Standup wieder da, und man sieht,
+// wie lange etwas schon haengt. Blockiert ist eine Aussage der Person, nicht
+// ableitbar — deshalb gespeichert.
+function blockUpdates(b) {
+  return Array.isArray(b && b.updates) ? b.updates : [];
+}
+
+function blockLatestUpdate(b, beforeMeetingId = null) {
+  const list = blockUpdates(b).filter(u => !beforeMeetingId || u.meetingId !== beforeMeetingId);
+  return list.length ? list[list.length - 1] : null;
+}
+
+function isBlockBlocked(b) {
+  return !!(b && b.blockedSince);
+}
+
+function addBlockUpdate(blockId, text, meetingId = null, date = todayStr()) {
+  const b = data.blocks.find(x => x.id === blockId);
+  const clean = String(text || '').trim();
+  if (!b || !clean) return false;
+  b.updates = [...blockUpdates(b), { id: uid(), date, text: clean, meetingId }];
+  saveData(data);
+  return true;
+}
+
+function removeBlockUpdate(blockId, updateId) {
+  const b = data.blocks.find(x => x.id === blockId);
+  if (!b) return;
+  b.updates = blockUpdates(b).filter(u => u.id !== updateId);
+  saveData(data);
+  render();
+}
+
+function setBlockBlocked(blockId, blocked, date = todayStr()) {
+  const b = data.blocks.find(x => x.id === blockId);
+  if (!b) return;
+  b.blockedSince = blocked ? (b.blockedSince || date) : null;
+  saveData(data);
+  render();
+}
+
+function blockBlockedLabel(b) {
+  return isBlockBlocked(b) ? `blockiert seit ${formatDateShort(b.blockedSince)}` : '';
+}
+
 // Die offenen Tickets der Person unter dem Auftrag eines Blocks — fuer den
 // Zaehler am Balken und den Tooltip.
 function blockOpenTickets(b) {
@@ -405,6 +455,8 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
       if (b.state === 'done') classes.push('tl-block-done');
       if (b.state === 'waiting') classes.push('tl-block-handover-on');
       if (b.overrun) classes.push('tl-block-overrun');
+      if (isBlockBlocked(b) && b.state !== 'done') classes.push('tl-block-blocked');
+      const latest = blockLatestUpdate(b);
 
       // Schraffierter Teil: ab dem ersten sichtbaren Tag nach der Schaetzung.
       let overrunPct = 0;
@@ -420,6 +472,8 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
         key ? `${key}${jiraUrl(key) ? ' (Cmd/Strg-Klick öffnet)' : ''}` : '',
         absence ? `${formatDate(b.start)}–${formatDate(b.end)}` : `geschätzt ${formatDate(b.start)}–${formatDate(b.plannedEnd)}`,
         b.overrun ? `läuft über — laut Jira noch offen (Stand: ${syncAge})` : '',
+        isBlockBlocked(b) && b.state !== 'done' ? `⛔ ${blockBlockedLabel(b)}` : '',
+        latest ? `zuletzt ${formatDateShort(latest.date)}: ${latest.text}` : '',
         b.state === 'done' ? (b.done ? 'erledigt' : 'erledigt laut Jira') : '',
         waitingStatus ? `wartet: ${waitingStatus} — Person ist hier faktisch frei` : '',
         open.length ? `\nOffen (Stand: ${syncAge}):` : '',
@@ -436,7 +490,7 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
         onclick="event.stopPropagation();if(_suppressNextBlockClick)return;if((event.metaKey||event.ctrlKey)&&openBlockJira('${b.id}'))return;openBlockForm('${b.id}')"
         onpointerdown="onBlockPointerDown(event,'${b.id}')">
         ${overrunPct ? `<span class="tl-block-overrun-part" style="width:${overrunPct.toFixed(3)}%"></span>` : ''}
-        ${b.state === 'done' ? '<span class="tl-block-check">&#x2713;</span>' : ''}${waitingStatus ? `<span class="tl-block-handover">${esc(waitingStatus.toLowerCase())}</span>` : ''}<span class="tl-block-label">${esc(label)}</span>${openSubtasks.length ? `<span class="tl-block-group-count" title="Offene Subtasks">${openSubtasks.length} offen</span>` : ''}
+        ${b.state === 'done' ? '<span class="tl-block-check">&#x2713;</span>' : ''}${isBlockBlocked(b) && b.state !== 'done' ? '<span class="tl-block-blocked-mark" aria-label="blockiert">⛔</span>' : ''}${waitingStatus ? `<span class="tl-block-handover">${esc(waitingStatus.toLowerCase())}</span>` : ''}<span class="tl-block-label">${esc(label)}</span>${openSubtasks.length ? `<span class="tl-block-group-count" title="Offene Subtasks">${openSubtasks.length} offen</span>` : ''}
       </div>`;
     }).join('');
 
@@ -1283,12 +1337,24 @@ function openBlockForm(blockId, prefillPersonId, prefillStart, prefillEnd) {
         ${[1, 2, 3, 4, 6].map(n => `<button type="button" class="filter-btn" onclick="setBlockDurationWeeks(${n})">${n} W</button>`).join('')}
       </div>
       ${view && view.overrun ? `<div class="form-hint">Läuft über: laut Jira noch offen (Stand: ${esc(jiraSyncAgeLabel() || 'unbekannt')}), der Balken reicht deshalb bis heute. Ist es in Wahrheit schon fertig, „Erledigt“ anhaken und das Ende aufs echte Datum setzen.</div>` : ''}
-      <div class="form-group" id="blockDoneGroup" ${typ === 'abwesenheit' ? 'hidden' : ''}>
+      <div class="form-row" id="blockDoneGroup" ${typ === 'abwesenheit' ? 'hidden' : ''}>
         <label class="form-label" style="display:flex;align-items:center;gap:8px">
           <input type="checkbox" id="blockDone" ${(b && b.done) || jiraDone ? 'checked' : ''} ${jiraDone ? 'disabled' : ''}>
           <span>Erledigt${jiraDone ? ' — laut Jira' : ''}</span>
         </label>
+        <label class="form-label" style="display:flex;align-items:center;gap:8px">
+          <input type="checkbox" id="blockBlocked" ${b && isBlockBlocked(b) ? 'checked' : ''}>
+          <span>Blockiert${b && isBlockBlocked(b) ? ` seit ${formatDate(b.blockedSince)}` : ''}</span>
+        </label>
       </div>
+      ${b && blockUpdates(b).length ? `
+        <div class="form-group">
+          <label class="form-label">Updates</label>
+          <div class="block-updates">
+            ${blockUpdates(b).slice().reverse().map(u => `
+              <div class="block-update"><span class="block-update-date">${formatDateShort(u.date)}</span><span>${esc(u.text)}</span></div>`).join('')}
+          </div>
+        </div>` : ''}
       <div class="form-group">
         <label class="form-label">Notiz</label>
         <textarea class="form-textarea" id="blockNotiz" rows="3">${b ? esc(b.notiz || '') : ''}</textarea>
@@ -1391,6 +1457,8 @@ function saveBlock(id) {
   const doneEl = document.getElementById('blockDone');
   // Ein von Jira abgeleitetes Erledigt ist kein manuelles — nicht speichern.
   const done = typ === 'ticket' && !!(doneEl && doneEl.checked && !doneEl.disabled);
+  const blockedEl = document.getElementById('blockBlocked');
+  const blocked = typ === 'ticket' && !!(blockedEl && blockedEl.checked);
 
   if (!personId) { toast('Person nötig'); return; }
   if (!start && !end) { toast('Start und Ende nötig'); return; }
@@ -1415,6 +1483,7 @@ function saveBlock(id) {
     const summary = key ? jiraSummaryForKey(key) : '';
     fields = {
       personId, typ, start, end, done, notiz: notiz || null,
+      blockedSince: blocked ? ((existing && existing.blockedSince) || todayStr()) : null,
       jiraRef: key || null,
       jiraSummary: summary || (existing && existing.jiraSummary) || null,
       // Gespeichert nur als Rueckfall fuer die Anzeige ohne Jira-Stand.
@@ -1721,6 +1790,7 @@ function exportPersonBlocks(personId, from, to, matchingBlocks) {
       if (blockState(b) === 'done') md += ` · erledigt`;
       if (blockAuftragKey(b)) md += ` · ${jiraMd(blockAuftragKey(b))}`;
       md += '\n';
+      blockUpdates(b).forEach(u => { md += `  - ${formatDate(u.date)}: ${u.text}\n`; });
     });
   } else {
     md += `_Keine Planungsblöcke im gewählten Zeitraum._\n`;

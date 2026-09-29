@@ -112,6 +112,16 @@ stored — it's derived at render time from the items that already exist.
 This is the feature the tool exists for: never walking into a 1:1 without
 context, and never maintaining a separate "agenda" document that drifts.
 
+### Standup round
+
+A team meeting shows one row per participant with the Aufträge they're on
+that day — taken from planning and Jira, not typed. What gets typed is the
+state ("hängt an …"), and it's stored on the block as a dated update, plus a
+`blockedSince` when someone is stuck. That puts it back in front of you in
+the planner tooltip and at the next standup ("zuletzt 12.10.: …", "blockiert
+seit …"), which is what makes "stuck for three standups" visible. Anything
+not tied to an Auftrag stays as a per-person note on the meeting.
+
 ### Growth signals
 
 Highlights and concerns are logged per person as dated items. A rolling

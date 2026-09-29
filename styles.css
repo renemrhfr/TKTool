@@ -6253,3 +6253,66 @@ body {
 @media (max-width: 700px) {
   .overview-board:has(> :nth-child(3):last-child) { grid-template-columns: 1fr; }
 }
+
+/* Standup-Runde: eine Zeile pro Person, darunter ihre laufenden Auftraege.
+   Getippt wird nur der Stand; der landet am Block. */
+.standup-round h3 { display: flex; align-items: baseline; gap: 10px; }
+.standup-person {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.standup-person:last-child { border-bottom: none; }
+.standup-person.is-absent { opacity: .55; }
+.standup-person-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.standup-person-body { display: flex; flex-direction: column; gap: 6px; padding-left: 34px; }
+.standup-block {
+  border-left: 3px solid var(--timeline-ticket, var(--accent));
+  padding: 4px 0 4px 10px;
+}
+.standup-block.is-blocked { border-left-color: var(--danger); }
+.standup-block-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; }
+.standup-block-title {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+.standup-block-title:hover { color: var(--accent); }
+.standup-chip {
+  font-size: 10px;
+  text-transform: lowercase;
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text-secondary);
+}
+.standup-chip-muted { color: var(--text-muted); }
+.standup-chip-blocked { color: var(--danger); border-color: var(--danger); }
+.standup-chip-overrun { color: var(--warning); border-color: var(--warning); }
+.standup-previous { font-size: 12px; color: var(--text-muted); }
+.standup-own { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.standup-own > span { flex: 1; min-width: 0; }
+.standup-icon-btn {
+  background: none;
+  border: none;
+  padding: 0 4px;
+  font-size: 11px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.standup-icon-btn:hover { color: var(--accent); }
+.standup-input-row { display: flex; gap: 6px; align-items: center; }
+.standup-input-row .form-input { flex: 1; min-width: 0; padding: 4px 8px; font-size: 13px; }
+.standup-unplanned { font-size: 12px; color: var(--text-muted); display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.standup-unplanned-item { display: inline-flex; align-items: center; gap: 4px; }
+
+/* Blockiert: rote Kante am Balken, sichtbar in jeder Timeline. */
+.tl-block.tl-block-blocked { box-shadow: inset 0 0 0 1px var(--danger); border-left-color: var(--danger); }
+.tl-block-blocked-mark { flex: 0 0 auto; font-size: 10px; }
+.block-updates { display: flex; flex-direction: column; gap: 4px; max-height: 160px; overflow-y: auto; font-size: 13px; }
+.block-update { display: flex; gap: 8px; }
+.block-update-date { color: var(--text-muted); flex: 0 0 auto; font-variant-numeric: tabular-nums; }

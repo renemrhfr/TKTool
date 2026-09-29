@@ -516,6 +516,160 @@ function renderMeetingStatusSection(m) {
   `;
 }
 
+// ============================================================
+// STANDUP-RUNDE
+// ============================================================
+// Im Standup sagt jeder, woran er sitzt und wo es haengt. Woran jemand sitzt,
+// weiss die App schon (Planung + Jira) — getippt wird nur der Stand. Der
+// landet am Block, nicht am Termin: dann steht er in der Planung und beim
+// naechsten Standup wieder da. Was an keinem Auftrag haengt ("krank",
+// "wartet auf VPN"), bleibt als Notiz pro Person am Meeting.
+function standupBlocksFor(personId, meeting) {
+  const date = meeting.date || todayStr();
+  return (data.blocks || [])
+    .filter(b => b.personId === personId && !isAbsenceBlock(b) && !isBlockParked(b))
+    .map(blockView)
+    .filter(b => b.state !== 'done' && (
+      (b.start <= date && b.end >= date)
+      || isBlockBlocked(b)
+      || blockUpdates(b).some(u => u.meetingId === meeting.id)))
+    .sort((a, b) => (isBlockBlocked(b) - isBlockBlocked(a))
+      || (b.overrun - a.overrun)
+      || (a.state === 'waiting') - (b.state === 'waiting')
+      || a.end.localeCompare(b.end));
+}
+
+function standupPersonNote(meeting, personId) {
+  return (meeting.standup && meeting.standup[personId]) || '';
+}
+
+function renderStandupBlock(meeting, b) {
+  const key = blockAuftragKey(b);
+  const previous = blockLatestUpdate(b, meeting.id);
+  const own = blockUpdates(b).filter(u => u.meetingId === meeting.id);
+  const waiting = b.state === 'waiting' ? String(blockOpenTickets(b)[0]?.status || 'wartet') : '';
+  const chips = [
+    isBlockBlocked(b) ? `<span class="standup-chip standup-chip-blocked">${esc(blockBlockedLabel(b))}</span>` : '',
+    b.overrun ? `<span class="standup-chip standup-chip-overrun">über seit ${formatDateShort(b.plannedEnd)}</span>` : '',
+    waiting ? `<span class="standup-chip">${esc(waiting.toLowerCase())}</span>` : '',
+    !b.overrun && !waiting ? `<span class="standup-chip standup-chip-muted">bis ${formatDateShort(b.end)}</span>` : '',
+  ].join('');
+  return `
+    <div class="standup-block ${isBlockBlocked(b) ? 'is-blocked' : ''}">
+      <div class="standup-block-head">
+        <button class="standup-block-title" type="button" onclick="openBlockForm('${b.id}')" title="Block öffnen">${esc(blockDisplayLabel(b))}</button>
+        ${key ? jiraKeyLink(key) : ''}
+        ${chips}
+      </div>
+      ${previous ? `<div class="standup-previous">zuletzt ${formatDateShort(previous.date)}: ${esc(previous.text)}</div>` : ''}
+      ${own.map(u => `
+        <div class="standup-own">
+          <span>${esc(u.text)}</span>
+          <button class="standup-icon-btn" type="button" title="Als Follow-up übernehmen" onclick="standupFollowUp('${meeting.id}','${b.personId}','${esc(key)}','${u.id}','${b.id}')">→ follow-up</button>
+          <button class="standup-icon-btn" type="button" title="Update löschen" onclick="removeBlockUpdate('${b.id}','${u.id}')">&#x2715;</button>
+        </div>`).join('')}
+      <div class="standup-input-row">
+        <input class="form-input standup-input" id="su-${meeting.id}-${b.id}" type="text" autocomplete="off"
+          placeholder="Stand / hängt an … (Enter speichert, springt weiter)"
+          onkeydown="onStandupKey(event,'${meeting.id}','block','${b.id}')">
+        <button class="btn btn-sm ${isBlockBlocked(b) ? 'btn-danger' : 'btn-secondary'}" type="button"
+          onclick="setBlockBlocked('${b.id}', ${!isBlockBlocked(b)}, '${meeting.date || todayStr()}')"
+          title="${isBlockBlocked(b) ? 'Blocker gelöst' : 'Als blockiert markieren'}">${isBlockBlocked(b) ? 'gelöst' : 'blockiert'}</button>
+      </div>
+    </div>`;
+}
+
+function renderStandupRound(m) {
+  if (!isTeamMeeting(m)) return '';
+  const date = m.date || todayStr();
+  const people = meetingParticipants(m).filter(p => p.type !== 'kontakt');
+  if (!people.length) {
+    return `<div class="meeting-detail-section meeting-detail-section-emphasis standup-round">
+      <h3>Runde</h3><div class="oneonone-carryover-empty">Teilnehmer wählen, dann erscheint hier die Runde.</div></div>`;
+  }
+  const rows = people.map(person => {
+    const absence = personAbsenceOnDate(person.id, date);
+    const blocks = absence ? [] : standupBlocksFor(person.id, m);
+    const unplanned = absence ? [] : (jiraUnplannedAuftraege(person) || []);
+    const note = standupPersonNote(m, person.id);
+    return `
+      <div class="standup-person ${absence ? 'is-absent' : ''}">
+        <div class="standup-person-head">
+          ${personAvatar(person, 'sm')}
+          <strong>${esc(person.name)}</strong>
+          ${absence
+            ? `<span class="standup-chip standup-chip-muted">${esc((absence.label || 'abwesend').toLowerCase())} bis ${formatDateShort(absence.end)}</span>`
+            : `<span class="standup-chip standup-chip-muted">${esc(freeFromLabel(personFreeFrom(person.id)))}</span>`}
+        </div>
+        ${absence ? '' : `
+          <div class="standup-person-body">
+            ${blocks.map(b => renderStandupBlock(m, b)).join('') || '<div class="standup-previous">Nichts geplant für diesen Tag.</div>'}
+            ${unplanned.length ? `<div class="standup-unplanned">ohne Block: ${unplanned.map(a => `
+              <span class="standup-unplanned-item">${jiraKeyLink(a.key)} ${esc(a.summary)}
+                <button class="standup-icon-btn" type="button" title="Hinten anstellen, 1 Woche" onclick="planAuftrag('${person.id}','${esc(a.key)}',1)">+1 W</button></span>`).join('')}</div>` : ''}
+            <div class="standup-input-row">
+              <input class="form-input standup-input standup-input-person" id="su-${m.id}-p-${person.id}" type="text" autocomplete="off"
+                value="${esc(note)}" placeholder="Sonstiges (ohne Ticket) …"
+                onchange="setStandupPersonNote('${m.id}','${person.id}',this.value)"
+                onkeydown="onStandupKey(event,'${m.id}','person','${person.id}')">
+            </div>
+          </div>`}
+      </div>`;
+  }).join('');
+  const blockedCount = people.reduce((n, p) => n + standupBlocksFor(p.id, m).filter(isBlockBlocked).length, 0);
+  return `
+    <div class="meeting-detail-section meeting-detail-section-emphasis standup-round">
+      <h3>Runde <span class="oneonone-carryover-count">${people.length} Personen${blockedCount ? ` · ${blockedCount} blockiert` : ''} · Stand ${esc(jiraSyncAgeLabel() || 'ohne Jira')}</span></h3>
+      ${rows}
+    </div>`;
+}
+
+function setStandupPersonNote(meetingId, personId, value) {
+  const m = data.meetings.find(x => x.id === meetingId);
+  if (!m) return;
+  const next = { ...(m.standup || {}) };
+  const clean = String(value || '').trim();
+  if (clean) next[personId] = clean;
+  else delete next[personId];
+  m.standup = next;
+  saveData(data);
+}
+
+// Enter speichert und springt ins naechste Feld — die Runde laeuft so ohne
+// Maus durch. Weil render() das DOM neu baut, wird der Fokus ueber die id
+// wiederhergestellt.
+function onStandupKey(event, meetingId, kind, id) {
+  if (event.key !== 'Enter' || event.isComposing) return;
+  event.preventDefault();
+  const inputs = Array.from(document.querySelectorAll('.standup-input'));
+  const next = inputs[inputs.indexOf(event.target) + 1];
+  const nextId = next ? next.id : '';
+  if (kind === 'block') {
+    const m = data.meetings.find(x => x.id === meetingId);
+    if (addBlockUpdate(id, event.target.value, meetingId, (m && m.date) || todayStr())) render();
+  } else {
+    setStandupPersonNote(meetingId, id, event.target.value);
+  }
+  const target = nextId && document.getElementById(nextId);
+  if (target) target.focus();
+}
+
+function standupFollowUp(meetingId, personId, key, updateId, blockId) {
+  const meeting = data.meetings.find(entry => entry.id === meetingId);
+  const block = data.blocks.find(b => b.id === blockId);
+  const update = block && blockUpdates(block).find(u => u.id === updateId);
+  if (!meeting || !update) return;
+  openCapture({
+    meetingId: meeting.id,
+    personId,
+    month: meeting.date ? meeting.date.slice(0, 7) : currentMonth(),
+    date: meeting.date || todayStr(),
+    status: 'todo',
+    type: 'todo',
+    text: key ? `${key}: ${update.text}` : update.text,
+  });
+}
+
 function renderCarryoverSignal(item) {
   const tone = item.type === 'concern' ? 'concern' : 'highlight';
   const label = item.type === 'concern' ? 'concern' : 'win';
@@ -625,6 +779,8 @@ function renderMeetingDetailBody(m) {
     ${renderMeetingInsights(m)}
 
     ${participantCard}
+
+    ${renderStandupRound(m)}
 
     ${renderMeetingStatusSection(m)}
 
