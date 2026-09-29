@@ -79,18 +79,6 @@ function personSupportInMonth(p, month) {
   return (p.supportMonate || []).includes(month);
 }
 
-function personSupportInWindow(p, startISO, endISO) {
-  if (!p.supportMonate || p.supportMonate.length === 0) return false;
-  const months = new Set();
-  let d = parseISO(startISO);
-  const end = parseISO(endISO);
-  while (d <= end) {
-    months.add(monthOfDate(d));
-    d = addDays(d, 1);
-  }
-  return p.supportMonate.some(m => months.has(m));
-}
-
 function addWorkdays(startISO, n) {
   let d = parseISO(startISO);
   let left = n;
@@ -242,7 +230,6 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
     dense = false,
     compact = false,
     idPrefix = 'tl',
-    supportAnchorMonth = null,
     insertLane = false,
     showFreeFrom = true,
     showInbox = false,
@@ -324,8 +311,12 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
   const rowsHtml = personIds.map(pid => {
     const person = data.persons.find(p => p.id === pid);
     if (!person) return '';
-    const hasSupInWindow = personSupportInWindow(person, startDate, endDate);
-    const showSupBadge = supportAnchorMonth ? personSupportInMonth(person, supportAnchorMonth) : hasSupInWindow;
+    // Badge, sobald irgendein sichtbarer Tag in einem Support-Monat liegt —
+    // nicht nur der Monat in der Fenstermitte. Sonst verschwindet er, wenn
+    // zwei Wochen ueber ein Monatsende reichen. Welche Tage es genau sind,
+    // zeigt die Zellfarbe im Track.
+    const supMonths = (person.supportMonate || []).filter(m => m >= startDate.slice(0, 7) && m <= endDate.slice(0, 7));
+    const showSupBadge = supMonths.length > 0;
 
     // Track cells (weekends + support/markers). Today is shown by the header column and needle.
     const cellsHtml = days.map((d, i) => {
@@ -479,7 +470,7 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
         <div class="tl-person" style="height:${trackHeight}px" onclick="${labelClick}">
           <div class="tl-person-main">
             <div class="tl-person-top">
-              ${showSupBadge ? '<span class="tl-sup-badge" title="Support-Rotation">SUP</span>' : ''}
+              ${showSupBadge ? `<span class="tl-sup-badge" title="${esc('Support-Rotation: ' + supMonths.map(formatMonthName).join(', '))}">SUP</span>` : ''}
               <span class="tl-person-name">${esc(person.name)}</span>
               ${inboxBadge}
             </div>
@@ -612,7 +603,6 @@ function planungAnchorMonth() {
 
 function renderPlanung() {
   const { start, end } = planungWindow();
-  const month = planungSupportMonth();
   const sort = viewState.planungSort || 'name';
   const rawQuery = viewState.planungQuery || '';
   const blockQuery = rawQuery.trim().toLocaleLowerCase('de-AT');
@@ -731,7 +721,7 @@ function renderPlanung() {
     ${inboxCount && viewState.planungShowInbox ? renderPlanungInbox(inbox) : ''}
     ${searchResults}
 
-    ${personIds.length ? renderTimeline({ personIds, startDate: start, endDate: end, options: { idPrefix: 'planung', supportAnchorMonth: month, insertLane: true, showInbox: true, showWeekends: planungShowWeekends(), blockQuery, workOnly } })
+    ${personIds.length ? renderTimeline({ personIds, startDate: start, endDate: end, options: { idPrefix: 'planung', insertLane: true, showInbox: true, showWeekends: planungShowWeekends(), blockQuery, workOnly } })
       : `<div class="empty-state"><div class="empty-state-icon">&#128269;</div><div class="empty-state-text">${blockQuery ? 'Keine passenden Blöcke' : 'Keine Teammitglieder'}</div></div>`}
 
     ${renderWaitingQueue(personFilter, blockQuery)}
@@ -1113,7 +1103,7 @@ function renderPersonPlanungCard(person) {
         <div><strong>Nächste:</strong> ${next ? formatMonthName(next) : '—'}</div>
       </div>
 
-      ${renderTimeline({ personIds: [person.id], startDate: startISO, endDate: endISO, options: { idPrefix: 'person', supportAnchorMonth: curMonth, showWeekends: planungShowWeekends() } })}
+      ${renderTimeline({ personIds: [person.id], startDate: startISO, endDate: endISO, options: { idPrefix: 'person', showWeekends: planungShowWeekends() } })}
 
       ${blocksSection}
 
@@ -1203,7 +1193,7 @@ function renderMeetingTeamStatusForDate(dateISO, options = {}) {
   return `
     <div class="${inForm ? 'meeting-status-preview' : 'meeting-detail-section'}">
       <h3>${esc(heading)} — KW ${formatDateShort(start)}–${formatDateShort(end)}</h3>
-      ${renderTimeline({ personIds: resolvedPersonIds, startDate: start, endDate: end, options: { showWeekends: false, dense: true, compact: inForm, idPrefix: idPrefix || (inForm ? 'meeting-preview' : 'meeting'), supportAnchorMonth: monthOfDate(parseISO(dateISO)), insertLane: true } })}
+      ${renderTimeline({ personIds: resolvedPersonIds, startDate: start, endDate: end, options: { showWeekends: false, dense: true, compact: inForm, idPrefix: idPrefix || (inForm ? 'meeting-preview' : 'meeting'), insertLane: true } })}
     </div>
   `;
 }
