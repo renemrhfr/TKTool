@@ -138,37 +138,10 @@ function toggleJiraHandoverStatus(status) {
   });
 }
 
-// Aktueller Status des Tickets hinter einem Block — aus refs (dort stehen
-// genau die geplanten Keys) mit Rueckfall auf die Ticketliste der Person.
+// Aktueller Status des Auftrags hinter einem Block.
 function jiraStatusForBlock(block) {
-  if (!jiraSyncData || !block || !block.jiraRef) return null;
-  const key = block.jiraRef.trim().toUpperCase();
-  const refs = jiraSyncData.refs || {};
-  for (const raw of Object.keys(refs)) {
-    if (raw.trim().toUpperCase() === key) return refs[raw];
-  }
-  const person = data.persons.find(p => p.id === block.personId);
-  const tickets = person ? jiraTicketsForPerson(person) : null;
-  const hit = (tickets || []).find(t => String(t.key || '').toUpperCase() === key);
-  return hit ? { status: hit.status, statusCategory: hit.statusCategory } : null;
-}
-
-// Parent-Key eines Ticket-Keys aus dem Snapshot — egal ob das Ticket bei einer
-// Person haengt oder nur als referenzierter Key mitgeholt wurde. '' heisst
-// "kein Parent bekannt", auch wenn der Snapshot das Ticket gar nicht kennt.
-function jiraParentKeyForRef(ref) {
-  const key = String(ref || '').trim().toUpperCase();
-  if (!key || !jiraSyncData) return '';
-  for (const list of Object.values(jiraSyncData.assignees || {})) {
-    for (const t of list || []) {
-      if (String(t.key || '').toUpperCase() === key) return String(t.parentKey || '').toUpperCase();
-    }
-  }
-  const refs = jiraSyncData.refs || {};
-  for (const raw of Object.keys(refs)) {
-    if (raw.trim().toUpperCase() === key) return String(refs[raw].parentKey || '').toUpperCase();
-  }
-  return '';
+  if (!block || !block.jiraRef) return null;
+  return jiraTicketInfo(jiraAuftragKey(block.jiraRef));
 }
 
 // Blockiert der Block noch den Entwickler? Offene Bloecke, deren Ticket in
@@ -176,7 +149,7 @@ function jiraParentKeyForRef(ref) {
 // Waiting is ticket state, independent of the planning calendar.
 function jiraHandoverBlocks(personId) {
   return (data.blocks || []).filter(b => (!personId || b.personId === personId)
-    && !b.done && isJiraHandoverStatus(jiraStatusForBlock(b)?.status));
+    && !b.done && b.typ !== 'abwesenheit' && isJiraHandoverStatus(jiraStatusForBlock(b)?.status));
 }
 
 function jiraWaitingTickets(personId = null) {
@@ -190,7 +163,7 @@ function jiraWaitingTickets(personId = null) {
     }
   }
   for (const block of jiraHandoverBlocks()) {
-    const key = block.jiraRef.trim().toUpperCase();
+    const key = jiraAuftragKey(block.jiraRef);
     const state = jiraStatusForBlock(block);
     if (state.statusCategory === 'done') continue;
     const owner = state.assignee && data.persons.find(p => p.jiraAccountId === state.assignee);
@@ -201,11 +174,6 @@ function jiraWaitingTickets(personId = null) {
   }
   return [...byKey.values()].filter(t => !personId || t.personId === personId)
     .sort((a, b) => a.status.localeCompare(b.status, 'de') || a.key.localeCompare(b.key, 'de', { numeric: true }));
-}
-
-function jiraBlockResolved(block) {
-  const state = jiraStatusForBlock(block);
-  return state?.statusCategory === 'done';
 }
 
 // Alle je gesehenen Status, damit ausgeschlossene weiterhin waehlbar bleiben —
@@ -607,33 +575,92 @@ function jiraTicketsForPerson(person) {
   return Array.isArray(tickets) ? tickets.filter(t => !isJiraStatusExcluded(t.status)) : [];
 }
 
-// Alle Tickets aus dem Snapshot als flache Liste (key + summary), fuer die
-// Vorschlagsliste im Block-Formular. Dedupliziert, weil ein Ticket sowohl in
-// assignees als auch in refs stecken kann.
-function jiraTicketPool() {
-  if (!jiraSyncData) return [];
-  const byKey = {};
-  for (const list of Object.values(jiraSyncData.assignees || {})) {
-    if (!Array.isArray(list)) continue;
-    for (const t of list) {
-      const key = String(t.key || '').trim().toUpperCase();
-      if (key && !byKey[key]) byKey[key] = { key, summary: String(t.summary || '') };
+// --- Jira-Index ------------------------------------------------------
+// Ein Snapshot aendert sich nur beim Import (dann ist es ein neues Objekt).
+// Der Index haengt deshalb am Snapshot selbst und muss nie invalidiert werden.
+const jiraIndexCache = new WeakMap();
+
+function jiraIndex() {
+  if (!jiraSyncData) return null;
+  const cached = jiraIndexCache.get(jiraSyncData);
+  if (cached) return cached;
+  const byKey = new Map();
+  const parentSummary = new Map();
+  const put = (rawKey, info) => {
+    const key = String(rawKey || '').trim().toUpperCase();
+    if (!key) return;
+    byKey.set(key, { ...(byKey.get(key) || {}), ...info, key });
+    if (info.parentKey && info.parentSummary && !parentSummary.has(info.parentKey)) {
+      parentSummary.set(info.parentKey, info.parentSummary);
     }
-  }
+  };
   const refs = jiraSyncData.refs || {};
-  for (const raw of Object.keys(refs)) {
-    const key = raw.trim().toUpperCase();
-    if (key && !byKey[key]) byKey[key] = { key, summary: String(refs[raw].summary || '') };
+  for (const raw of Object.keys(refs)) put(raw, refs[raw]);
+  for (const [accountId, list] of Object.entries(jiraSyncData.assignees || {})) {
+    for (const t of list || []) put(t.key, { ...t, assignee: accountId });
   }
-  return Object.values(byKey).sort((a, b) => a.key.localeCompare(b.key));
+  const index = { byKey, parentSummary };
+  jiraIndexCache.set(jiraSyncData, index);
+  return index;
 }
 
-// Titel eines Keys, egal aus welcher Ecke des Snapshots er kommt.
-function jiraSummaryForKey(ref) {
+// Alles, was der Snapshot ueber einen Key weiss — egal ob er bei einer Person
+// haengt oder nur als referenzierter Key mitgeholt wurde.
+function jiraTicketInfo(ref) {
+  const index = jiraIndex();
+  const key = String(ref || '').trim().toUpperCase();
+  return index && key ? index.byKey.get(key) || null : null;
+}
+
+// Aeltere Snapshots kennen das Subtask-Flag noch nicht — dort muss der
+// Typname reichen, bis zum naechsten Import.
+function jiraIsSubtask(ticket) {
+  if (!ticket) return false;
+  if (typeof ticket.subtask === 'boolean') return ticket.subtask;
+  return /sub|unter/i.test(String(ticket.type || ''));
+}
+
+// Der Auftrag ist die Planungseinheit: ein Subtask zaehlt zu seinem Parent,
+// jedes andere Ticket ist selbst ein Auftrag. Ein Epic ueber dem Auftrag
+// spielt bewusst keine Rolle — dort haengen Themen, die nichts miteinander
+// zu tun haben (allen voran "Tagesgeschaeft").
+function jiraAuftragKey(ref) {
   const key = String(ref || '').trim().toUpperCase();
   if (!key) return '';
-  const hit = jiraTicketPool().find(t => t.key === key);
-  return hit ? hit.summary : '';
+  const ticket = jiraTicketInfo(key);
+  return ticket && ticket.parentKey && jiraIsSubtask(ticket) ? ticket.parentKey : key;
+}
+
+// Titel eines Keys, egal aus welcher Ecke des Snapshots er kommt. Ein Auftrag,
+// an dem die Person nur Subtasks hat, steht oft selbst nicht im Snapshot —
+// dann kennt ihn nur der Subtask als Parent.
+function jiraSummaryForKey(ref) {
+  const index = jiraIndex();
+  const key = String(ref || '').trim().toUpperCase();
+  if (!index || !key) return '';
+  const ticket = index.byKey.get(key);
+  return (ticket && ticket.summary) || index.parentSummary.get(key) || '';
+}
+
+// Alle Auftraege im Snapshot, fuer die Vorschlagsliste im Block-Formular.
+function jiraAuftragPool() {
+  const index = jiraIndex();
+  if (!index) return [];
+  const keys = new Set();
+  for (const ticket of index.byKey.values()) keys.add(jiraAuftragKey(ticket.key));
+  return [...keys]
+    .map(key => ({ key, summary: jiraSummaryForKey(key) }))
+    .sort((a, b) => a.key.localeCompare(b.key, 'de', { numeric: true }));
+}
+
+// Die offenen Tickets einer Person, die zu einem Auftrag gehoeren — der
+// Auftrag selbst eingeschlossen, falls er ihr gehoert. null = keine Aussage
+// moeglich (kein Snapshot oder Person nicht mit Jira verknuepft).
+function jiraPersonAuftragTickets(person, auftragKey) {
+  const tickets = jiraTicketsForPerson(person);
+  if (tickets === null) return null;
+  const key = String(auftragKey || '').trim().toUpperCase();
+  return tickets.filter(t => t.statusCategory !== 'done' && jiraAuftragKey(t.key) === key);
 }
 
 // Die Abfrage, die der Browser für uns ausführt: alle offenen Tickets des
@@ -646,11 +673,7 @@ function jiraQueryUrl() {
     .filter(p => p.type !== 'kontakt' && p.jiraAccountId)
     .map(p => p.jiraAccountId.trim())
     .filter((id, i, all) => all.indexOf(id) === i);
-  const today = todayStr();
-  const refKeys = (data.blocks || [])
-    .filter(b => !b.done && b.jiraRef)
-    .map(b => b.jiraRef.trim().toUpperCase())
-    .filter((key, i, all) => all.indexOf(key) === i);
+  const refKeys = jiraPlannedRefKeys();
   if (!accountIds.length && !refKeys.length) return '';
 
   const quoted = values => values.map(v => `"${v}"`).join(',');
@@ -677,73 +700,41 @@ function jiraQueryUrl() {
   return `${base}/rest/api/3/search/jql?${params}`;
 }
 
-// Drift zwischen Jira und Planung, über jiraRef-Key-Matching (nicht Anzahl):
-// unplanned = assigned Tickets ohne laufenden/zukünftigen Block,
-// stale = Blöcke, deren Ticket laut Sync erledigt oder umassigned ist.
-// Blöcke ohne jiraRef bleiben bewusst außen vor.
-function jiraDriftForPerson(person) {
-  const tickets = jiraTicketsForPerson(person);
-  if (tickets === null) return null;
-  const today = todayStr();
-  // Offen ist offen, egal ob das Enddatum schon durch ist. Sonst gilt ein
-  // abgelaufener Block als "nicht verplant" und "+ block" legt denselben
-  // Ticket-Block ein zweites Mal an — der Block gehoert verlaengert, nicht
-  // dupliziert.
-  const effective = new Map((typeof workingPlanBlocks === 'function' ? workingPlanBlocks() : []).map(b => [b.id, b]));
-  const openBlocks = (data.blocks || []).filter(b =>
-    b.personId === person.id && !b.done && b.jiraRef).map(b => effective.get(b.id) || b);
-  const activeBlocks = openBlocks.filter(b => (b.end || b.start || '') >= today);
-  const plannedKeys = new Set(openBlocks.map(b => b.jiraRef.trim().toUpperCase()));
-  const openKeys = new Set(tickets.map(t => String(t.key || '').toUpperCase()));
-  const unplanned = tickets.filter(t => !isJiraHandoverStatus(t.status) && !plannedKeys.has(String(t.key || '').toUpperCase()));
-  // Ticket laeuft in Jira noch, der Block ist aber abgelaufen: eigene Sorte
-  // Drift mit eigener Aktion (verlaengern) statt eines zweiten Blocks.
-  const expired = openBlocks.filter(b =>
-    b.start && b.end && b.end < today && openKeys.has(b.jiraRef.trim().toUpperCase())
-      && !isJiraHandoverStatus(jiraStatusForBlock(b)?.status));
-  const refs = (jiraSyncData && jiraSyncData.refs) || {};
-  const refByKey = {};
-  for (const k of Object.keys(refs)) refByKey[k.trim().toUpperCase()] = refs[k];
-  const stale = openBlocks.filter(b => {
-    const key = b.jiraRef.trim().toUpperCase();
-    if (openKeys.has(key)) return false;
-    const ref = refByKey[key];
-    if (!ref) return false; // unbekannter Key (Epic, fremdes Projekt) -> kein Urteil
-    if (ref.statusCategory === 'done') return true;
-    if (isJiraStatusExcluded(ref.status)) return true;
-    return !!(ref.assignee && person.jiraAccountId
-      && ref.assignee.trim() !== person.jiraAccountId.trim());
-  });
-  // Titel-Drift nur fuer Bloecke, deren Label aus Jira stammt und seither
-  // nicht von Hand geaendert wurde (label === jiraSummary). Handgeschriebene
-  // Labels sollen nicht dauerhaft als "veraltet" gemeldet werden.
-  const staleIds = new Set(stale.map(b => b.id));
-  const ticketByKey = {};
-  for (const t of tickets) ticketByKey[String(t.key || '').toUpperCase()] = t;
-  const renamed = activeBlocks.filter(b => {
-    if (staleIds.has(b.id)) return false;
-    if (!b.jiraSummary || b.label !== b.jiraSummary) return false;
-    const current = jiraCurrentSummary(b.jiraRef, ticketByKey, refByKey);
-    return !!current && current !== b.jiraSummary;
-  });
-  return {
-    unplanned,
-    stale,
-    renamed,
-    expired,
-    hasDrift: unplanned.length > 0 || stale.length > 0 || renamed.length > 0 || expired.length > 0,
-  };
+// Welche Keys die Abfrage zusaetzlich mitholen muss: die Auftraege offener
+// Bloecke — deren Status entscheidet, ob ein Block erledigt ist, auch wenn
+// der Auftrag jemand anderem gehoert.
+function jiraPlannedRefKeys() {
+  return (data.blocks || [])
+    .filter(b => !b.done && b.jiraRef && b.typ !== 'abwesenheit')
+    .map(b => jiraAuftragKey(b.jiraRef))
+    .filter((key, i, all) => key && all.indexOf(key) === i);
 }
 
-// Aktueller Ticket-Titel aus dem Snapshot: erst die offene Ticketliste der
-// Person, sonst der mitgelieferte Status geplanter Keys (refs).
-function jiraCurrentSummary(ref, ticketByKey, refByKey) {
-  const key = String(ref || '').trim().toUpperCase();
-  if (!key) return '';
-  const fromTicket = ticketByKey && ticketByKey[key];
-  if (fromTicket && fromTicket.summary) return fromTicket.summary;
-  const fromRef = refByKey && refByKey[key];
-  return (fromRef && fromRef.summary) || '';
+// Jira gegen Planung: Auftraege, an denen jemand offene Arbeit hat, fuer die
+// es aber keinen Block gibt. Mehr gibt es nicht abzugleichen — Titel, Status
+// und Erledigt werden aus dem Snapshot abgeleitet statt kopiert.
+function jiraUnplannedAuftraege(person) {
+  const tickets = jiraTicketsForPerson(person);
+  if (tickets === null) return null;
+  const planned = new Set((data.blocks || [])
+    .filter(b => b.personId === person.id && b.typ !== 'abwesenheit' && !b.done && b.jiraRef)
+    .map(b => jiraAuftragKey(b.jiraRef)));
+  const byKey = new Map();
+  for (const t of tickets) {
+    // Was nur noch in Review/QA liegt, braucht keinen Platz im Kalender.
+    if (t.statusCategory === 'done' || isJiraHandoverStatus(t.status)) continue;
+    const key = jiraAuftragKey(t.key);
+    if (planned.has(key)) continue;
+    if (!byKey.has(key)) byKey.set(key, { key, summary: jiraSummaryForKey(key) || t.summary || key, tickets: [] });
+    byKey.get(key).tickets.push(t);
+  }
+  return [...byKey.values()].sort((a, b) => a.key.localeCompare(b.key, 'de', { numeric: true }));
+}
+
+function jiraDriftForPerson(person) {
+  const unplanned = jiraUnplannedAuftraege(person);
+  if (unplanned === null) return null;
+  return { unplanned, hasDrift: unplanned.length > 0 };
 }
 
 function jiraSyncAgeLabel() {

@@ -84,13 +84,24 @@ settings menu lists who shares the folder and when they last synced.
 
 ### Capacity blocks
 
-Planning works in *blocks* (ticket, project, incident, absence) drawn on a
-per-person timeline, created and resized by dragging. Capacity is computed,
-never stored: workdays in the window minus allocated block days equals free
-days. People can be flagged for support duty per month (`supportMonate`),
-shown as a SUP badge. The deliberate choice here is workday granularity —
-no hours, no story points. A team lead needs to see "who is free next week",
-not run a resource-leveling algorithm.
+Planning works in *blocks* on a per-person timeline, created and resized by
+dragging. There are exactly two kinds: work on a Jira *Auftrag* (the ticket a
+person's subtasks hang under, or the ticket itself if it has no parent task)
+and absence. A block stores only person, Auftrag key, an estimated span and a
+manual "done" — everything else is derived from the imported Jira snapshot:
+the title, the open subtasks, whether the work is waiting in review, and
+whether the Auftrag is done. If Jira still shows work open after the estimate
+ran out, the bar keeps growing until today with a hatched tail; that is
+information, not a task.
+
+Per person the timeline shows *frei ab* — the first workday after the last
+work they're bound to, with a directly following absence pushed along. The
+only thing that asks for a decision is the inbox: Aufträge someone has open
+work on but no block. Planning one appends it after the person's last block.
+The deliberate choice here is workday granularity and rough estimates — no
+hours, no story points. A team lead needs to see "when can this person take
+the next topic", not run a resource-leveling algorithm. People can be flagged
+for support duty per month (`supportMonate`), shown as a SUP badge.
 
 ### 1:1 carryover
 

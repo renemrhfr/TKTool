@@ -1099,10 +1099,8 @@ function personAbsenceOnDate(personId, date) {
 // waehrend die Karte darunter brav "ab 03.08." anzeigte.
 function teamFocusScore(entry) {
   const nothingPlanned = !entry.activeBlocks.length
-    && !entry.upcomingBlocks.length
-    && !entry.overdueBlocks.length;
+    && !entry.upcomingBlocks.length;
   return (nothingPlanned && !entry.absenceToday ? 30 : 0)
-    + (entry.overdueBlocks.length * 20)
     + (entry.oneOnOneMissing ? 24 : 0)
-    + (entry.drift ? (entry.drift.stale.length * 16) + (entry.drift.unplanned.length * 6) + (entry.drift.renamed.length * 3) : 0);
+    + (entry.drift ? entry.drift.unplanned.length * 6 : 0);
 }

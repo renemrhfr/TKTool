@@ -599,6 +599,16 @@ async function loadJiraSync() {
 // offene Tickets pro Teammitglied (assignees) und der Status der in der
 // Planung referenzierten Keys (refs) — letztere koennen erledigt oder
 // umassigned sein und duerfen deshalb nicht als offene Tickets zaehlen.
+// Subtask-Flag und Titel des Parents: der Auftrag ueber einem Subtask muss
+// benannt werden koennen, auch wenn er selbst nicht im Snapshot steht (er
+// gehoert oft jemand anderem). Jira liefert beides im parent-Feld mit.
+function jiraHierarchyFields(f) {
+  return {
+    subtask: !!(f.issuetype && f.issuetype.subtask),
+    parentSummary: f.parent && f.parent.fields ? String(f.parent.fields.summary || '') : '',
+  };
+}
+
 function jiraSnapshotFromResponse(parsed) {
   if (!parsed || !Array.isArray(parsed.issues)) {
     throw new Error('Das sieht nicht nach einer Jira-Antwort aus (kein "issues"-Array).');
@@ -606,10 +616,7 @@ function jiraSnapshotFromResponse(parsed) {
   const teamIds = data.persons
     .filter(p => p.type !== 'kontakt' && p.jiraAccountId)
     .map(p => p.jiraAccountId.trim());
-  const today = todayStr();
-  const refKeys = new Set((data.blocks || [])
-    .filter(b => !b.done && b.jiraRef)
-    .map(b => b.jiraRef.trim().toUpperCase()));
+  const refKeys = new Set(jiraPlannedRefKeys());
 
   // Vorbelegen, damit ein Teammitglied ohne Treffer als "keine Tickets"
   // erkannt wird und nicht als "nicht verknuepft".
@@ -636,9 +643,10 @@ function jiraSnapshotFromResponse(parsed) {
         type: f.issuetype ? String(f.issuetype.name || '') : '',
         updated: String(f.updated || ''),
         // Traegt in Jira Cloud beide Beziehungen: Subtask -> Auftrag und
-        // Auftrag -> Epic. Gruppiert wird spaeter nur, wenn der Parent
-        // derselben Person gehoert, siehe groupJiraTickets().
+        // Auftrag -> Epic. Welche es ist, sagt erst subtask — daran haengt,
+        // welcher Auftrag in der Planung einen Block bekommt.
         parentKey: f.parent ? String(f.parent.key || '').toUpperCase() : '',
+        ...jiraHierarchyFields(f),
       });
     }
     if (refKeys.has(key.toUpperCase())) {
@@ -649,6 +657,7 @@ function jiraSnapshotFromResponse(parsed) {
         assignee: accountId,
         summary: String(f.summary || ''),
         parentKey: f.parent ? String(f.parent.key || '').toUpperCase() : '',
+        ...jiraHierarchyFields(f),
       };
     }
   }
@@ -1172,7 +1181,10 @@ const CLEANUP_GROUPS = [
     label: 'planungsblöcke',
     hint: 'erledigte Blöcke und vergangene Abwesenheiten',
     defaultMonths: 3,
-    match: r => !!(r.start && r.end && (r.done || r.typ === 'abwesenheit')),
+    // Erledigt kann auch aus Jira kommen (Auftrag geschlossen) — dann steht
+    // am Record nichts, und ohne blockState blieben solche Bloecke ewig.
+    match: r => !!(r.start && r.end && (r.done || r.typ === 'abwesenheit'
+      || (typeof blockState === 'function' && blockState(r) === 'done'))),
   },
   {
     id: 'markers',

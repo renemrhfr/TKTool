@@ -238,26 +238,18 @@ function ticketCountLabel(count) {
 }
 
 // Die Zahl am Avatar zaehlt nicht die Arbeit, sondern den Handlungsbedarf:
-// ueberfaellige Bloecke plus Jira-Drift. Zehn saubere Tickets sind kein
-// Signal, ein ueberfaelliger Block ist eines — und nur das gehoert an den
-// Avatar, der aus drei Metern Abstand noch lesbar ist.
+// Jira-Auftraege, an denen die Person arbeitet, die aber noch keinen Block
+// haben. Zehn saubere Tickets sind kein Signal — und nur ein Signal gehoert
+// an den Avatar, der aus drei Metern Abstand noch lesbar ist.
 function teamFocusAttentionBadge(entry) {
-  const drift = entry.drift;
-  const parts = [
-    entry.overdueBlocks.length ? `${entry.overdueBlocks.length} überfällig` : '',
-    drift?.unplanned.length ? `${drift.unplanned.length} ohne block` : '',
-    drift?.stale.length ? `${drift.stale.length} ${drift.stale.length === 1 ? 'block' : 'blocks'} veraltet` : '',
-  ].filter(Boolean);
+  const count = entry.drift?.unplanned.length || 0;
   // Nichts offen heisst kein Badge: eine 0 waere nur Rauschen, und der ruhige
   // Avatar ist selbst die Aussage.
-  if (!parts.length) return {};
-  const count = entry.overdueBlocks.length + (drift?.unplanned.length || 0) + (drift?.stale.length || 0);
+  if (!count) return {};
   return {
     count,
-    // Ueberfaellig und veraltet sind Fehler, ein ungeplantes Ticket ist bloss
-    // noch nicht eingeplant — das darf nicht gleich aussehen.
-    countTone: entry.overdueBlocks.length || drift?.stale.length ? 'bad' : 'warn',
-    countTitle: parts.join(' · '),
+    countTone: 'warn',
+    countTitle: `${count} ${count === 1 ? 'Auftrag' : 'Aufträge'} ohne Block`,
   };
 }
 
@@ -286,8 +278,7 @@ function teamFocusWorkingBlocks(entry) {
 }
 
 function teamFocusBlocks(entry) {
-  return [...entry.overdueBlocks.map(block => ({ block, kind: 'overdue' })),
-    ...teamFocusWorkingBlocks(entry),
+  return [...teamFocusWorkingBlocks(entry),
     ...entry.upcomingBlocks.map(block => ({ block, kind: 'upcoming' }))];
 }
 
@@ -312,25 +303,27 @@ function toggleTeamFocusCard(personId) {
 // die Planung.
 function renderTeamFocusBlockRow(block, kind) {
   const handover = kind === 'active' ? teamFocusBlockHandoverStatus(block) : '';
-  const canOpenJira = !!jiraUrl(block.jiraRef);
-  const timing = kind === 'overdue' ? `seit ${formatDateShort(block.end)}`
-    : kind === 'upcoming' ? `ab ${formatDateShort(block.start)}`
+  const canOpenJira = !!jiraUrl(blockAuftragKey(block));
+  const label = blockDisplayLabel(block);
+  const ref = blockAuftragKey(block);
+  const timing = kind === 'upcoming' ? `ab ${formatDateShort(block.start)}`
     : handover ? 'wartet'
+    : block.overrun ? `über seit ${formatDateShort(block.plannedEnd)}`
     : `noch ${workdaysBetween(todayStr(), block.end)} wt`;
-  const state = kind === 'overdue' ? 'überfällig — nicht erledigt'
-    : handover ? `wartet auf ${handover}`
+  const state = handover ? `wartet auf ${handover}`
+    : block.overrun ? 'läuft über — laut Jira noch offen'
     : '';
   const title = [
-    `${block.label || 'Block'} · ${formatDate(block.start)} – ${formatDate(block.end)}`,
+    `${label} · ${formatDate(block.start)} – ${formatDate(block.plannedEnd || block.end)}`,
     state,
-    canOpenJira ? `Jira: ${block.jiraRef} (Cmd/Strg-Klick öffnet)` : '',
+    canOpenJira ? `Jira: ${ref} (Cmd/Strg-Klick öffnet)` : '',
   ].filter(Boolean).join('\n');
   return `
-    <button class="tf-block tf-block-${kind} ${handover ? 'tf-block-handover' : ''}" type="button" onclick="if((event.metaKey||event.ctrlKey)&&openBlockJira('${block.id}'))return;navigateToPlanungBlock('${block.id}')" title="${esc(title)}">
+    <button class="tf-block tf-block-${kind} ${handover ? 'tf-block-handover' : ''} ${block.overrun ? 'tf-block-overrun' : ''}" type="button" onclick="if((event.metaKey||event.ctrlKey)&&openBlockJira('${block.id}'))return;navigateToPlanungBlock('${block.id}')" title="${esc(title)}">
       <span class="tf-block-mark"></span>
       <span class="tf-block-body">
-        <span class="tf-block-title">${esc(block.label || 'Block')}</span>
-        ${block.jiraRef ? `<span class="tf-block-ref">${esc(block.jiraRef)}</span>` : ''}
+        <span class="tf-block-title">${esc(label)}</span>
+        ${ref ? `<span class="tf-block-ref">${esc(ref)}</span>` : ''}
       </span>
       <span class="tf-block-timing">${esc(timing)}</span>
     </button>
@@ -340,8 +333,6 @@ function renderTeamFocusBlockRow(block, kind) {
 // Alle Bloecke der aufgeklappten Person. Bis zu zehn bleiben direkt sichtbar;
 // darueber scrollt nur die Liste. Laufende stehen vor kommenden.
 function renderTeamFocusBlocks(entry) {
-  // Ueberfaellige zuerst: sie sind das einzige, was hier eine Handlung
-  // erzwingt, und wuerden sonst im Scrollbereich verschwinden.
   const blocks = teamFocusBlocks(entry);
   const empty = entry.absenceToday
     ? `${esc(teamFocusAbsenceLabel(entry.absenceToday))} · nichts geplant`
@@ -358,10 +349,10 @@ function renderTeamFocusBlocks(entry) {
       <div class="tf-blocks-scroll">
         <div class="tf-blocks-list">
           ${blocks.length
-            ? ['overdue', 'active', 'upcoming'].map(kind => {
+            ? ['active', 'upcoming'].map(kind => {
                 const rows = blocks.filter(entry => entry.kind === kind);
-                const title = { overdue: 'Neu einplanen', active: 'Aktuell eingeplant', upcoming: 'Danach geplant' }[kind];
-                const description = { overdue: 'Planungszeitraum vorbei · noch offen', active: 'Der geplante Zeitraum umfasst heute', upcoming: 'Nach geplantem Startdatum' }[kind];
+                const title = { active: 'Aktuell eingeplant', upcoming: 'Danach geplant' }[kind];
+                const description = { active: 'Der geplante Zeitraum umfasst heute', upcoming: 'Nach geplantem Startdatum' }[kind];
                 return rows.length ? `<section class="tf-plan-group tf-plan-group-${kind}"><div class="tf-context-heading"><strong>${title} <span class="tf-blocks-count">${rows.length}</span></strong><span>${description}</span></div><div class="tf-plan-group-rows">${rows.map(({block}) => renderTeamFocusBlockRow(block, kind)).join('')}</div></section>` : '';
               }).join('')
             : `<div class="tf-blocks-empty">${empty}</div>`}
@@ -382,21 +373,11 @@ function renderTeamFocusJiraMetric(entry) {
         <span class="tf-metric-note">kein jira-user</span>
       </button>`;
   }
-  const drift = entry.drift;
-  const driftParts = [];
-  if (drift.unplanned.length) driftParts.push(`${drift.unplanned.length} nicht eingeplant`);
-  if (drift.stale.length) driftParts.push(`${drift.stale.length} ${drift.stale.length === 1 ? 'block' : 'blocks'} veraltet`);
-  const driftDetail = [
-    drift.unplanned.length ? `Ohne Block: ${drift.unplanned.map(t => t.key).join(', ')}` : '',
-    drift.stale.length ? `Veraltet: ${drift.stale.map(b => `${b.label || b.jiraRef} (${b.jiraRef})`).join(', ')}` : '',
-  ].filter(Boolean).join('\n');
-  const jiraSig = drift.stale.length ? 'tf-sig-bad' : drift.unplanned.length ? 'tf-sig-warn' : 'tf-sig-ok';
-  const jiraValue = drift.stale.length && drift.unplanned.length ? 'abweichungen'
-    : drift.stale.length ? `${drift.stale.length} ${drift.stale.length === 1 ? 'block' : 'blocks'} veraltet`
-    : drift.unplanned.length ? `${drift.unplanned.length} nicht eingeplant`
-    : 'synchron';
-  const jiraTicketTotal = entry.jiraTickets.length ? ticketCountLabel(entry.jiraTickets.length) : 'keine tickets';
-  const jiraNote = drift.stale.length && drift.unplanned.length ? driftParts.join(' · ') : jiraTicketTotal;
+  const unplanned = entry.drift.unplanned;
+  const driftDetail = unplanned.length ? `Ohne Block: ${unplanned.map(a => a.key).join(', ')}` : '';
+  const jiraSig = unplanned.length ? 'tf-sig-warn' : 'tf-sig-ok';
+  const jiraValue = unplanned.length ? `${unplanned.length} nicht eingeplant` : 'synchron';
+  const jiraNote = entry.jiraTickets.length ? ticketCountLabel(entry.jiraTickets.length) : 'keine tickets';
   return `
     <button class="tf-metric tf-metric-action ${jiraSig}" type="button" onclick="event.preventDefault(); event.stopPropagation(); navigate('planung',{planungPerson:'${entry.person.id}'})" title="${esc(`Jira-Tickets von ${entry.person.name} ansehen (Stand: ${jiraSyncAgeLabel() || 'unbekannt'})${driftDetail ? '\n' + driftDetail : ''}`)}">
       <span class="tf-metric-label">Jira</span>
@@ -448,7 +429,6 @@ function renderReviews() {
     .map(person => {
       const absenceToday = personAbsenceOnDate(person.id, today);
       const activeBlocks = personActiveBlocks(person.id, today);
-      const overdueBlocks = personOverdueBlocks(person.id);
       // Ohne Fenster: die Liste scrollt ohnehin, und "ab 12.08." sagt mehr
       // als eine Stichtagsgrenze, die man nicht mehr einstellen kann.
       const upcomingBlocks = personUpcomingBlocks(person.id, today);
@@ -458,7 +438,7 @@ function renderReviews() {
       const unscheduledOneOnOne = nextOneOnOne ? null : personUnscheduledOneOnOne(person.id);
       const oneOnOneMissing = !nextOneOnOne;
       const entry = {
-        person, absenceToday, activeBlocks, overdueBlocks, upcomingBlocks,
+        person, absenceToday, activeBlocks, upcomingBlocks,
         jiraTickets, drift, nextOneOnOne, unscheduledOneOnOne, oneOnOneMissing,
       };
       entry.attentionLevel = 'low';
@@ -516,7 +496,7 @@ function renderReviews() {
                 <span class="tf-work-count">
                 <span class="tf-metric-label tf-work-waiting" title="Wartet in Review, QA oder einem anderen Übergabestatus">Wartet</span>
                 <span class="tf-metric-value tf-work-waiting" title="Wartet in Review, QA oder einem anderen Übergabestatus">${waitingBlocks.length}</span></span>` : ''}
-                ${entry.overdueBlocks.length ? `<button class="filter-btn tf-work-overdue" onclick="event.stopPropagation();navigate('planung',{planungPerson:'${entry.person.id}',planungShowOverdue:true})">${entry.overdueBlocks.length} neu einplanen</button>` : ''}
+                ${entry.drift?.unplanned.length ? `<button class="filter-btn tf-work-overdue" onclick="event.stopPropagation();navigate('planung',{planungPerson:'${entry.person.id}',planungShowInbox:true})">${entry.drift.unplanned.length} einplanen</button>` : ''}
               </div>
               <button class="tf-card-toggle" type="button" aria-expanded="${open}" aria-controls="${esc(detailId)}" onclick="event.stopPropagation(); toggleTeamFocusCard('${entry.person.id}')" title="Tickets ${open ? 'einklappen' : 'ausklappen'}" aria-label="Tickets von ${esc(entry.person.name)} ${open ? 'einklappen' : 'ausklappen'}">
                 <span aria-hidden="true">⌄</span>

@@ -4944,12 +4944,7 @@ button.tf-metric {
 .tl-block-done .tl-block-label { text-decoration: line-through; }
 .tl-block-check { flex: 0 0 auto; font-weight: 700; }
 
-/* Zusammengefasste Bloecke: der Sammelbalken traegt die gestapelte Kante, damit
-   man sieht, dass darunter mehr liegt. Nicht ziehbar, daher kein resize-Cursor. */
-.tl-block-group {
-  cursor: pointer;
-  box-shadow: 0 2px 0 -1px var(--bg), 0 3px 0 -1px currentColor;
-}
+/* Zaehler offener Subtasks am Auftrags-Balken. */
 .tl-block-group-count {
   flex: 0 0 auto;
   font-size: 10px;
@@ -4959,27 +4954,23 @@ button.tf-metric {
   border-radius: 3px;
   background: rgba(0, 0, 0, 0.22);
 }
-/* Liegt hinter den Bloecken und faengt keine Klicks ab. */
-.tl-group-band {
+/* Ueberzogen: laut Jira noch offen, Schaetzung vorbei. Der Balken waechst bis
+   heute mit, der Teil nach der Schaetzung ist schraffiert — sichtbar, aber
+   kein Alarm. */
+.tl-block-overrun-part {
   position: absolute;
-  z-index: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
   pointer-events: none;
-  border-radius: 5px;
-  margin: -2px -3px;
-  padding: 2px 3px;
-  background: color-mix(in srgb, var(--text) 7%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 12%, transparent);
+  background: repeating-linear-gradient(135deg,
+    color-mix(in srgb, var(--block-tone, var(--accent)) 45%, transparent) 0 4px,
+    transparent 4px 8px);
+  border-left: 1px dashed color-mix(in srgb, var(--block-tone, var(--accent)) 70%, transparent);
 }
-.tl-block-group-count.is-open { cursor: pointer; }
-.tl-block-group-count.is-open:hover { background: rgba(0, 0, 0, 0.38); }
-/* Kinder einer aufgeklappten Gruppe: eingerueckte Kante statt eigener Farbe,
-   die Typ-Farbe soll erhalten bleiben. */
-.tl-block-group-child { border-left: 3px solid rgba(0, 0, 0, 0.28); }
-.tl-block-overdue { box-shadow: 0 0 0 2px var(--danger); }
-.tl-block-swatch-overdue {
-  background: transparent;
-  border-color: var(--danger);
-  box-shadow: 0 0 0 1px var(--danger);
+.tl-block-overrun > :not(.tl-block-overrun-part) { position: relative; }
+.tl-block-swatch-overrun {
+  background: repeating-linear-gradient(135deg, var(--timeline-ticket) 0 2px, transparent 2px 4px);
 }
 
 .tl-block-preview {
@@ -5111,36 +5102,34 @@ button.tf-metric {
 
 .planung-actions .btn { width: auto; }
 
-.form-group-parked { flex: 0 0 auto; display: flex; align-items: flex-end; }
-.form-group-parked .form-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 0;
-  padding-bottom: 8px;
-  cursor: pointer;
-  white-space: nowrap;
-}
+.block-duration { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .form-input[readonly] { opacity: 0.5; }
 
-.planung-overdue-btn { color: var(--danger); border-color: var(--danger); }
-.planung-overdue-btn:hover { color: var(--danger); border-color: var(--danger); filter: brightness(1.1); }
-.planung-overdue-btn.active {
-  color: var(--danger);
-  border-color: var(--danger);
-  border-left: 2px solid var(--danger);
+.planung-inbox-btn { color: var(--warning); border-color: var(--warning); }
+.planung-inbox-btn:hover { color: var(--warning); border-color: var(--warning); filter: brightness(1.1); }
+.planung-inbox-btn.active {
+  color: var(--warning);
+  border-color: var(--warning);
+  border-left: 2px solid var(--warning);
 }
 
 .planung-jira-changes-btn { color: var(--text-secondary); }
 .planung-jira-changes-btn:hover { color: var(--text); }
 
-.planung-overdue-panel {
+.planung-inbox-panel {
   border: 1px solid var(--border);
-  border-left: 2px solid var(--danger);
+  border-left: 2px solid var(--warning);
   background: var(--surface);
   margin-bottom: 12px;
 }
-.planung-overdue-row {
+.planung-inbox-head {
+  padding: 6px 10px;
+  font-size: 11px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+}
+.planung-inbox-from { color: var(--text-muted); font-size: 11px; align-self: center; }
+.planung-inbox-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -5149,47 +5138,23 @@ button.tf-metric {
   font-size: 12px;
   border-bottom: 1px solid var(--border);
 }
-.planung-overdue-row:last-child { border-bottom: none; }
-.planung-overdue-info {
+.planung-inbox-row:last-child { border-bottom: none; }
+.planung-inbox-info {
   display: flex;
   align-items: baseline;
   gap: 8px;
   min-width: 0;
   cursor: pointer;
 }
-.planung-overdue-info:hover .planung-overdue-label { color: var(--accent); }
-.planung-overdue-person { font-weight: 600; flex: 0 0 auto; }
-.planung-overdue-label {
+.planung-inbox-info:hover .planung-inbox-label { color: var(--accent); }
+.planung-inbox-person { font-weight: 600; flex: 0 0 auto; }
+.planung-inbox-label {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.planung-overdue-date { color: var(--danger); flex: 0 0 auto; font-size: 11px; }
-.planung-overdue-actions { display: flex; gap: 6px; flex: 0 0 auto; }
-
-.planung-parked {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  padding: 0 0 10px;
-  font-size: 11px;
-}
-.planung-parked-head { color: var(--text-muted); text-transform: lowercase; }
-.planung-parked-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 2px 8px;
-  font-size: 11px;
-  border: 1px dashed var(--border);
-  border-radius: 3px;
-  background: var(--surface);
-  color: var(--text-secondary);
-  cursor: pointer;
-}
-.planung-parked-chip:hover { border-color: var(--accent); color: var(--accent); background: var(--interactive-hover-bg); }
-.planung-parked-person { font-weight: 600; }
+.planung-inbox-date { color: var(--text-muted); flex: 0 0 auto; font-size: 11px; }
+.planung-inbox-actions { display: flex; gap: 6px; flex: 0 0 auto; }
 
 .person-blocks { padding: 10px 2px; }
 .person-blocks-head { font-size: 12px; font-weight: 600; margin-bottom: 6px; }
@@ -5872,16 +5837,7 @@ a.jira-ticket-key:hover { text-decoration: underline; }
   border-color: var(--warning);
 }
 
-/* Drift-Menue: eine Zeile pro Abweichung, rechts genau eine Aktion */
-.jira-drift-group { margin-bottom: 14px; }
-.jira-drift-group:last-child { margin-bottom: 0; }
-.jira-drift-head {
-  font-size: 10px;
-  letter-spacing: .05em;
-  text-transform: lowercase;
-  color: var(--text-muted);
-  margin-bottom: 4px;
-}
+/* Zeilen im Umstellungs-Dialog */
 .jira-drift-row {
   display: flex;
   align-items: center;
@@ -5900,7 +5856,6 @@ a.jira-ticket-key:hover { text-decoration: underline; }
   white-space: nowrap;
   color: var(--text);
 }
-.jira-drift-rename s { color: var(--text-muted); }
 .jira-drift-note {
   flex-shrink: 0;
   font-size: 10px;
@@ -5908,11 +5863,6 @@ a.jira-ticket-key:hover { text-decoration: underline; }
   color: var(--text-muted);
 }
 .jira-drift-row .btn { flex-shrink: 0; }
-.tl-block-jira-stale {
-  opacity: .55;
-  background-image: repeating-linear-gradient(45deg, transparent 0 6px, color-mix(in srgb, var(--text) 18%, transparent) 6px 8px);
-}
-.tl-block-jira-stale .tl-block-label { text-decoration: line-through; }
 
 /* Uebergabe (QA/Review): Ticket laeuft, aber nicht beim Entwickler.
    Bewusst kuehl statt Ampelfarbe — kein Problem, nur eine Info fuer die
@@ -6254,13 +6204,6 @@ body {
   border-bottom: 1px solid var(--border);
 }
 .planner-toolbar-row:last-child { margin-bottom: 0; }
-.planung-parked {
-  padding: 10px 14px;
-  background: var(--section-heading-bg);
-  border: 1px dashed var(--section-border);
-  border-radius: var(--control-radius);
-}
-.planung-parked-head { color: var(--text-secondary); font-weight: 700; }
 .timeline {
   border-color: var(--section-border);
   border-radius: var(--radius-md);
