@@ -223,7 +223,7 @@ function renderMeetingListRow(m, isActive, query = '', isToday = false) {
       </div>
       <div class="meeting-list-main">
         <div class="meeting-list-head">
-          <span class="meeting-list-type">${m.type === 'oneOnOne' ? '1:1' : (teamMeeting ? 'team' : 'mtg')}</span>
+          <span class="meeting-list-type">${meetingFormatLabel(m)}</span>
           <span class="meeting-list-title">${meetingDisplayTitle(m)}</span>
           ${(openTodos || counts.done) ? `<span class="meeting-list-followups">
             ${openTodos ? `<span class="badge badge-todo">${openTodos}</span>` : ''}
@@ -302,11 +302,16 @@ function renderMeetingsDetailPlaceholder(upcoming) {
       <div class="meetings-empty-quickcards">
         ${next.map(m => `
           <button class="meetings-empty-card" onclick="openMeetingDetail('${m.id}')">
-            <span class="meetings-empty-card-label">${m.type === 'oneOnOne' ? '1:1' : (isTeamMeeting(m) ? 'team' : 'mtg')}</span>
+            <span class="meetings-empty-card-label">${meetingFormatLabel(m)}</span>
             <span class="meetings-empty-card-title">${meetingDisplayTitle(m)}</span>
             <span class="meetings-empty-card-date">${meetingRelativeDate(m.date)}</span>
           </button>
         `).join('')}
+        <button class="meetings-empty-card meetings-empty-card-new" onclick="openTodayStandup()">
+          <span class="meetings-empty-card-label">neu</span>
+          <span class="meetings-empty-card-title">+ Standup</span>
+          <span class="meetings-empty-card-date">heute, alle Anwesenden</span>
+        </button>
         <button class="meetings-empty-card meetings-empty-card-new" onclick="openMeetingForm('meeting')">
           <span class="meetings-empty-card-label">neu</span>
           <span class="meetings-empty-card-title">+ Meeting</span>
@@ -409,6 +414,7 @@ function renderMeetings() {
         </div>
       </div>
       <div style="display:flex;gap:8px">
+        <button class="btn btn-primary btn-sm" onclick="openTodayStandup()" title="Heutigen Standup öffnen oder anlegen — alle Anwesenden sind schon eingetragen">+ Standup</button>
         <button class="btn btn-primary btn-sm" onclick="openMeetingForm('meeting')">+ Meeting</button>
         <button class="btn btn-primary btn-sm" onclick="openMeetingForm('oneOnOne')">+ 1:1</button>
       </div>
@@ -435,7 +441,7 @@ function renderMeetings() {
               </div>
               <div class="meetings-detail-actions">
                 ${selected.personId ? `<button class="btn btn-secondary btn-sm" onclick="openPersonById('${selected.personId}')">@${esc(personName(selected.personId))}</button>` : ''}
-                ${selected.type !== 'oneOnOne' ? `<label class="btn btn-secondary btn-sm" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" ${isTeamMeeting(selected) ? 'checked' : ''} onchange="toggleMeetingTeamFlag('${selected.id}', this.checked)" style="margin:0"><span>Team</span></label>` : ''}
+                ${selected.type !== 'oneOnOne' ? renderMeetingFormatPicker(`setMeetingFormat('${selected.id}','%')`, meetingFormat(selected)) : ''}
                 ${selected.type !== 'oneOnOne' ? `<button class="btn btn-secondary btn-sm" onclick="openMeetingTitleForm('${selected.id}')">Titel bearbeiten</button>` : ''}
                 ${selected.type === 'oneOnOne' && !selected.date ? `<button class="btn btn-secondary btn-sm" onclick="openScheduleMeetingDate('${selected.id}')">Einplanen</button>` : ''}
                 <button class="btn btn-primary btn-sm" onclick="openMeetingFollowUp('${selected.id}')">+ Follow-up</button>
@@ -478,7 +484,7 @@ function renderMeetingDetail() {
       <span class="section-title">${meetingDisplayTitle(m)}</span>
       <div style="display:flex;gap:8px">
         ${m.personId ? `<button class="btn btn-secondary btn-sm" onclick="openPersonById('${m.personId}')">@${esc(personName(m.personId))}</button>` : ''}
-        ${m.type !== 'oneOnOne' ? `<label class="btn btn-secondary btn-sm" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" ${isTeamMeeting(m) ? 'checked' : ''} onchange="toggleMeetingTeamFlag('${m.id}', this.checked)" style="margin:0"><span>Team</span></label>` : ''}
+        ${m.type !== 'oneOnOne' ? renderMeetingFormatPicker(`setMeetingFormat('${m.id}','%')`, meetingFormat(m)) : ''}
         ${m.type !== 'oneOnOne' ? `<button class="btn btn-secondary btn-sm" onclick="openMeetingTitleForm('${m.id}')">Titel bearbeiten</button>` : ''}
         <button class="btn btn-primary btn-sm" onclick="openMeetingFollowUp('${m.id}')">+ Follow-up</button>
         <span style="color:var(--text-muted);font-size:14px;line-height:32px">${m.date ? formatDate(m.date) : 'ohne Datum'}</span>
@@ -580,7 +586,7 @@ function renderStandupBlock(meeting, b) {
 }
 
 function renderStandupRound(m) {
-  if (!isTeamMeeting(m)) return '';
+  if (!isStandupMeeting(m)) return '';
   const date = m.date || todayStr();
   const people = meetingParticipants(m).filter(p => p.type !== 'kontakt');
   if (!people.length) {
@@ -920,13 +926,44 @@ function toggleMeetingParticipant(meetingId, personId) {
   render();
 }
 
-function toggleMeetingTeamFlag(meetingId, checked) {
+function setMeetingFormat(meetingId, format) {
   const meeting = data.meetings.find(entry => entry.id === meetingId);
   if (!meeting || meeting.type === 'oneOnOne') return;
-  meeting.isTeamMeeting = checked;
-  if (!checked) meeting.participants = [];
+  meeting.isTeamMeeting = format !== 'meeting';
+  meeting.isStandup = format === 'standup';
+  if (format === 'meeting') meeting.participants = [];
+  else if (format === 'standup' && !meetingParticipantIds(meeting).length) {
+    meeting.participants = defaultStandupParticipants(meeting.date);
+  }
   saveData(data);
   render();
+}
+
+// Der Standup kommt jeden Tag: ein Klick, und er ist offen — gibt es fuer
+// heute schon einen, wird der geoeffnet statt ein zweiter angelegt. Der Titel
+// kommt vom letzten Standup, damit die Serie (Uebernahme) zusammenhaengt.
+function openTodayStandup() {
+  const today = todayStr();
+  const existing = data.meetings.find(m => m.date === today && isStandupMeeting(m));
+  if (existing) { navigate('meetings:detail', { meetingId: existing.id }); return; }
+  const last = data.meetings
+    .filter(m => isStandupMeeting(m) && m.date)
+    .sort((a, b) => b.date.localeCompare(a.date))[0];
+  const meeting = {
+    id: uid(),
+    type: 'meeting',
+    isTeamMeeting: true,
+    isStandup: true,
+    title: (last && last.title) || 'Standup',
+    date: today,
+    personId: null,
+    participants: defaultStandupParticipants(today),
+    prep: '',
+    notes: '',
+  };
+  data.meetings.push(meeting);
+  saveData(data);
+  navigate('meetings:detail', { meetingId: meeting.id });
 }
 
 // ---- Prep bullet editor ----

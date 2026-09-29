@@ -420,7 +420,43 @@ function meetingParticipantIds(meeting) {
 
 function isTeamMeeting(meeting) {
   if (!meeting || meeting.type === 'oneOnOne') return false;
-  return meeting.isTeamMeeting === true;
+  return meeting.isTeamMeeting === true || meeting.isStandup === true;
+}
+
+// Ein Standup ist ein Team-Termin mit Runde. Alte Team-Meetings, die
+// "Standup"/"Daily" heissen, zaehlen dazu, bis jemand die Art ausdruecklich
+// umstellt (isStandup === false).
+function isStandupMeeting(meeting) {
+  if (!isTeamMeeting(meeting)) return false;
+  if (typeof meeting.isStandup === 'boolean') return meeting.isStandup;
+  return /stand-?up|daily/i.test(meeting.title || '');
+}
+
+// Genau eine Art pro Termin: meeting | team | standup. Zwei Checkboxen
+// wuerden "Standup ohne Team" erlauben.
+function meetingFormat(meeting) {
+  if (!meeting || meeting.type === 'oneOnOne') return 'oneOnOne';
+  return isStandupMeeting(meeting) ? 'standup' : isTeamMeeting(meeting) ? 'team' : 'meeting';
+}
+
+function meetingFormatLabel(meeting) {
+  return { oneOnOne: '1:1', meeting: 'mtg', team: 'team', standup: 'standup' }[meetingFormat(meeting)];
+}
+
+// Beim Standup ist anfangs jeder dabei, der an dem Tag nicht abwesend ist —
+// abhaken muss man nur, wer fehlt.
+function defaultStandupParticipants(dateISO) {
+  return data.persons
+    .filter(p => p.type !== 'kontakt' && !personAbsenceOnDate(p.id, dateISO || todayStr()))
+    .map(p => p.id);
+}
+
+function renderMeetingFormatPicker(onchange, current) {
+  return `<div class="segmented-toggle meeting-format-picker" role="radiogroup" aria-label="Art">
+    ${[['meeting', 'Meeting'], ['team', 'Team'], ['standup', 'Standup']].map(([val, label]) => `
+      <button type="button" class="segmented-toggle-btn ${current === val ? 'active' : ''}" role="radio" aria-checked="${current === val}"
+        data-format="${val}" onclick="${onchange.replace('%', val)}">${label}</button>`).join('')}
+  </div>`;
 }
 
 function meetingParticipants(meeting) {
@@ -789,6 +825,7 @@ function meetingMatchesQuery(meeting, query) {
     ...linkedItems.flatMap(item => [item.text, item.notes, item.status, item.type]),
     meeting.type === 'oneOnOne' ? '1:1' : 'meeting',
     isTeamMeeting(meeting) ? 'team' : 'other',
+    isStandupMeeting(meeting) ? 'standup' : '',
   ].some(value => includesQuery(value, query));
 }
 

@@ -122,6 +122,12 @@ the planner tooltip and at the next standup ("zuletzt 12.10.: …", "blockiert
 seit …"), which is what makes "stuck for three standups" visible. Anything
 not tied to an Auftrag stays as a per-person note on the meeting.
 
+A meeting has exactly one kind — meeting, team or standup — rather than two
+checkboxes that would allow "a standup that isn't a team meeting". Team
+meetings (workshops) get the attendance list; only standups get the round.
+"+ Standup" opens today's standup or creates it with everyone who isn't
+absent already ticked.
+
 ### Growth signals
 
 Highlights and concerns are logged per person as dated items. A rolling

@@ -6316,3 +6316,18 @@ body {
 .block-updates { display: flex; flex-direction: column; gap: 4px; max-height: 160px; overflow-y: auto; font-size: 13px; }
 .block-update { display: flex; gap: 8px; }
 .block-update-date { color: var(--text-muted); flex: 0 0 auto; font-variant-numeric: tabular-nums; }
+
+/* Art des Termins: meeting | team | standup — eine Wahl statt zweier Checkboxen. */
+.meeting-format-picker { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.meetings-detail-actions .meeting-format-picker,
+.section-header .meeting-format-picker {
+  display: inline-grid;
+  grid-template-columns: repeat(3, auto);
+  gap: 2px;
+  padding: 2px;
+  margin: 0;
+  align-self: center;
+}
+.meetings-detail-actions .meeting-format-picker .segmented-toggle-btn,
+.section-header .meeting-format-picker .segmented-toggle-btn { padding: 4px 10px; }
+.meetings-detail-actions { align-items: center; }

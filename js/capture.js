@@ -252,10 +252,9 @@ function openCapture(prefill = {}) {
           </datalist>
         </div>
         <div class="form-group" id="captureMeetingTeamGroup">
-          <label class="form-label" style="display:flex;align-items:center;gap:8px">
-            <input type="checkbox" id="meetingIsTeam" checked onchange="updateMeetingStatusPreview()">
-            <span>Team-Meeting</span>
-          </label>
+          <label class="form-label">Art</label>
+          <input type="hidden" id="meetingFormat" value="team">
+          ${renderMeetingFormatPicker("setMeetingFormFormat('%')", 'team')}
         </div>
         <div class="form-group" id="captureMeetingPersonGroup">
           <label class="form-label">Mit</label>
@@ -389,11 +388,11 @@ function saveCaptureMeeting() {
   const meeting = {
     id: uid(),
     type,
-    isTeamMeeting: isOneOnOne ? false : !!document.getElementById('meetingIsTeam')?.checked,
     title,
     date: document.getElementById('meetingDate')?.value || '',
     personId: isOneOnOne ? personId : null,
     participants: [],
+    ...meetingFormatFields(isOneOnOne),
     prep: prepFromFormText(document.getElementById('meetingPrep')?.value),
     notes: '',
   };
@@ -712,10 +711,9 @@ function openMeetingForm(type, personId) {
           </datalist>
         </div>
         <div class="form-group">
-          <label class="form-label" style="display:flex;align-items:center;gap:8px">
-            <input type="checkbox" id="meetingIsTeam" checked onchange="updateMeetingStatusPreview()">
-            <span>Team-Meeting</span>
-          </label>
+          <label class="form-label">Art</label>
+          <input type="hidden" id="meetingFormat" value="team">
+          ${renderMeetingFormatPicker("setMeetingFormFormat('%')", 'team')}
         </div>
       ` : ''}
       <div class="form-group">
@@ -747,6 +745,33 @@ function openMeetingForm(type, personId) {
   setTimeout(() => document.getElementById('meetingTitle').focus(), 100);
 }
 
+function setMeetingFormFormat(format) {
+  const input = document.getElementById('meetingFormat');
+  if (!input) return;
+  input.value = format;
+  document.querySelectorAll('.meeting-format-picker .segmented-toggle-btn').forEach(btn => {
+    const on = btn.dataset.format === format;
+    btn.classList.toggle('active', on);
+    btn.setAttribute('aria-checked', String(on));
+  });
+  const title = document.getElementById('meetingTitle');
+  if (format === 'standup' && title && !title.value.trim()) title.value = 'Standup';
+  updateMeetingStatusPreview();
+}
+
+// Art aus dem Formular in die Meeting-Felder. Ein Standup startet mit allen,
+// die an dem Tag da sind.
+function meetingFormatFields(isOneOnOne) {
+  if (isOneOnOne) return { isTeamMeeting: false };
+  const format = document.getElementById('meetingFormat')?.value || 'team';
+  const date = document.getElementById('meetingDate')?.value || todayStr();
+  return {
+    isTeamMeeting: format !== 'meeting',
+    isStandup: format === 'standup',
+    ...(format === 'standup' ? { participants: defaultStandupParticipants(date) } : {}),
+  };
+}
+
 function updateMeetingStatusPreview() {
   const preview = document.getElementById('meetingStatusPreview');
   const carryoverPreview = document.getElementById('meetingCarryoverPreview');
@@ -754,7 +779,7 @@ function updateMeetingStatusPreview() {
   const captureMeetingType = document.getElementById('captureMeetingType')?.value;
   const isOneOnOne = captureMeetingType ? captureMeetingType === 'oneOnOne' : !!document.getElementById('meetingPerson');
   const personId = isOneOnOne ? (document.getElementById('meetingPerson')?.value || '') : '';
-  const isTeam = document.getElementById('meetingIsTeam')?.checked ?? true;
+  const isTeam = (document.getElementById('meetingFormat')?.value || 'team') !== 'meeting';
   if (preview) preview.innerHTML = renderMeetingFormStatusPreview(date, isOneOnOne, personId, isTeam);
   if (carryoverPreview) carryoverPreview.innerHTML = renderMeetingFormCarryoverPreview(isOneOnOne, personId, date);
 }
@@ -813,11 +838,11 @@ function saveMeeting(type) {
   const meeting = {
     id: uid(),
     type: isOneOnOne ? 'oneOnOne' : 'meeting',
-    isTeamMeeting: isOneOnOne ? false : !!document.getElementById('meetingIsTeam')?.checked,
     title: isOneOnOne ? '' : title,
     date: document.getElementById('meetingDate').value,
     personId: isOneOnOne ? personId : null,
     participants: [],
+    ...meetingFormatFields(isOneOnOne),
     prep: prepFromFormText(document.getElementById('meetingPrep').value),
     notes: '',
   };
