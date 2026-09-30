@@ -6451,7 +6451,7 @@ body[data-theme] .review-due-section-warning {
   border: 0;
   border-radius: 0;
   background: transparent;
-  max-height: 320px;
+  max-height: 460px;
 }
 
 body[data-theme] .review-due-section-head {
@@ -6492,15 +6492,18 @@ body[data-theme] .review-due-section-count {
 
 body[data-theme] .review-due-item-list { gap: 6px; }
 
+/* Kein overflow:hidden: das setzt in der Grid-Liste die Mindesthoehe auf 0,
+   dann quetscht der Browser alle Eintraege in die Box statt zu scrollen. */
 body[data-theme] .review-due-item {
   border: 1px solid var(--line-soft);
   border-radius: var(--radius-md);
   background: var(--fill-subtle);
-  overflow: hidden;
 }
 
+body[data-theme] .review-due-item-main { border-radius: var(--radius-md) 0 0 var(--radius-md); }
+
 body[data-theme] .review-due-item-main {
-  grid-template-columns: 64px minmax(0, 1fr);
+  grid-template-columns: 86px minmax(0, 1fr);
   gap: 10px;
   padding: 10px 12px;
 }
@@ -7517,6 +7520,8 @@ body[data-theme] .week-card .card-header { margin-bottom: 6px; }
 /* Teamfokus: mit Jira stehen 1:1 und Jira nebeneinander — lieber umbrechen
    als "Keines gep…" abschneiden */
 body[data-theme] .tf-metric-value { white-space: normal; overflow: visible; }
+
+body[data-theme] .review-due-item-age { white-space: nowrap; overflow-wrap: normal; }
 
 </style>
 <style data-source="./themes/dark.css">
@@ -9054,7 +9059,7 @@ body[data-theme="spaceship"] input[type="month"]::-webkit-calendar-picker-indica
 // ============================================================
 // DATA LAYER — File System Access API
 // ============================================================
-const APP_VERSION = '1.0.65';
+const APP_VERSION = '1.0.66';
 const DATA_FILENAME = 'tktool-data.json';
 const JIRA_SYNC_FILENAME = 'jira-tickets.json';
 const JIRA_QUERY_MAX_RESULTS = 100;
