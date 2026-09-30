@@ -188,9 +188,8 @@ the app's HTML, CSS, and JavaScript in one file and is refreshed with each updat
   `js/helpers.js`, view files, and `js/ui.js` is for navigability, not
   encapsulation — everything is still global, and inline `onclick` handlers
   depend on that. Load order matters: data and helpers first, init last.
-- **Keyboard-first capture.** `Ctrl+K` captures an item from anywhere,
-  `Ctrl+J` toggles a free-form quicknotes drawer. Friction at capture time
-  is the main reason tracking tools die.
+- **Keyboard-first capture.** `Ctrl+K` captures an item from anywhere.
+  Friction at capture time is the main reason tracking tools die.
 
 ## Non-goals
 

@@ -25,11 +25,6 @@ function renderNotes() {
 
   if (!sudo) {
     return `
-      <div class="section-header notes-page-head">
-        <div class="overview-toolbar">
-          <span class="section-title">Notizen</span>
-        </div>
-      </div>
       <p class="notes-page-intro">Langfristige Pläne, Beobachtungen und Dokumentationen, die keinem einzelnen Todo oder Meeting gehören.</p>
       ${sudoLockedPlaceholder('Notizen')}
     `;
@@ -37,14 +32,10 @@ function renderNotes() {
 
   return `
     <div class="section-header notes-page-head">
-      <div class="overview-toolbar">
-        <span class="section-title">Notizen</span>
-        <div class="view-search">
-          <input id="notesSearchInput" type="search" placeholder="grep: titel, inhalt..."
-            value="${esc(rawQuery)}" oninput="setNotesQuery(this.value)">
-        </div>
+      <div class="view-search">
+        <input id="notesSearchInput" type="search" placeholder="Notizen durchsuchen – Titel, Inhalt…"
+          value="${esc(rawQuery)}" oninput="setNotesQuery(this.value)">
       </div>
-      <button class="btn btn-primary btn-sm" onclick="openNoteForm()">+ Notiz</button>
     </div>
     <p class="notes-page-intro">Langfristige Pläne, Beobachtungen und Dokumentationen, die keinem einzelnen Todo oder Meeting gehören.</p>
 

@@ -236,7 +236,6 @@ function renderTeam() {
   return `
     <div class="section-header">
       ${renderPeopleTabs(false)}
-      <button class="btn btn-primary btn-sm" onclick="openPersonForm(null, 'team')">+ Teammitglied</button>
     </div>
     ${teamPersons.length ? `
       <div class="team-layout">
@@ -325,7 +324,7 @@ function renderTeam() {
 
 	            ${sudo ? `<div class="team-section-block">
                 <div class="card-header">
-                  <span class="card-title">growth journal</span>
+                  <span class="card-title">Growth Journal</span>
                   <span style="color:var(--text-muted);font-size:12px">30 Tage · +${selectedGrowthSignal.highlights} / -${selectedGrowthSignal.concerns}</span>
                 </div>
                 <div class="filters">
@@ -390,7 +389,6 @@ function renderKontakte() {
   return `
     <div class="section-header">
       ${renderPeopleTabs(true)}
-      <button class="btn btn-primary btn-sm" onclick="openPersonForm(null, 'kontakt')">+ Kontakt</button>
     </div>
     ${kontakte.length ? `
       <div class="team-layout">

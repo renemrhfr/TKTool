@@ -400,31 +400,22 @@ function renderMeetings() {
   `;
 
   return `
-    <div class="section-header">
-      <div class="overview-toolbar">
-        <span class="section-title">Meetings</span>
-        <div class="view-search">
-          <input
-            id="meetingSearchInput"
-            type="search"
-            placeholder="grep: titel, notizen, prep, personen..."
-            value="${esc(rawQuery)}"
-            oninput="setMeetingQuery(this.value)"
-          >
-        </div>
+    <div class="section-header meetings-toolbar">
+      <div class="filters">
+        <button class="filter-btn ${filter === 'all' ? 'active' : ''}" onclick="setMeetingTypeFilter('all')">alle</button>
+        <button class="filter-btn ${filter === 'oneOnOne' ? 'active' : ''}" onclick="setMeetingTypeFilter('oneOnOne')">1:1s</button>
+        <button class="filter-btn ${filter === 'team' ? 'active' : ''}" onclick="setMeetingTypeFilter('team')">team</button>
+        <button class="filter-btn ${filter === 'other' ? 'active' : ''}" onclick="setMeetingTypeFilter('other')">sonstige</button>
       </div>
-      <div style="display:flex;gap:8px">
-        <button class="btn btn-primary btn-sm" onclick="openTodayStandup()" title="Heutigen Standup öffnen oder anlegen — alle Anwesenden sind schon eingetragen">+ Standup</button>
-        <button class="btn btn-primary btn-sm" onclick="openMeetingForm('meeting')">+ Meeting</button>
-        <button class="btn btn-primary btn-sm" onclick="openMeetingForm('oneOnOne')">+ 1:1</button>
+      <div class="view-search">
+        <input
+          id="meetingSearchInput"
+          type="search"
+          placeholder="Meetings durchsuchen – Titel, Notizen, Prep, Personen…"
+          value="${esc(rawQuery)}"
+          oninput="setMeetingQuery(this.value)"
+        >
       </div>
-    </div>
-
-    <div class="filters">
-      <button class="filter-btn ${filter === 'all' ? 'active' : ''}" onclick="setMeetingTypeFilter('all')">alle</button>
-      <button class="filter-btn ${filter === 'oneOnOne' ? 'active' : ''}" onclick="setMeetingTypeFilter('oneOnOne')">1:1s</button>
-      <button class="filter-btn ${filter === 'team' ? 'active' : ''}" onclick="setMeetingTypeFilter('team')">team</button>
-      <button class="filter-btn ${filter === 'other' ? 'active' : ''}" onclick="setMeetingTypeFilter('other')">sonstige</button>
     </div>
 
     ${totalCount ? `
