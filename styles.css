@@ -6160,7 +6160,7 @@ body[data-theme] .tf-card:first-child { border-top: 0; }
 body[data-theme] .tf-card:hover { background: transparent; }
 
 body[data-theme] .tf-card-summary {
-  grid-template-columns: minmax(150px, 1fr) minmax(130px, 0.8fr) minmax(170px, 1.3fr) 28px;
+  grid-template-columns: minmax(150px, 1fr) minmax(240px, 1.4fr) minmax(160px, 1.2fr) auto;
   gap: 14px;
   padding: 10px 8px;
   margin: 0 -8px;
@@ -6201,7 +6201,7 @@ body[data-theme] .tf-absent-mark {
   color: var(--text-secondary);
 }
 
-body[data-theme] .tf-metric-row { grid-template-columns: minmax(0, 1fr); }
+body[data-theme] .tf-metric-row { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
 
 body[data-theme] .tf-metric,
 body[data-theme] .tf-metric-row > .tf-metric:first-child,
@@ -7243,3 +7243,193 @@ body[data-theme] .review-grid + .card { margin-top: 16px; }
 }
 
 .tf-now-count.is-high { background: var(--warning-light); color: var(--warning); }
+
+/* Punkt fuers 1:1: sitzt neben dem Aufklapp-Pfeil jeder Teamfokus-Zeile */
+.tf-card-actions { display: inline-flex; align-items: center; gap: 2px; }
+
+.tf-point-add {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.tf-point-add svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.tf-point-add:hover { background: var(--accent-soft); color: var(--accent); }
+
+.one-on-one-point-hint {
+  margin: -4px 0 14px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+/* ============================================================
+   WOCHENABSCHLUSS
+   ============================================================ */
+body[data-theme] .sidebar .nav button[hidden] { display: none; }
+body[data-theme] .sidebar .nav .nav-weekly:not(.active) .nav-icon { color: var(--accent); }
+
+.page-head-side {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.week-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.week-col { display: grid; gap: 16px; min-width: 0; }
+
+.week-col-title {
+  margin: 4px 2px -6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+body[data-theme] .week-card { margin: 0; }
+body[data-theme] .week-card .card-header { margin-bottom: 6px; }
+
+.week-count {
+  padding: 1px 9px;
+  border-radius: var(--radius-pill);
+  background: var(--fill-hover);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.week-list { list-style: none; margin: 0 -8px; }
+
+.week-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  border-radius: var(--radius);
+}
+
+.week-row + .week-row { border-top: 1px solid var(--line-soft); }
+.week-row.is-clickable { cursor: pointer; }
+.week-row.is-clickable:hover { background: var(--fill-subtle); }
+.week-row-main { flex: 1; min-width: 0; }
+
+.week-row-title {
+  font-size: 14px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.week-row-title .badge { margin-right: 4px; }
+
+.week-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.week-row-side {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.week-key {
+  margin-right: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.week-person {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+
+.week-person .person-avatar-badge { transform: scale(0.85); }
+
+.week-flag {
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--warning-light);
+  color: var(--warning);
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.week-flag-danger { background: var(--danger-light); color: var(--danger); }
+.week-danger { color: var(--danger); }
+
+.week-empty { padding: 6px 0 4px; font-size: 13px; color: var(--text-muted); }
+
+.week-source {
+  margin: -10px 4px 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.week-person-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+}
+
+.week-person-row + .week-person-row { border-top: 1px solid var(--line-soft); }
+.week-person-row > .week-person { padding-top: 2px; font-size: 14px; font-weight: 500; color: var(--text); }
+
+.week-signals { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+
+.week-signal {
+  padding: 3px 10px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.week-signal-warn { background: var(--warning-light); color: var(--warning); }
+.week-signal-muted { background: var(--fill-hover); color: var(--text-secondary); }
+.week-signal:hover { filter: brightness(1.1); }
+
+@media (max-width: 1100px) {
+  .week-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Teamfokus: mit Jira stehen 1:1 und Jira nebeneinander — lieber umbrechen
+   als "Keines gep…" abschneiden */
+body[data-theme] .tf-metric-value { white-space: normal; overflow: visible; }

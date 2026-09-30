@@ -6244,7 +6244,7 @@ body[data-theme] .tf-card:first-child { border-top: 0; }
 body[data-theme] .tf-card:hover { background: transparent; }
 
 body[data-theme] .tf-card-summary {
-  grid-template-columns: minmax(150px, 1fr) minmax(130px, 0.8fr) minmax(170px, 1.3fr) 28px;
+  grid-template-columns: minmax(150px, 1fr) minmax(240px, 1.4fr) minmax(160px, 1.2fr) auto;
   gap: 14px;
   padding: 10px 8px;
   margin: 0 -8px;
@@ -6285,7 +6285,7 @@ body[data-theme] .tf-absent-mark {
   color: var(--text-secondary);
 }
 
-body[data-theme] .tf-metric-row { grid-template-columns: minmax(0, 1fr); }
+body[data-theme] .tf-metric-row { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
 
 body[data-theme] .tf-metric,
 body[data-theme] .tf-metric-row > .tf-metric:first-child,
@@ -7327,6 +7327,196 @@ body[data-theme] .review-grid + .card { margin-top: 16px; }
 }
 
 .tf-now-count.is-high { background: var(--warning-light); color: var(--warning); }
+
+/* Punkt fuers 1:1: sitzt neben dem Aufklapp-Pfeil jeder Teamfokus-Zeile */
+.tf-card-actions { display: inline-flex; align-items: center; gap: 2px; }
+
+.tf-point-add {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.tf-point-add svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.tf-point-add:hover { background: var(--accent-soft); color: var(--accent); }
+
+.one-on-one-point-hint {
+  margin: -4px 0 14px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+/* ============================================================
+   WOCHENABSCHLUSS
+   ============================================================ */
+body[data-theme] .sidebar .nav button[hidden] { display: none; }
+body[data-theme] .sidebar .nav .nav-weekly:not(.active) .nav-icon { color: var(--accent); }
+
+.page-head-side {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.week-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.week-col { display: grid; gap: 16px; min-width: 0; }
+
+.week-col-title {
+  margin: 4px 2px -6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+body[data-theme] .week-card { margin: 0; }
+body[data-theme] .week-card .card-header { margin-bottom: 6px; }
+
+.week-count {
+  padding: 1px 9px;
+  border-radius: var(--radius-pill);
+  background: var(--fill-hover);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.week-list { list-style: none; margin: 0 -8px; }
+
+.week-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  border-radius: var(--radius);
+}
+
+.week-row + .week-row { border-top: 1px solid var(--line-soft); }
+.week-row.is-clickable { cursor: pointer; }
+.week-row.is-clickable:hover { background: var(--fill-subtle); }
+.week-row-main { flex: 1; min-width: 0; }
+
+.week-row-title {
+  font-size: 14px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.week-row-title .badge { margin-right: 4px; }
+
+.week-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.week-row-side {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.week-key {
+  margin-right: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.week-person {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+
+.week-person .person-avatar-badge { transform: scale(0.85); }
+
+.week-flag {
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--warning-light);
+  color: var(--warning);
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.week-flag-danger { background: var(--danger-light); color: var(--danger); }
+.week-danger { color: var(--danger); }
+
+.week-empty { padding: 6px 0 4px; font-size: 13px; color: var(--text-muted); }
+
+.week-source {
+  margin: -10px 4px 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.week-person-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+}
+
+.week-person-row + .week-person-row { border-top: 1px solid var(--line-soft); }
+.week-person-row > .week-person { padding-top: 2px; font-size: 14px; font-weight: 500; color: var(--text); }
+
+.week-signals { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+
+.week-signal {
+  padding: 3px 10px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.week-signal-warn { background: var(--warning-light); color: var(--warning); }
+.week-signal-muted { background: var(--fill-hover); color: var(--text-secondary); }
+.week-signal:hover { filter: brightness(1.1); }
+
+@media (max-width: 1100px) {
+  .week-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Teamfokus: mit Jira stehen 1:1 und Jira nebeneinander — lieber umbrechen
+   als "Keines gep…" abschneiden */
+body[data-theme] .tf-metric-value { white-space: normal; overflow: visible; }
 
 </style>
 <style data-source="./themes/dark.css">
@@ -8818,6 +9008,7 @@ body[data-theme="spaceship"] input[type="month"]::-webkit-calendar-picker-indica
       <button data-view="meetings" title="Meetings"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 9h8M8 13h5"/></svg><span class="nav-label">Meetings</span></button>
       <button data-view="team" title="Team"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/></svg><span class="nav-label">Team</span></button>
       <button data-view="notizen" title="Persönliche Notizen (Sudo)"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg><span class="nav-label">Notizen</span></button>
+      <button data-view="woche" class="nav-weekly" title="Wochenabschluss" hidden><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/><path d="M8.5 15l2.5 2.5 4.5-5"/></svg><span class="nav-label">Wochenabschluss</span></button>
     </nav>
     <div class="header-actions sidebar-footer">
       <div class="theme-picker" id="themePicker">
@@ -8863,7 +9054,7 @@ body[data-theme="spaceship"] input[type="month"]::-webkit-calendar-picker-indica
 // ============================================================
 // DATA LAYER — File System Access API
 // ============================================================
-const APP_VERSION = '1.0.64';
+const APP_VERSION = '1.0.65';
 const DATA_FILENAME = 'tktool-data.json';
 const JIRA_SYNC_FILENAME = 'jira-tickets.json';
 const JIRA_QUERY_MAX_RESULTS = 100;
@@ -9485,6 +9676,7 @@ function jiraSnapshotFromResponse(parsed) {
   const assignees = {};
   for (const id of teamIds) assignees[id] = [];
   const refs = {};
+  const resolved = [];
   const seenStatuses = [];
 
   for (const issue of parsed.issues) {
@@ -9511,6 +9703,18 @@ function jiraSnapshotFromResponse(parsed) {
         ...jiraHierarchyFields(f),
       });
     }
+    // Abgeschlossene Auftraege des Teams, fuer den Wochenabschluss. Kommen
+    // ueber denselben Request, zaehlen aber nie als offene Tickets.
+    if (f.resolution && f.resolutiondate && accountId && assignees[accountId]
+      && !(f.issuetype && f.issuetype.subtask) && !resolved.some(t => t.key === key)) {
+      resolved.push({
+        key,
+        summary: String(f.summary || ''),
+        accountId,
+        type: f.issuetype ? String(f.issuetype.name || '') : '',
+        resolvedAt: String(f.resolutiondate),
+      });
+    }
     if (refKeys.has(key.toUpperCase())) {
       // summary wird fuer den Titel-Abgleich geplanter Bloecke gebraucht
       refs[key.toUpperCase()] = {
@@ -9531,6 +9735,7 @@ function jiraSnapshotFromResponse(parsed) {
     source: getJiraBaseUrl(),
     assignees,
     refs,
+    resolved,
     truncated: !!parsed.nextPageToken,
   };
 }
@@ -10949,6 +11154,10 @@ function jiraQueryUrl() {
     // maxResults-Budget ab. Der refs-Teil unten bleibt bewusst ungefiltert,
     // dort brauchen wir den Status auch von erledigten Tickets.
     if (excluded.length) jql += ` AND status not in (${quoted(excluded)})`;
+    // Fuer den Wochenabschluss: was das Team zuletzt abgeschlossen hat. Nur
+    // Auftraege, keine Subtasks — die kosten Budget und sagen im Rueckblick
+    // nichts, was der Auftrag nicht schon sagt.
+    jql = `(${jql}) OR (assignee in (${quoted(accountIds)}) AND resolved >= -7d AND issuetype in standardIssueTypes())`;
   }
   if (refKeys.length) {
     const byKey = `key in (${quoted(refKeys)})`;
@@ -10958,7 +11167,7 @@ function jiraQueryUrl() {
 
   const params = new URLSearchParams({
     jql,
-    fields: 'summary,status,priority,issuetype,updated,assignee,resolution,parent',
+    fields: 'summary,status,priority,issuetype,updated,assignee,resolution,resolutiondate,parent',
     maxResults: String(JIRA_QUERY_MAX_RESULTS),
   });
   return `${base}/rest/api/3/search/jql?${params}`;
@@ -11184,6 +11393,7 @@ const PAGE_TITLES = {
   kontakte: 'Team',
   notizen: 'Notizen',
   search: 'Suche',
+  woche: 'Wochenabschluss',
 };
 
 // Die Uebersicht bekommt Datum und die Zahlen, nach denen man morgens
@@ -11226,6 +11436,8 @@ function renderPageHeadActions(view) {
       return btn('+ Kontakt', "openPersonForm(null, 'kontakt')", true);
     case 'overview':
       return btn('+ Aufgabe', `openCapture({ type: 'todo', status: 'todo', month: '${viewState.month || currentMonth()}' })`, true);
+    case 'woche':
+      return btn('Export .md', 'exportWeeklyReview()', false, 'Wochenabschluss als Markdown herunterladen');
     default:
       return '';
   }
@@ -11235,18 +11447,31 @@ function renderPageHead(view) {
   const title = PAGE_TITLES[view];
   if (!title) return '';
   const isDashboard = view === 'reviews';
+  const week = view === 'woche' ? weekRange() : null;
   const eyebrow = isDashboard
     ? new Date().toLocaleDateString('de-AT', { weekday: 'long', day: 'numeric', month: 'long' })
-    : '';
+    : week ? `KW ${isoWeekNumber(week.start)} · ${formatDateShort(week.start)}–${formatDateShort(week.end)}` : '';
+  const side = isDashboard
+    ? renderPageHeadStats()
+    : week
+      ? `<div class="page-head-side">${renderWeeklyReviewStats()}<div class="page-head-actions">${renderPageHeadActions(view)}</div></div>`
+      : `<div class="page-head-actions">${renderPageHeadActions(view)}</div>`;
   return `
     <div class="page-head page-head-${view}">
       <div>
         ${eyebrow ? `<div class="page-head-eyebrow">${esc(eyebrow)}</div>` : ''}
         <h1 class="page-head-title">${esc(title)}</h1>
       </div>
-      ${isDashboard ? renderPageHeadStats() : `<div class="page-head-actions">${renderPageHeadActions(view)}</div>`}
+      ${side}
     </div>
   `;
+}
+
+// Der Wochenabschluss steht nur Freitag bis Sonntag in der Navigation —
+// ausser man ist gerade drin.
+function syncWeeklyNav() {
+  const button = document.querySelector('#nav button[data-view="woche"]');
+  if (button) button.hidden = !isWeekReviewDay() && currentView !== 'woche';
 }
 
 function render() {
@@ -11267,9 +11492,11 @@ function render() {
     case 'planung': app.innerHTML = renderPlanung(); break;
     case 'notizen': app.innerHTML = renderNotes(); setTimeout(initNotesView, 0); break;
     case 'search': app.innerHTML = renderSearch(); break;
+    case 'woche': app.innerHTML = renderWeeklyReview(); break;
     default: app.innerHTML = renderOverview();
   }
   app.insertAdjacentHTML('afterbegin', renderPageHead(currentView.split(':')[0]));
+  syncWeeklyNav();
   if (scrollState) restoreScrollState(scrollState);
   else window.scrollTo(0, 0);
   restoreOverviewSearchFocus();
@@ -13583,6 +13810,76 @@ function openNextOneOnOne(personId) {
   openMeetingForm('oneOnOne', personId);
 }
 
+// ============================================================
+// PUNKT FUERS 1:1
+// ============================================================
+// Was man nicht sofort ansprechen will (ein schlecht reviewter PR, eine
+// Beobachtung), soll trotzdem nicht verloren gehen. Der Punkt landet in der
+// Vorbereitung des naechsten 1:1 — gibt es keins, entsteht ein undatiertes,
+// das der Teamfokus dann als "nicht terminiert" zeigt.
+function oneOnOnePointTarget(personId) {
+  return personNextOneOnOne(personId) || personUnscheduledOneOnOne(personId);
+}
+
+function oneOnOneOpenPrepCount(meeting) {
+  return meeting ? parsePrepBullets(meeting.prep).filter(bullet => !bullet.done && bullet.text.trim()).length : 0;
+}
+
+function openOneOnOnePointForm(personId) {
+  const person = data.persons.find(p => p.id === personId);
+  if (!person) return;
+  const target = oneOnOnePointTarget(personId);
+  const where = !target
+    ? 'Noch kein 1:1 geplant — es wird ein 1:1 ohne Datum angelegt.'
+    : target.date
+      ? `Kommt ins 1:1 am ${formatDate(target.date)} (${oneOnOneDueLabel(target.date)}).`
+      : 'Kommt ins 1:1 ohne Datum — noch einplanen.';
+  const open = oneOnOneOpenPrepCount(target);
+  document.getElementById('modal').innerHTML = `
+    <div class="modal-header">
+      <span class="modal-title">Punkt fürs 1:1 mit ${esc(person.name)}</span>
+      <button class="modal-close" onclick="closeOverlay()">&#x2715;</button>
+    </div>
+    <div class="modal-body" onkeydown="if(event.key==='Enter'&&(event.ctrlKey||event.metaKey||event.target.id==='oneOnOnePointLink')){event.preventDefault();saveOneOnOnePoint('${personId}')}">
+      <div class="form-group">
+        <label class="form-label" for="oneOnOnePointText">Was willst du ansprechen?</label>
+        <textarea class="form-textarea" id="oneOnOnePointText" rows="3"
+          placeholder="z.B. Review von PR #412 war sehr knapp — Erwartungen an Reviews klären"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="oneOnOnePointLink">Link (optional)</label>
+        <input class="form-input" id="oneOnOnePointLink" placeholder="PR, Ticket, Doku…">
+      </div>
+      <div class="one-on-one-point-hint">${esc(where)}${open ? ` Dort stehen schon ${open} offene ${open === 1 ? 'Punkt' : 'Punkte'}.` : ''}</div>
+      <button class="btn btn-primary" style="width:100%" onclick="saveOneOnOnePoint('${personId}')">Zum 1:1 hinzufügen</button>
+    </div>
+  `;
+  openOverlay();
+  setTimeout(() => document.getElementById('oneOnOnePointText')?.focus(), 0);
+}
+
+function saveOneOnOnePoint(personId) {
+  const text = document.getElementById('oneOnOnePointText').value.trim();
+  if (!text) { document.getElementById('oneOnOnePointText').focus(); return; }
+  const link = normalizeExternalUrl(document.getElementById('oneOnOnePointLink').value);
+  let meeting = oneOnOnePointTarget(personId);
+  if (!meeting) {
+    meeting = {
+      id: uid(), type: 'oneOnOne', title: '', date: '', personId,
+      participants: [], isTeamMeeting: false, prep: '', notes: '',
+    };
+    data.meetings.push(meeting);
+  }
+  // Das Datum steht im Punkt selbst: im Gespraech zaehlt, wie frisch die
+  // Beobachtung ist — Feedback nach zwei Wochen landet schwaecher.
+  const line = `${text}${link ? ` — ${link}` : ''} (notiert ${formatDateShort(todayStr())})`;
+  meeting.prep = serializePrepBullets([...parsePrepBullets(meeting.prep), { text: line, done: false }]);
+  saveData(data);
+  closeOverlay();
+  toast(meeting.date ? `Punkt fürs 1:1 am ${formatDateShort(meeting.date)} notiert` : 'Punkt notiert — 1:1 noch ohne Datum');
+  render();
+}
+
 function oneOnOneDueLabel(dateISO) {
   if (!dateISO) return 'ohne datum';
   const days = Math.round((parseISO(dateISO) - parseISO(todayStr())) / 86400000);
@@ -14184,11 +14481,16 @@ function renderTeamFocusOneOnOneMetric(entry) {
   const meeting = entry.nextOneOnOne || entry.unscheduledOneOnOne
     || { id: '', type: 'oneOnOne', personId: entry.person.id, date: todayStr() };
   const carryover = carryoverCount(oneOnOneCarryover(meeting));
+  const points = oneOnOneOpenPrepCount(entry.nextOneOnOne || entry.unscheduledOneOnOne);
   const value = entry.nextOneOnOne
     ? oneOnOneDueLabel(entry.nextOneOnOne.date)
     : entry.unscheduledOneOnOne ? 'nicht terminiert' : 'keines geplant';
-  const note = carryover
-    ? `${carryover} mitzunehmen`
+  const noteParts = [
+    points ? `${points} ${points === 1 ? 'Punkt' : 'Punkte'}` : '',
+    carryover ? `${carryover} mitzunehmen` : '',
+  ].filter(Boolean);
+  const note = noteParts.length
+    ? noteParts.join(' · ')
     : entry.nextOneOnOne ? 'nichts offen' : 'anlegen';
   const title = entry.nextOneOnOne ? 'Nächstes 1:1 öffnen'
     : entry.unscheduledOneOnOne ? '1:1 einplanen'
@@ -14317,9 +14619,14 @@ function renderReviews() {
                 ${waitingBlocks.length ? `<span class="tf-work-chip tf-work-waiting" title="Wartet in Review, QA oder einem anderen Übergabestatus">${waitingBlocks.length} wartet</span>` : ''}
                 ${entry.drift?.unplanned.length ? `<button class="filter-btn tf-work-overdue" onclick="event.stopPropagation();navigate('planung',{planungPerson:'${entry.person.id}',planungShowInbox:true})">${entry.drift.unplanned.length} einplanen</button>` : ''}
               </div>
-              <button class="tf-card-toggle" type="button" aria-expanded="${open}" aria-controls="${esc(detailId)}" onclick="event.stopPropagation(); toggleTeamFocusCard('${entry.person.id}')" title="Tickets ${open ? 'einklappen' : 'ausklappen'}" aria-label="Tickets von ${esc(entry.person.name)} ${open ? 'einklappen' : 'ausklappen'}">
-                <span aria-hidden="true">⌄</span>
-              </button>
+              <span class="tf-card-actions">
+                <button class="tf-point-add" type="button" onclick="event.stopPropagation(); openOneOnOnePointForm('${entry.person.id}')" title="Punkt fürs nächste 1:1 notieren" aria-label="Punkt fürs 1:1 mit ${esc(entry.person.name)} notieren">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M12 7v6M9 10h6"/></svg>
+                </button>
+                <button class="tf-card-toggle" type="button" aria-expanded="${open}" aria-controls="${esc(detailId)}" onclick="event.stopPropagation(); toggleTeamFocusCard('${entry.person.id}')" title="Tickets ${open ? 'einklappen' : 'ausklappen'}" aria-label="Tickets von ${esc(entry.person.name)} ${open ? 'einklappen' : 'ausklappen'}">
+                  <span aria-hidden="true">⌄</span>
+                </button>
+              </span>
             </div>
             <div class="tf-card-detail" id="${esc(detailId)}"${open ? '' : ' hidden'}>
               ${renderTeamFocusBlocks(entry)}
@@ -18095,6 +18402,297 @@ function openSupportEditor() {
           <button class="btn btn-secondary btn-sm" onclick="addSupportMonthFromInput('${p.id}');openSupportEditor()">+ Monat</button></div>
       </section>`).join('')}</div>`;
   openOverlay();
+}
+
+</script>
+<script data-source="./js/weekly.js">
+// ============================================================
+// WOCHENABSCHLUSS
+// ============================================================
+// Freitags-Ritual: was diese Woche fertig wurde, was liegen geblieben ist und
+// was naechste Woche ansteht. Nichts davon wird gepflegt — alles ist aus
+// Items, Meetings, Bloecken und dem Jira-Snapshot abgeleitet.
+
+// Nur Freitag bis Sonntag in der Navigation: das Ritual soll auffallen, wenn
+// es dran ist, und sonst keinen Platz kosten.
+function isWeekReviewDay(date = new Date()) {
+  return [5, 6, 0].includes(date.getDay());
+}
+
+function weekRange(today = todayStr()) {
+  const start = startOfWeek(parseISO(today));
+  return { start: toISO(start), end: toISO(addDays(start, 6)) };
+}
+
+function isoWeekNumber(iso) {
+  const d = parseISO(iso);
+  const thursday = addDays(d, 3 - ((d.getDay() + 6) % 7));
+  const firstThursday = new Date(thursday.getFullYear(), 0, 4);
+  return 1 + Math.round(((thursday - firstThursday) / 86400000 - 3 + ((firstThursday.getDay() + 6) % 7)) / 7);
+}
+
+// Wann ein Feld zuletzt geaendert wurde, als lokales Datum. Die Sync-Schicht
+// stempelt jedes Feld; ein eigenes "erledigt am" gibt es nicht.
+function fieldChangedOn(record, field) {
+  const at = record && record._syncFields && record._syncFields[field] && record._syncFields[field].changedAt;
+  return at ? toISO(new Date(at)) : '';
+}
+
+function inDateRange(iso, range) {
+  return !!iso && iso >= range.start && iso <= range.end;
+}
+
+function daysSince(iso, today = todayStr()) {
+  return Math.round((parseISO(today) - parseISO(iso)) / 86400000);
+}
+
+function lastOneOnOneDate(personId, today = todayStr()) {
+  return data.meetings
+    .filter(m => m.type === 'oneOnOne' && m.personId === personId && m.date && m.date <= today)
+    .map(m => m.date)
+    .sort()
+    .pop() || '';
+}
+
+function weeklyReviewData() {
+  const today = todayStr();
+  const week = weekRange(today);
+  const next = { start: toISO(addDays(parseISO(week.start), 7)), end: toISO(addDays(parseISO(week.start), 13)) };
+  const team = data.persons.filter(p => p.type !== 'kontakt').sort(comparePersonsByName);
+
+  // Erledigt: Statuswechsel auf "done" in dieser Woche. Alte Eintraege ohne
+  // Stempel fallen auf ihr Datum zurueck.
+  const doneTodos = data.items
+    .filter(i => i.type === 'todo' && i.status === 'done')
+    .filter(i => inDateRange(fieldChangedOn(i, 'status') || i.date, week))
+    .sort((a, b) => (fieldChangedOn(b, 'status') || b.date || '').localeCompare(fieldChangedOn(a, 'status') || a.date || ''));
+  const wins = data.items
+    .filter(i => (i.type === 'win' || i.type === 'highlight') && inDateRange(i.date, week))
+    .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+
+  // Jira: abgeschlossene Auftraege aus dem Snapshot, ergaenzt um Bloecke, die
+  // diese Woche als erledigt markiert wurden (auch ohne Jira-Anbindung).
+  const byAccount = new Map(team.filter(p => p.jiraAccountId).map(p => [p.jiraAccountId.trim(), p]));
+  const jiraResolved = jiraSyncData && Array.isArray(jiraSyncData.resolved)
+    ? jiraSyncData.resolved
+      .filter(t => inDateRange(toISO(new Date(t.resolvedAt)), week))
+      .map(t => ({ key: t.key, title: t.summary || t.key, person: byAccount.get(t.accountId) || null, on: toISO(new Date(t.resolvedAt)) }))
+    : null;
+  const seenKeys = new Set((jiraResolved || []).map(t => jiraAuftragKey(t.key)));
+  const doneBlocks = (data.blocks || [])
+    .filter(b => b.done && !isAbsenceBlock(b) && inDateRange(fieldChangedOn(b, 'done'), week))
+    .filter(b => !b.jiraRef || !seenKeys.has(jiraAuftragKey(b.jiraRef)))
+    .map(b => ({ key: b.jiraRef ? jiraAuftragKey(b.jiraRef) : '', title: blockDisplayLabel(b), person: data.persons.find(p => p.id === b.personId) || null, on: fieldChangedOn(b, 'done') }));
+  const finished = [...(jiraResolved || []), ...doneBlocks].sort((a, b) => b.on.localeCompare(a.on));
+
+  const meetingsHeld = data.meetings
+    .filter(m => inDateRange(m.date, week) && m.date <= today)
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  // Braucht Aufmerksamkeit
+  const overdue = data.items
+    .filter(i => i.type === 'todo' && i.status !== 'done' && i.status !== 'backlog' && i.date && i.date < today)
+    .sort(compareByDueDate);
+  const overdueIds = new Set(overdue.map(i => i.id));
+  const waitingLong = data.items
+    .filter(i => i.status === 'waiting' && !overdueIds.has(i.id))
+    .map(i => ({ item: i, since: fieldChangedOn(i, 'status') || i.date || '' }))
+    .filter(w => w.since && daysSince(w.since, today) >= 7)
+    .sort((a, b) => a.since.localeCompare(b.since));
+
+  const people = team.map(person => {
+    const signals = [];
+    const last = lastOneOnOneDate(person.id, today);
+    const upcoming = personNextOneOnOne(person.id);
+    const soon = upcoming && daysSince(today, upcoming.date) <= 7;
+    if (!soon && (!last || daysSince(last, today) > 14)) {
+      signals.push({ tone: 'warn', text: last ? `Kein 1:1 seit ${daysSince(last, today)} Tagen` : 'Noch nie ein 1:1', action: `openNextOneOnOne('${person.id}')` });
+    }
+    const parallel = personActiveBlocks(person.id, today).length;
+    if (parallel >= 3) {
+      signals.push({ tone: 'warn', text: `${parallel} Tickets parallel`, action: `navigate('planung',{planungPerson:'${person.id}'})` });
+    }
+    const since30 = toISO(addDays(parseISO(today), -30));
+    const journal = data.items.filter(i => i.personId === person.id && (i.type === 'highlight' || i.type === 'concern') && i.date && i.date >= since30);
+    if (!journal.length) {
+      signals.push({ tone: 'muted', text: 'Kein Journal-Eintrag in 30 Tagen', action: `openCapture({ captureMode: 'teammate' })` });
+    }
+    const unplanned = jiraSyncData ? (jiraUnplannedAuftraege(person) || []).length : 0;
+    if (unplanned) {
+      signals.push({ tone: 'warn', text: `${unplanned} ${unplanned === 1 ? 'Auftrag' : 'Aufträge'} ohne Block`, action: `navigate('planung',{planungPerson:'${person.id}',planungShowInbox:true})` });
+    }
+    return { person, signals };
+  }).filter(entry => entry.signals.length);
+
+  // Naechste Woche
+  const nextMeetings = data.meetings
+    .filter(m => inDateRange(m.date, next))
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const nextAbsences = (data.blocks || [])
+    .filter(b => isAbsenceBlock(b) && b.start <= next.end && b.end >= next.start)
+    .sort((a, b) => a.start.localeCompare(b.start));
+  const nextStarts = (data.blocks || [])
+    .filter(b => !isAbsenceBlock(b) && !b.done && inDateRange(b.start, next))
+    .sort((a, b) => a.start.localeCompare(b.start));
+
+  return { today, week, next, doneTodos, wins, finished, jiraResolved, meetingsHeld, overdue, waitingLong, people, nextMeetings, nextAbsences, nextStarts };
+}
+
+function weeklyPersonChip(person) {
+  return person ? `<span class="week-person">${personAvatar(person, 'sm')}<span>${esc(person.name)}</span></span>` : '';
+}
+
+function weeklyRow({ title, meta = '', side = '', onclick = '' }) {
+  return `
+    <li class="week-row${onclick ? ' is-clickable' : ''}"${onclick ? ` onclick="${onclick}"` : ''}>
+      <div class="week-row-main">
+        <div class="week-row-title">${title}</div>
+        ${meta ? `<div class="week-row-meta">${meta}</div>` : ''}
+      </div>
+      ${side ? `<div class="week-row-side">${side}</div>` : ''}
+    </li>`;
+}
+
+function weeklySection(title, count, rows, empty) {
+  return `
+    <section class="card week-card">
+      <div class="card-header">
+        <span class="card-title">${title}</span>
+        ${count !== null ? `<span class="week-count">${count}</span>` : ''}
+      </div>
+      ${rows.length ? `<ul class="week-list">${rows.join('')}</ul>` : `<div class="week-empty">${empty}</div>`}
+    </section>`;
+}
+
+function renderWeeklyReviewStats() {
+  const r = weeklyReviewData();
+  const stat = (value, label) => `<span class="page-stat"><strong>${value}</strong>${label}</span>`;
+  return `
+    <div class="page-head-stats">
+      ${stat(r.doneTodos.length, r.doneTodos.length === 1 ? 'Todo erledigt' : 'Todos erledigt')}
+      ${stat(r.finished.length, r.finished.length === 1 ? 'Ticket fertig' : 'Tickets fertig')}
+      ${stat(r.meetingsHeld.length, r.meetingsHeld.length === 1 ? 'Meeting' : 'Meetings')}
+      ${stat(r.wins.length, r.wins.length === 1 ? 'Win' : 'Wins')}
+    </div>`;
+}
+
+function renderWeeklyReview() {
+  const r = weeklyReviewData();
+  const personById = id => data.persons.find(p => p.id === id) || null;
+
+  const jiraHint = !jiraSyncData
+    ? 'Kein Jira-Stand — abgeschlossene Tickets erscheinen nach dem ersten Import.'
+    : !r.jiraResolved
+      ? 'Jira-Stand ist älter als diese Funktion — einmal neu einspielen, dann erscheinen abgeschlossene Tickets.'
+      : `Jira-Stand: ${esc(jiraSyncAgeLabel() || 'unbekannt')}`;
+
+  const finishedRows = r.finished.map(t => weeklyRow({
+    title: `${t.key ? `<span class="week-key">${esc(t.key)}</span>` : ''}${esc(t.title)}`,
+    meta: weeklyPersonChip(t.person),
+    side: formatDateShort(t.on),
+  }));
+  const todoRows = r.doneTodos.map(i => weeklyRow({
+    title: esc(i.text),
+    meta: weeklyPersonChip(personById(i.personId)),
+    side: formatDateShort(fieldChangedOn(i, 'status') || i.date),
+    onclick: `openEditItem('${i.id}')`,
+  }));
+  const winRows = r.wins.map(i => weeklyRow({
+    title: `<span class="badge badge-${i.type}">${itemTypeLabel(i.type)}</span> ${esc(i.text)}`,
+    meta: weeklyPersonChip(personById(i.personId)),
+    side: formatDateShort(i.date),
+    onclick: `openEditItem('${i.id}')`,
+  }));
+  const meetingRows = r.meetingsHeld.map(m => {
+    const counts = meetingFollowupCounts(m.id);
+    const open = counts.todo + counts.waiting;
+    return weeklyRow({
+      title: meetingDisplayTitle(m),
+      meta: formatDate(m.date),
+      side: open ? `<span class="week-flag">${open} offen</span>` : '',
+      onclick: `navigate('meetings:detail',{meetingId:'${m.id}'})`,
+    });
+  });
+
+  const attentionRows = [
+    ...r.overdue.map(i => weeklyRow({
+      title: esc(i.text),
+      meta: [weeklyPersonChip(personById(i.personId)), `<span class="week-danger">fällig ${formatDateShort(i.date)}</span>`].filter(Boolean).join(''),
+      side: '<span class="week-flag week-flag-danger">überfällig</span>',
+      onclick: `openEditItem('${i.id}')`,
+    })),
+    ...r.waitingLong.map(w => weeklyRow({
+      title: esc(w.item.text),
+      meta: weeklyPersonChip(personById(w.item.personId)),
+      side: `<span class="week-flag">wartet seit ${daysSince(w.since)} Tagen</span>`,
+      onclick: `openEditItem('${w.item.id}')`,
+    })),
+  ];
+  const peopleRows = r.people.map(({ person, signals }) => `
+    <li class="week-person-row">
+      ${weeklyPersonChip(person)}
+      <div class="week-signals">
+        ${signals.map(s => `<button type="button" class="week-signal week-signal-${s.tone}" onclick="${s.action}">${esc(s.text)}</button>`).join('')}
+      </div>
+    </li>`);
+
+  const nextRows = [
+    ...r.nextMeetings.map(m => weeklyRow({
+      title: meetingDisplayTitle(m),
+      meta: formatDate(m.date),
+      onclick: `navigate('meetings:detail',{meetingId:'${m.id}'})`,
+    })),
+    ...r.nextAbsences.map(b => weeklyRow({
+      title: `${esc(personName(b.personId))}: ${esc(b.label || 'Abwesend')}`,
+      meta: `${formatDateShort(b.start)} – ${formatDateShort(b.end)}`,
+      side: '<span class="week-flag">abwesend</span>',
+    })),
+    ...r.nextStarts.map(b => weeklyRow({
+      title: esc(blockDisplayLabel(b)),
+      meta: weeklyPersonChip(personById(b.personId)),
+      side: `startet ${formatDateShort(b.start)}`,
+      onclick: `navigateToPlanungBlock('${b.id}')`,
+    })),
+  ];
+
+  return `
+    <div class="week-grid">
+      <div class="week-col">
+        <div class="week-col-title">Geschafft</div>
+        ${weeklySection('Tickets abgeschlossen', r.finished.length, finishedRows, 'Keine abgeschlossenen Tickets diese Woche.')}
+        <div class="week-source">${jiraHint}</div>
+        ${weeklySection('Todos erledigt', r.doneTodos.length, todoRows, 'Keine Todos diese Woche erledigt.')}
+        ${weeklySection('Wins & Highlights', r.wins.length, winRows, 'Nichts notiert — gab es wirklich nichts?')}
+        ${weeklySection('Meetings', r.meetingsHeld.length, meetingRows, 'Keine Meetings diese Woche.')}
+      </div>
+      <div class="week-col">
+        <div class="week-col-title">Braucht Aufmerksamkeit</div>
+        ${weeklySection('Liegen geblieben', attentionRows.length, attentionRows, 'Nichts überfällig, nichts hängt länger als eine Woche.')}
+        ${weeklySection('Team', r.people.length, peopleRows, 'Bei allen ist das 1:1 aktuell und das Journal gepflegt.')}
+        <div class="week-col-title">Nächste Woche</div>
+        ${weeklySection(`KW ${isoWeekNumber(r.next.start)} · ${formatDateShort(r.next.start)}–${formatDateShort(r.next.end)}`, null, nextRows, 'Noch nichts geplant.')}
+      </div>
+    </div>
+  `;
+}
+
+// Markdown fuer den eigenen Report nach oben oder ins Wiki.
+function exportWeeklyReview() {
+  const r = weeklyReviewData();
+  const kw = isoWeekNumber(r.week.start);
+  const name = id => (data.persons.find(p => p.id === id) || {}).name || '';
+  const list = (rows, empty) => rows.length ? rows.map(x => `- ${x}`).join('\n') + '\n' : `_${empty}_\n`;
+  let md = `# Wochenabschluss KW ${kw} (${formatDate(r.week.start)} – ${formatDate(r.week.end)})\n\n`;
+  md += `## Tickets abgeschlossen\n` + list(r.finished.map(t => `${t.key ? `**${t.key}** ` : ''}${t.title}${t.person ? ` — ${t.person.name}` : ''}`), 'keine') + '\n';
+  md += `## Todos erledigt\n` + list(r.doneTodos.map(i => `${i.text}${i.personId ? ` — ${name(i.personId)}` : ''}`), 'keine') + '\n';
+  md += `## Wins & Highlights\n` + list(r.wins.map(i => `${itemTypeLabel(i.type)}: ${i.text}${i.personId ? ` — ${name(i.personId)}` : ''}`), 'keine') + '\n';
+  md += `## Meetings\n` + list(r.meetingsHeld.map(m => `${formatDate(m.date)} ${meetingTitleText(m)}`), 'keine') + '\n';
+  md += `## Liegen geblieben\n` + list([
+    ...r.overdue.map(i => `Überfällig seit ${formatDateShort(i.date)}: ${i.text}`),
+    ...r.waitingLong.map(w => `Wartet seit ${daysSince(w.since)} Tagen: ${w.item.text}`),
+  ], 'nichts') + '\n';
+  md += `## Team\n` + list(r.people.map(({ person, signals }) => `${person.name}: ${signals.map(s => s.text).join(', ')}`), 'alles aktuell');
+  downloadFile(`wochenabschluss-kw${String(kw).padStart(2, '0')}-${r.week.start.slice(0, 4)}.md`, md);
 }
 
 </script>

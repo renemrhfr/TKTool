@@ -107,6 +107,7 @@ const PAGE_TITLES = {
   kontakte: 'Team',
   notizen: 'Notizen',
   search: 'Suche',
+  woche: 'Wochenabschluss',
 };
 
 // Die Uebersicht bekommt Datum und die Zahlen, nach denen man morgens
@@ -149,6 +150,8 @@ function renderPageHeadActions(view) {
       return btn('+ Kontakt', "openPersonForm(null, 'kontakt')", true);
     case 'overview':
       return btn('+ Aufgabe', `openCapture({ type: 'todo', status: 'todo', month: '${viewState.month || currentMonth()}' })`, true);
+    case 'woche':
+      return btn('Export .md', 'exportWeeklyReview()', false, 'Wochenabschluss als Markdown herunterladen');
     default:
       return '';
   }
@@ -158,18 +161,31 @@ function renderPageHead(view) {
   const title = PAGE_TITLES[view];
   if (!title) return '';
   const isDashboard = view === 'reviews';
+  const week = view === 'woche' ? weekRange() : null;
   const eyebrow = isDashboard
     ? new Date().toLocaleDateString('de-AT', { weekday: 'long', day: 'numeric', month: 'long' })
-    : '';
+    : week ? `KW ${isoWeekNumber(week.start)} · ${formatDateShort(week.start)}–${formatDateShort(week.end)}` : '';
+  const side = isDashboard
+    ? renderPageHeadStats()
+    : week
+      ? `<div class="page-head-side">${renderWeeklyReviewStats()}<div class="page-head-actions">${renderPageHeadActions(view)}</div></div>`
+      : `<div class="page-head-actions">${renderPageHeadActions(view)}</div>`;
   return `
     <div class="page-head page-head-${view}">
       <div>
         ${eyebrow ? `<div class="page-head-eyebrow">${esc(eyebrow)}</div>` : ''}
         <h1 class="page-head-title">${esc(title)}</h1>
       </div>
-      ${isDashboard ? renderPageHeadStats() : `<div class="page-head-actions">${renderPageHeadActions(view)}</div>`}
+      ${side}
     </div>
   `;
+}
+
+// Der Wochenabschluss steht nur Freitag bis Sonntag in der Navigation —
+// ausser man ist gerade drin.
+function syncWeeklyNav() {
+  const button = document.querySelector('#nav button[data-view="woche"]');
+  if (button) button.hidden = !isWeekReviewDay() && currentView !== 'woche';
 }
 
 function render() {
@@ -190,9 +206,11 @@ function render() {
     case 'planung': app.innerHTML = renderPlanung(); break;
     case 'notizen': app.innerHTML = renderNotes(); setTimeout(initNotesView, 0); break;
     case 'search': app.innerHTML = renderSearch(); break;
+    case 'woche': app.innerHTML = renderWeeklyReview(); break;
     default: app.innerHTML = renderOverview();
   }
   app.insertAdjacentHTML('afterbegin', renderPageHead(currentView.split(':')[0]));
+  syncWeeklyNav();
   if (scrollState) restoreScrollState(scrollState);
   else window.scrollTo(0, 0);
   restoreOverviewSearchFocus();

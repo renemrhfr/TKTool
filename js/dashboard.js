@@ -393,11 +393,16 @@ function renderTeamFocusOneOnOneMetric(entry) {
   const meeting = entry.nextOneOnOne || entry.unscheduledOneOnOne
     || { id: '', type: 'oneOnOne', personId: entry.person.id, date: todayStr() };
   const carryover = carryoverCount(oneOnOneCarryover(meeting));
+  const points = oneOnOneOpenPrepCount(entry.nextOneOnOne || entry.unscheduledOneOnOne);
   const value = entry.nextOneOnOne
     ? oneOnOneDueLabel(entry.nextOneOnOne.date)
     : entry.unscheduledOneOnOne ? 'nicht terminiert' : 'keines geplant';
-  const note = carryover
-    ? `${carryover} mitzunehmen`
+  const noteParts = [
+    points ? `${points} ${points === 1 ? 'Punkt' : 'Punkte'}` : '',
+    carryover ? `${carryover} mitzunehmen` : '',
+  ].filter(Boolean);
+  const note = noteParts.length
+    ? noteParts.join(' · ')
     : entry.nextOneOnOne ? 'nichts offen' : 'anlegen';
   const title = entry.nextOneOnOne ? 'Nächstes 1:1 öffnen'
     : entry.unscheduledOneOnOne ? '1:1 einplanen'
@@ -526,9 +531,14 @@ function renderReviews() {
                 ${waitingBlocks.length ? `<span class="tf-work-chip tf-work-waiting" title="Wartet in Review, QA oder einem anderen Übergabestatus">${waitingBlocks.length} wartet</span>` : ''}
                 ${entry.drift?.unplanned.length ? `<button class="filter-btn tf-work-overdue" onclick="event.stopPropagation();navigate('planung',{planungPerson:'${entry.person.id}',planungShowInbox:true})">${entry.drift.unplanned.length} einplanen</button>` : ''}
               </div>
-              <button class="tf-card-toggle" type="button" aria-expanded="${open}" aria-controls="${esc(detailId)}" onclick="event.stopPropagation(); toggleTeamFocusCard('${entry.person.id}')" title="Tickets ${open ? 'einklappen' : 'ausklappen'}" aria-label="Tickets von ${esc(entry.person.name)} ${open ? 'einklappen' : 'ausklappen'}">
-                <span aria-hidden="true">⌄</span>
-              </button>
+              <span class="tf-card-actions">
+                <button class="tf-point-add" type="button" onclick="event.stopPropagation(); openOneOnOnePointForm('${entry.person.id}')" title="Punkt fürs nächste 1:1 notieren" aria-label="Punkt fürs 1:1 mit ${esc(entry.person.name)} notieren">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M12 7v6M9 10h6"/></svg>
+                </button>
+                <button class="tf-card-toggle" type="button" aria-expanded="${open}" aria-controls="${esc(detailId)}" onclick="event.stopPropagation(); toggleTeamFocusCard('${entry.person.id}')" title="Tickets ${open ? 'einklappen' : 'ausklappen'}" aria-label="Tickets von ${esc(entry.person.name)} ${open ? 'einklappen' : 'ausklappen'}">
+                  <span aria-hidden="true">⌄</span>
+                </button>
+              </span>
             </div>
             <div class="tf-card-detail" id="${esc(detailId)}"${open ? '' : ' hidden'}>
               ${renderTeamFocusBlocks(entry)}
