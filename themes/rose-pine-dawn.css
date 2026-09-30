@@ -29,7 +29,6 @@ body[data-theme="rose-pine-dawn"] {
   --weekend-support-bg: #f0ddbf;
   --weekend-support-bg-strong: #e8d1aa;
   --weekend-support-border: #d9b979;
-  --font-body: var(--font-sans);
   --board-todo-bg: #e1edf1;
   --board-backlog-bg: #fffaf3;
   --board-waiting-bg: #f8ead4;

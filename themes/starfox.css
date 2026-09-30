@@ -29,7 +29,6 @@ body[data-theme="starfox"] {
   --weekend-support-bg: #39311f;
   --weekend-support-bg-strong: #493d24;
   --weekend-support-border: #806438;
-  --font-body: var(--font-sans);
   --board-todo-bg: #102c40;
   --board-backlog-bg: #122536;
   --board-waiting-bg: #392b1c;

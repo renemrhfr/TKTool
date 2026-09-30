@@ -29,7 +29,6 @@ body[data-theme="switch"] {
   --weekend-support-bg: #f1e5c8;
   --weekend-support-bg-strong: #e9d9b2;
   --weekend-support-border: #d8c28d;
-  --font-body: var(--font-sans);
   --board-todo-bg: #e7f5ff;
   --board-backlog-bg: #ffffff;
   --board-waiting-bg: #fff5db;
@@ -72,61 +71,6 @@ body[data-theme="switch"] {
   --timeline-ticket: #e60012;
   --timeline-incident: #d51c2c;
   --timeline-abwesenheit: #8d9298;
-  --radius: 18px;
-  --radius-sm: 12px;
-  --radius-md: 18px;
-  --radius-lg: 22px;
-  --border-width: 1px;
-  --border-strong-width: 1px;
-  --border-accent-width: 0;
-  --header-height: 56px;
-  --layout-gap: 14px;
-  --stack-gap: 12px;
-  --main-padding-y: 16px;
-  --card-padding: 13px;
-  --control-padding-y: 8px;
-  --control-padding-x: 14px;
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.06);
-  --shadow-float: 0 10px 24px rgba(0, 0, 0, 0.14);
-  --shadow-popover: 0 16px 32px rgba(0, 0, 0, 0.16);
-  --label-letter-spacing: 0.04em;
-  --brand-letter-spacing: 0.02em;
-  --active-font-weight: 700;
-  --nav-active-border-width: 0;
-  --row-status-width: 4px;
-  --row-danger-width: 4px;
-}
-
-body[data-theme="switch"] .header {
-  background: transparent;
-  border-bottom-color: transparent;
-}
-
-body[data-theme="switch"] .header-inner {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 0 0 24px 24px;
-  padding: 0 14px;
-  box-shadow: var(--shadow-card);
-}
-
-body[data-theme="switch"] .logo {
-  width: 32px;
-  height: 32px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  background: var(--accent);
-  color: #fff;
-  font-size: 11px;
-  letter-spacing: 0;
-}
-
-body[data-theme="switch"] .nav button,
-body[data-theme="switch"] .header-actions button,
-body[data-theme="switch"] .theme-trigger {
-  border-radius: 999px;
 }
 
 body[data-theme="switch"] .nav button.active {
@@ -135,6 +79,3 @@ body[data-theme="switch"] .nav button.active {
   color: #fff;
 }
 
-body[data-theme="switch"] .card {
-  border-left-width: 1px;
-}

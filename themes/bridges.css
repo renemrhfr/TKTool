@@ -29,7 +29,6 @@ body[data-theme="bridges"] {
   --weekend-support-bg: #eadfca;
   --weekend-support-bg-strong: #e0d1b6;
   --weekend-support-border: #bda171;
-  --font-body: var(--font-sans);
   --board-todo-bg: #dceaf0;
   --board-backlog-bg: #f9fbfc;
   --board-waiting-bg: #f3e5c7;

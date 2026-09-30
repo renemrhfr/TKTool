@@ -29,7 +29,6 @@ body[data-theme="hyrule"] {
   --weekend-support-bg: #ebdcae;
   --weekend-support-bg-strong: #e1cd91;
   --weekend-support-border: #bda151;
-  --font-body: var(--font-sans);
   --board-todo-bg: #dcebed;
   --board-backlog-bg: #fbf8ea;
   --board-waiting-bg: #f1e3b8;

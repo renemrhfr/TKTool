@@ -29,7 +29,6 @@ body[data-theme="daylight"] {
   --weekend-support-bg: #f1dfb8;
   --weekend-support-bg-strong: #e9d29f;
   --weekend-support-border: #c7a763;
-  --font-body: var(--font-sans);
   --board-todo-bg: #e2eef9;
   --board-backlog-bg: #f7fafd;
   --board-waiting-bg: #f8e8c8;

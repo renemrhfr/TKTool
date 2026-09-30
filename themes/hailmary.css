@@ -1,7 +1,7 @@
 /*
  * Project Hail Mary — Mission-Log der Hail Mary auf dem Weg nach Tau Ceti.
  * Tiefes Weltraum-Navy, xenonit-graue Teal-Rahmen, Amber-Monospace-Labels
- * wie auf der Bordkonsole. Nur Farben und Hintergrund, Struktur kommt aus modern.css.
+ * wie auf der Bordkonsole. Nur Farben und Hintergrund, Struktur kommt aus styles.css.
  */
 body[data-theme="hailmary"] {
   --bg: #0a0f14;
@@ -34,7 +34,6 @@ body[data-theme="hailmary"] {
   --weekend-support-bg: #2e2619;
   --weekend-support-bg-strong: #3a301e;
   --weekend-support-border: #7a5f33;
-  --font-body: var(--font-sans);
   --board-todo-bg: #10222a;
   --board-backlog-bg: #111a21;
   --board-waiting-bg: #2a2219;
@@ -77,9 +76,6 @@ body[data-theme="hailmary"] {
   --timeline-ticket: #e8ad4e;
   --timeline-incident: #e2685c;
   --timeline-abwesenheit: #72838b;
-  --shadow-card: 0 4px 14px rgba(0, 0, 0, 0.22);
-  --shadow-float: 0 10px 28px rgba(0, 0, 0, 0.45);
-  --shadow-popover: 0 18px 42px rgba(0, 0, 0, 0.55);
 }
 
 /*

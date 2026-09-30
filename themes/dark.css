@@ -68,18 +68,6 @@ body[data-theme="everforest-dark"] {
   --stat-done-bg: #303b2f;
   --stat-wins-text: #d699b6;
   --stat-wins-bg: #3b313a;
-  --radius: 2px;
-  --radius-sm: 1px;
-  --radius-md: 3px;
-  --radius-lg: 4px;
-  --border-width: 1px;
-  --border-strong-width: 2px;
-  --border-accent-width: 3px;
-  --shadow-card: none;
-  --shadow-float: 0 3px 10px rgba(0, 0, 0, 0.28);
-  --shadow-popover: 0 10px 24px rgba(0, 0, 0, 0.32);
-  --label-letter-spacing: 0.1em;
-  --active-font-weight: 600;
 }
 
 body[data-theme="dark"] .overview-meta .stat-number,
