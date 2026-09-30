@@ -9452,13 +9452,14 @@ body[data-theme="arrakis"] ::selection {
 }
 
 </style>
-<style data-source="./themes/hailmary.css">
+<style data-source="./themes/spaceship.css">
 /*
- * Project Hail Mary — Mission-Log der Hail Mary auf dem Weg nach Tau Ceti.
- * Tiefes Weltraum-Navy, xenonit-graue Teal-Rahmen, Amber-Monospace-Labels
- * wie auf der Bordkonsole. Nur Farben und Hintergrund, Struktur kommt aus styles.css.
+ * Spaceship — Mission-Log auf dem Weg durchs All.
+ * Tiefes Weltraum-Navy, xenonit-graue Teal-Rahmen und Amber-Akzente wie
+ * auf einer Bordkonsole. Nur Farben und Hintergrund, Struktur kommt aus
+ * styles.css.
  */
-body[data-theme="hailmary"] {
+body[data-theme="spaceship"] {
   --bg: #0a0f14;
   --bg-elev: #0f161c;
   --surface: #111a21;
@@ -9537,7 +9538,7 @@ body[data-theme="hailmary"] {
  * Punktraster wie auf einer Navigationskarte. Scroll-gebunden (wie bei den
  * anderen Themes), damit Chromium keine Vollbild-Compositor-Flaechen anlegt.
  */
-body[data-theme="hailmary"] {
+body[data-theme="spaceship"] {
   background-color: var(--bg);
   background-image:
     radial-gradient(circle, rgba(120, 150, 160, 0.07) 0 1px, transparent 1.4px),
@@ -9547,19 +9548,19 @@ body[data-theme="hailmary"] {
   background-attachment: scroll;
 }
 
-body[data-theme="hailmary"] ::selection {
+body[data-theme="spaceship"] ::selection {
   color: #0a0f14;
   background: var(--accent);
 }
 
-body[data-theme="hailmary"] .participant-pill.active {
+body[data-theme="spaceship"] .participant-pill.active {
   color: #0a0f14;
   background: linear-gradient(180deg, #f0ba5e, #d49a3c);
   border-color: #f3c77c;
 }
 
-body[data-theme="hailmary"] input[type="date"]::-webkit-calendar-picker-indicator,
-body[data-theme="hailmary"] input[type="month"]::-webkit-calendar-picker-indicator {
+body[data-theme="spaceship"] input[type="date"]::-webkit-calendar-picker-indicator,
+body[data-theme="spaceship"] input[type="month"]::-webkit-calendar-picker-indicator {
   filter: invert(0.85);
 }
 
@@ -9644,7 +9645,7 @@ body[data-theme="hailmary"] input[type="month"]::-webkit-calendar-picker-indicat
 // ============================================================
 // DATA LAYER — File System Access API
 // ============================================================
-const APP_VERSION = '1.0.62';
+const APP_VERSION = '1.0.63';
 const DATA_FILENAME = 'tktool-data.json';
 const JIRA_SYNC_FILENAME = 'jira-tickets.json';
 const JIRA_QUERY_MAX_RESULTS = 100;
@@ -9698,7 +9699,7 @@ const THEMES = [
   'matrix',
   'kodama',
   'arrakis',
-  'hailmary',
+  'spaceship',
 ];
 const THEME_LABELS = {
   light: 'light',
@@ -9713,7 +9714,7 @@ const THEME_LABELS = {
   matrix: 'matrix',
   kodama: 'kodama',
   arrakis: 'arrakis',
-  hailmary: 'hail mary',
+  spaceship: 'spaceship',
 };
 const THEME_COLORS = {
   light: ['#fdf6e3', '#f57d26'],
@@ -9728,7 +9729,7 @@ const THEME_COLORS = {
   matrix: ['#030703', '#38b84a'],
   kodama: ['#092526', '#e3a54b'],
   arrakis: ['#ead4a6', '#c8662d'],
-  hailmary: ['#0a0f14', '#e8ad4e'],
+  spaceship: ['#0a0f14', '#e8ad4e'],
 };
 
 // Surface runtime failures in the app as well as in DevTools. This is

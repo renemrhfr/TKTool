@@ -1,7 +1,7 @@
 // ============================================================
 // DATA LAYER — File System Access API
 // ============================================================
-const APP_VERSION = '1.0.62';
+const APP_VERSION = '1.0.63';
 const DATA_FILENAME = 'tktool-data.json';
 const JIRA_SYNC_FILENAME = 'jira-tickets.json';
 const JIRA_QUERY_MAX_RESULTS = 100;
@@ -55,7 +55,7 @@ const THEMES = [
   'matrix',
   'kodama',
   'arrakis',
-  'hailmary',
+  'spaceship',
 ];
 const THEME_LABELS = {
   light: 'light',
@@ -70,7 +70,7 @@ const THEME_LABELS = {
   matrix: 'matrix',
   kodama: 'kodama',
   arrakis: 'arrakis',
-  hailmary: 'hail mary',
+  spaceship: 'spaceship',
 };
 const THEME_COLORS = {
   light: ['#fdf6e3', '#f57d26'],
@@ -85,7 +85,7 @@ const THEME_COLORS = {
   matrix: ['#030703', '#38b84a'],
   kodama: ['#092526', '#e3a54b'],
   arrakis: ['#ead4a6', '#c8662d'],
-  hailmary: ['#0a0f14', '#e8ad4e'],
+  spaceship: ['#0a0f14', '#e8ad4e'],
 };
 
 // Surface runtime failures in the app as well as in DevTools. This is
