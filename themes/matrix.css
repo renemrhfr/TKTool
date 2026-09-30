@@ -84,8 +84,6 @@ body[data-theme="matrix"] .header {
   background: rgba(3, 7, 3, 0.96);
   border-bottom-color: var(--accent);
   box-shadow: 0 0 18px rgba(0, 255, 65, 0.12);
-  overflow-x: hidden;
-  overflow-x: clip;
 }
 
 body[data-theme="matrix"] .logo {
