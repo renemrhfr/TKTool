@@ -29,7 +29,6 @@ body[data-theme="matrix"] {
   --weekend-support-bg: #1f2d14;
   --weekend-support-bg-strong: #283a19;
   --weekend-support-border: #5a7c2b;
-  --font-body: var(--font-mono);
   --board-todo-bg: #071b1d;
   --board-backlog-bg: #0b180b;
   --board-waiting-bg: #202611;
@@ -68,46 +67,10 @@ body[data-theme="matrix"] {
   --stat-done-bg: #0c2412;
   --stat-wins-text: #7cffd4;
   --stat-wins-bg: #12352e;
-  --quicknotes-bar-bg: #071107;
-  --quicknotes-bar-bg-hover: #0b1b0b;
-  --quicknotes-bar-gradient: linear-gradient(180deg, #0b1b0b 0%, #071107 100%);
-  --quicknotes-bar-gradient-hover: linear-gradient(180deg, #102610 0%, #0b1b0b 100%);
-  --quicknotes-bar-border: #1f4f1f;
-  --quicknotes-indicator-border: rgba(0, 255, 65, 0.28);
-  --quicknotes-indicator-bg: rgba(0, 255, 65, 0.08);
-  --quicknotes-indicator-active-border: rgba(0, 255, 65, 0.52);
-  --quicknotes-indicator-active-bg: rgba(0, 255, 65, 0.16);
-  --quicknotes-indicator-active-text: #7cff8d;
-  --quicknotes-capture-border: rgba(0, 255, 65, 0.24);
-  --quicknotes-capture-bg: rgba(0, 255, 65, 0.06);
-  --quicknotes-capture-bg-hover: rgba(0, 255, 65, 0.12);
   --timeline-projekt: #34d9ff;
   --timeline-ticket: #38b84a;
   --timeline-incident: #ff5c7a;
   --timeline-abwesenheit: #5ea65e;
-  --radius: 0;
-  --radius-sm: 0;
-  --radius-md: 0;
-  --radius-lg: 0;
-  --border-width: 1px;
-  --border-strong-width: 1px;
-  --border-accent-width: 2px;
-  --header-height: 46px;
-  --layout-gap: 8px;
-  --stack-gap: 6px;
-  --main-padding-y: 12px;
-  --card-padding: 9px;
-  --control-padding-y: 5px;
-  --control-padding-x: 9px;
-  --shadow-card: inset 0 0 0 1px rgba(0, 255, 65, 0.04);
-  --shadow-float: 0 0 0 1px rgba(0, 255, 65, 0.16), 0 0 18px rgba(0, 255, 65, 0.12);
-  --shadow-popover: 0 0 0 1px rgba(0, 255, 65, 0.18), 0 0 28px rgba(0, 255, 65, 0.12);
-  --label-letter-spacing: 0.14em;
-  --brand-letter-spacing: 0.16em;
-  --active-font-weight: 700;
-  --nav-active-border-width: 2px;
-  --row-status-width: 2px;
-  --row-danger-width: 3px;
 }
 
 body[data-theme="matrix"] {
@@ -121,28 +84,11 @@ body[data-theme="matrix"] .header {
   background: rgba(3, 7, 3, 0.96);
   border-bottom-color: var(--accent);
   box-shadow: 0 0 18px rgba(0, 255, 65, 0.12);
-  overflow-x: hidden;
-  overflow-x: clip;
 }
 
 body[data-theme="matrix"] .logo {
   color: var(--accent);
   text-shadow: 0 0 8px rgba(0, 255, 65, 0.8);
-}
-
-body[data-theme="matrix"] .nav {
-  overflow: hidden;
-  padding: 2px;
-  margin: -2px 6px -2px -2px;
-  scrollbar-width: none;
-}
-
-body[data-theme="matrix"] .nav::-webkit-scrollbar {
-  display: none;
-}
-
-body[data-theme="matrix"] .header-search {
-  margin-left: 4px;
 }
 
 body[data-theme="matrix"] .nav button,

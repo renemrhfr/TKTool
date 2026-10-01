@@ -136,7 +136,7 @@ function renderReviewDueList(items) {
     },
     {
       key: 'today',
-      title: 'Fällig',
+      title: 'Heute',
       hint: todayDue.length ? 'Heute geplant oder fällig' : 'Heute nichts fällig',
       items: todayDue,
       tone: 'warning',
@@ -222,7 +222,7 @@ function renderDashboardReviewAction() {
   const count = monthReviewMonths().length;
   return `
     <button class="btn btn-secondary btn-sm dashboard-review-action" onclick="openMonthReviewsArchive()" title="Frühere Monatsrückblicke ansehen">
-      <span>monatsrückblicke</span>
+      <span>Monatsrückblicke</span>
       <span class="dashboard-review-count">${count}</span>
     </button>
   `;
@@ -393,11 +393,16 @@ function renderTeamFocusOneOnOneMetric(entry) {
   const meeting = entry.nextOneOnOne || entry.unscheduledOneOnOne
     || { id: '', type: 'oneOnOne', personId: entry.person.id, date: todayStr() };
   const carryover = carryoverCount(oneOnOneCarryover(meeting));
+  const points = oneOnOneOpenPrepCount(entry.nextOneOnOne || entry.unscheduledOneOnOne);
   const value = entry.nextOneOnOne
     ? oneOnOneDueLabel(entry.nextOneOnOne.date)
     : entry.unscheduledOneOnOne ? 'nicht terminiert' : 'keines geplant';
-  const note = carryover
-    ? `${carryover} mitzunehmen`
+  const noteParts = [
+    points ? `${points} ${points === 1 ? 'Punkt' : 'Punkte'}` : '',
+    carryover ? `${carryover} mitzunehmen` : '',
+  ].filter(Boolean);
+  const note = noteParts.length
+    ? noteParts.join(' · ')
     : entry.nextOneOnOne ? 'nichts offen' : 'anlegen';
   const title = entry.nextOneOnOne ? 'Nächstes 1:1 öffnen'
     : entry.unscheduledOneOnOne ? '1:1 einplanen'
@@ -408,6 +413,32 @@ function renderTeamFocusOneOnOneMetric(entry) {
       <span class="tf-metric-value">${esc(value)}</span>
       <span class="tf-metric-note">${esc(note)}</span>
     </button>`;
+}
+
+// Statt "Jetzt 1 · Als Nächstes 0" steht da, woran die Person gerade
+// arbeitet — die Zahl allein zwingt zum Aufklappen.
+function renderTeamFocusNow(entry, workingBlocks) {
+  const current = workingBlocks[0]?.block;
+  const next = entry.upcomingBlocks[0];
+  if (current) {
+    // Bei mehreren parallelen steht das zuerst endende da. Die Anzahl gehoert
+    // in die Label-Zeile: viel Parallelarbeit ist selbst das Signal.
+    const count = workingBlocks.length;
+    const all = workingBlocks.map(({ block }) => blockDisplayLabel(block)).join('\n');
+    return `
+      <span class="tf-now"${count > 1 ? ` title="${esc(all)}"` : ''}>
+        <span class="tf-now-label">${count > 1 ? `Arbeitet an <span class="tf-now-count${count >= 3 ? ' is-high' : ''}">${count} parallel</span>` : 'Arbeitet an'}</span>
+        <span class="tf-now-title">${esc(blockDisplayLabel(current))}</span>
+      </span>`;
+  }
+  if (next) {
+    return `
+      <span class="tf-now tf-now-next">
+        <span class="tf-now-label">Ab ${esc(formatDateShort(next.start))}</span>
+        <span class="tf-now-title">${esc(blockDisplayLabel(next))}</span>
+      </span>`;
+  }
+  return '<span class="tf-now tf-now-empty"><span class="tf-now-label">Nichts eingeplant</span></span>';
 }
 
 function renderReviews() {
@@ -459,6 +490,13 @@ function renderReviews() {
     ${jiraWaitingTickets().length ? `<button class="dashboard-waiting" onclick="openWaitingQueue()"><strong>Warteschlange · ${jiraWaitingTickets().length} Tickets</strong><span>${esc(waitingStatusCounts(jiraWaitingTickets()))}</span><span>Teamweit ansehen →</span></button>` : ''}
     ${renderJiraChanges()}
     <div class="review-grid">
+      <div class="card review-due-card">
+        <div class="card-header">
+          <span class="card-title">Fällig</span>
+          <span class="search-summary">${dueItems.length} Items</span>
+        </div>
+        ${renderReviewDueList(dueItems)}
+      </div>
       <div class="card review-team-focus-card">
         <div class="card-header">
           <span class="card-title">Teamfokus</span>
@@ -489,18 +527,18 @@ function renderReviews() {
                 ${renderTeamFocusJiraMetric(entry)}
               </div>
               <div class="tf-work-metric">
-                <span class="tf-work-count"><span class="tf-metric-label">Jetzt</span>
-                <span class="tf-metric-value">${workingBlocks.length}</span></span>
-                <span class="tf-work-count"><span class="tf-metric-label">Als Nächstes</span><span class="tf-metric-value">${entry.upcomingBlocks.length}</span></span>
-                ${waitingBlocks.length ? `
-                <span class="tf-work-count">
-                <span class="tf-metric-label tf-work-waiting" title="Wartet in Review, QA oder einem anderen Übergabestatus">Wartet</span>
-                <span class="tf-metric-value tf-work-waiting" title="Wartet in Review, QA oder einem anderen Übergabestatus">${waitingBlocks.length}</span></span>` : ''}
+                ${renderTeamFocusNow(entry, workingBlocks)}
+                ${waitingBlocks.length ? `<span class="tf-work-chip tf-work-waiting" title="Wartet in Review, QA oder einem anderen Übergabestatus">${waitingBlocks.length} wartet</span>` : ''}
                 ${entry.drift?.unplanned.length ? `<button class="filter-btn tf-work-overdue" onclick="event.stopPropagation();navigate('planung',{planungPerson:'${entry.person.id}',planungShowInbox:true})">${entry.drift.unplanned.length} einplanen</button>` : ''}
               </div>
-              <button class="tf-card-toggle" type="button" aria-expanded="${open}" aria-controls="${esc(detailId)}" onclick="event.stopPropagation(); toggleTeamFocusCard('${entry.person.id}')" title="Tickets ${open ? 'einklappen' : 'ausklappen'}" aria-label="Tickets von ${esc(entry.person.name)} ${open ? 'einklappen' : 'ausklappen'}">
-                <span aria-hidden="true">⌄</span>
-              </button>
+              <span class="tf-card-actions">
+                <button class="tf-point-add" type="button" onclick="event.stopPropagation(); openOneOnOnePointForm('${entry.person.id}')" title="Punkt fürs nächste 1:1 notieren" aria-label="Punkt fürs 1:1 mit ${esc(entry.person.name)} notieren">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M12 7v6M9 10h6"/></svg>
+                </button>
+                <button class="tf-card-toggle" type="button" aria-expanded="${open}" aria-controls="${esc(detailId)}" onclick="event.stopPropagation(); toggleTeamFocusCard('${entry.person.id}')" title="Tickets ${open ? 'einklappen' : 'ausklappen'}" aria-label="Tickets von ${esc(entry.person.name)} ${open ? 'einklappen' : 'ausklappen'}">
+                  <span aria-hidden="true">⌄</span>
+                </button>
+              </span>
             </div>
             <div class="tf-card-detail" id="${esc(detailId)}"${open ? '' : ' hidden'}>
               ${renderTeamFocusBlocks(entry)}
@@ -510,6 +548,7 @@ function renderReviews() {
         </div>
       </div>
 
+      <div class="review-side-column">
       <div class="card review-schedule-card">
         <div class="card-header"><span class="card-title">Nächste Meetings</span></div>
         ${renderReviewMeetingList(upcomingMeetings, 'Keine kommenden Meetings')}
@@ -520,12 +559,6 @@ function renderReviews() {
         ${renderReviewMarkerList(upcomingMarkers, 'Keine kommenden Events')}
       </div>
 
-      <div class="card review-due-card">
-        <div class="card-header">
-          <span class="card-title">Fällig</span>
-          <span class="search-summary">${dueItems.length} Items</span>
-        </div>
-        ${renderReviewDueList(dueItems)}
       </div>
     </div>
 

@@ -112,6 +112,24 @@ stored — it's derived at render time from the items that already exist.
 This is the feature the tool exists for: never walking into a 1:1 without
 context, and never maintaining a separate "agenda" document that drifts.
 
+What isn't an item yet — a thinly reviewed PR, an observation worth raising
+but not worth a message today — goes straight into the next 1:1's
+preparation from the Teamfokus row. If no 1:1 exists, an undated one is
+created, which the Teamfokus then shows as "nicht terminiert". Each point
+carries the date it was noted: feedback loses weight with age, and a point
+that's two weeks old is a sign it should have been raised sooner.
+
+### Weekly review
+
+Friday to Sunday, the sidebar shows a "Wochenabschluss": Jira Aufträge the
+team resolved this week, todos done, wins, meetings held; what's overdue or
+has been waiting for more than a week; and per person, the gaps that don't
+announce themselves — no 1:1 in two weeks, no journal entry in 30 days,
+three or more tickets in parallel, Jira work without a planning block. It
+maintains nothing of its own: "done this week" comes from the per-field sync
+timestamps, resolved tickets from the regular Jira import (which also asks
+for the team's Aufträge resolved in the last 7 days). Exports as Markdown.
+
 ### Standup round
 
 A team meeting shows one row per participant with the Aufträge they're on
@@ -188,9 +206,8 @@ the app's HTML, CSS, and JavaScript in one file and is refreshed with each updat
   `js/helpers.js`, view files, and `js/ui.js` is for navigability, not
   encapsulation — everything is still global, and inline `onclick` handlers
   depend on that. Load order matters: data and helpers first, init last.
-- **Keyboard-first capture.** `Ctrl+K` captures an item from anywhere,
-  `Ctrl+J` toggles a free-form quicknotes drawer. Friction at capture time
-  is the main reason tracking tools die.
+- **Keyboard-first capture.** `Ctrl+K` captures an item from anywhere.
+  Friction at capture time is the main reason tracking tools die.
 
 ## Non-goals
 

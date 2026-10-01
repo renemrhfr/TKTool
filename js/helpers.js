@@ -721,6 +721,10 @@ function jiraQueryUrl() {
     // maxResults-Budget ab. Der refs-Teil unten bleibt bewusst ungefiltert,
     // dort brauchen wir den Status auch von erledigten Tickets.
     if (excluded.length) jql += ` AND status not in (${quoted(excluded)})`;
+    // Fuer den Wochenabschluss: was das Team zuletzt abgeschlossen hat. Nur
+    // Auftraege, keine Subtasks — die kosten Budget und sagen im Rueckblick
+    // nichts, was der Auftrag nicht schon sagt.
+    jql = `(${jql}) OR (assignee in (${quoted(accountIds)}) AND resolved >= -7d AND issuetype in standardIssueTypes())`;
   }
   if (refKeys.length) {
     const byKey = `key in (${quoted(refKeys)})`;
@@ -730,7 +734,7 @@ function jiraQueryUrl() {
 
   const params = new URLSearchParams({
     jql,
-    fields: 'summary,status,priority,issuetype,updated,assignee,resolution,parent',
+    fields: 'summary,status,priority,issuetype,updated,assignee,resolution,resolutiondate,parent',
     maxResults: String(JIRA_QUERY_MAX_RESULTS),
   });
   return `${base}/rest/api/3/search/jql?${params}`;

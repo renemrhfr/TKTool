@@ -400,31 +400,22 @@ function renderMeetings() {
   `;
 
   return `
-    <div class="section-header">
-      <div class="overview-toolbar">
-        <span class="section-title">Meetings</span>
-        <div class="view-search">
-          <input
-            id="meetingSearchInput"
-            type="search"
-            placeholder="grep: titel, notizen, prep, personen..."
-            value="${esc(rawQuery)}"
-            oninput="setMeetingQuery(this.value)"
-          >
-        </div>
+    <div class="section-header meetings-toolbar">
+      <div class="filters">
+        <button class="filter-btn ${filter === 'all' ? 'active' : ''}" onclick="setMeetingTypeFilter('all')">alle</button>
+        <button class="filter-btn ${filter === 'oneOnOne' ? 'active' : ''}" onclick="setMeetingTypeFilter('oneOnOne')">1:1s</button>
+        <button class="filter-btn ${filter === 'team' ? 'active' : ''}" onclick="setMeetingTypeFilter('team')">team</button>
+        <button class="filter-btn ${filter === 'other' ? 'active' : ''}" onclick="setMeetingTypeFilter('other')">sonstige</button>
       </div>
-      <div style="display:flex;gap:8px">
-        <button class="btn btn-primary btn-sm" onclick="openTodayStandup()" title="Heutigen Standup öffnen oder anlegen — alle Anwesenden sind schon eingetragen">+ Standup</button>
-        <button class="btn btn-primary btn-sm" onclick="openMeetingForm('meeting')">+ Meeting</button>
-        <button class="btn btn-primary btn-sm" onclick="openMeetingForm('oneOnOne')">+ 1:1</button>
+      <div class="view-search">
+        <input
+          id="meetingSearchInput"
+          type="search"
+          placeholder="Meetings durchsuchen – Titel, Notizen, Prep, Personen…"
+          value="${esc(rawQuery)}"
+          oninput="setMeetingQuery(this.value)"
+        >
       </div>
-    </div>
-
-    <div class="filters">
-      <button class="filter-btn ${filter === 'all' ? 'active' : ''}" onclick="setMeetingTypeFilter('all')">alle</button>
-      <button class="filter-btn ${filter === 'oneOnOne' ? 'active' : ''}" onclick="setMeetingTypeFilter('oneOnOne')">1:1s</button>
-      <button class="filter-btn ${filter === 'team' ? 'active' : ''}" onclick="setMeetingTypeFilter('team')">team</button>
-      <button class="filter-btn ${filter === 'other' ? 'active' : ''}" onclick="setMeetingTypeFilter('other')">sonstige</button>
     </div>
 
     ${totalCount ? `
@@ -1261,6 +1252,76 @@ function openNextOneOnOne(personId) {
   const draft = personUnscheduledOneOnOne(personId);
   if (draft) { openScheduleMeetingDate(draft.id); return; }
   openMeetingForm('oneOnOne', personId);
+}
+
+// ============================================================
+// PUNKT FUERS 1:1
+// ============================================================
+// Was man nicht sofort ansprechen will (ein schlecht reviewter PR, eine
+// Beobachtung), soll trotzdem nicht verloren gehen. Der Punkt landet in der
+// Vorbereitung des naechsten 1:1 — gibt es keins, entsteht ein undatiertes,
+// das der Teamfokus dann als "nicht terminiert" zeigt.
+function oneOnOnePointTarget(personId) {
+  return personNextOneOnOne(personId) || personUnscheduledOneOnOne(personId);
+}
+
+function oneOnOneOpenPrepCount(meeting) {
+  return meeting ? parsePrepBullets(meeting.prep).filter(bullet => !bullet.done && bullet.text.trim()).length : 0;
+}
+
+function openOneOnOnePointForm(personId) {
+  const person = data.persons.find(p => p.id === personId);
+  if (!person) return;
+  const target = oneOnOnePointTarget(personId);
+  const where = !target
+    ? 'Noch kein 1:1 geplant — es wird ein 1:1 ohne Datum angelegt.'
+    : target.date
+      ? `Kommt ins 1:1 am ${formatDate(target.date)} (${oneOnOneDueLabel(target.date)}).`
+      : 'Kommt ins 1:1 ohne Datum — noch einplanen.';
+  const open = oneOnOneOpenPrepCount(target);
+  document.getElementById('modal').innerHTML = `
+    <div class="modal-header">
+      <span class="modal-title">Punkt fürs 1:1 mit ${esc(person.name)}</span>
+      <button class="modal-close" onclick="closeOverlay()">&#x2715;</button>
+    </div>
+    <div class="modal-body" onkeydown="if(event.key==='Enter'&&(event.ctrlKey||event.metaKey||event.target.id==='oneOnOnePointLink')){event.preventDefault();saveOneOnOnePoint('${personId}')}">
+      <div class="form-group">
+        <label class="form-label" for="oneOnOnePointText">Was willst du ansprechen?</label>
+        <textarea class="form-textarea" id="oneOnOnePointText" rows="3"
+          placeholder="z.B. Review von PR #412 war sehr knapp — Erwartungen an Reviews klären"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="oneOnOnePointLink">Link (optional)</label>
+        <input class="form-input" id="oneOnOnePointLink" placeholder="PR, Ticket, Doku…">
+      </div>
+      <div class="one-on-one-point-hint">${esc(where)}${open ? ` Dort stehen schon ${open} offene ${open === 1 ? 'Punkt' : 'Punkte'}.` : ''}</div>
+      <button class="btn btn-primary" style="width:100%" onclick="saveOneOnOnePoint('${personId}')">Zum 1:1 hinzufügen</button>
+    </div>
+  `;
+  openOverlay();
+  setTimeout(() => document.getElementById('oneOnOnePointText')?.focus(), 0);
+}
+
+function saveOneOnOnePoint(personId) {
+  const text = document.getElementById('oneOnOnePointText').value.trim();
+  if (!text) { document.getElementById('oneOnOnePointText').focus(); return; }
+  const link = normalizeExternalUrl(document.getElementById('oneOnOnePointLink').value);
+  let meeting = oneOnOnePointTarget(personId);
+  if (!meeting) {
+    meeting = {
+      id: uid(), type: 'oneOnOne', title: '', date: '', personId,
+      participants: [], isTeamMeeting: false, prep: '', notes: '',
+    };
+    data.meetings.push(meeting);
+  }
+  // Das Datum steht im Punkt selbst: im Gespraech zaehlt, wie frisch die
+  // Beobachtung ist — Feedback nach zwei Wochen landet schwaecher.
+  const line = `${text}${link ? ` — ${link}` : ''} (notiert ${formatDateShort(todayStr())})`;
+  meeting.prep = serializePrepBullets([...parsePrepBullets(meeting.prep), { text: line, done: false }]);
+  saveData(data);
+  closeOverlay();
+  toast(meeting.date ? `Punkt fürs 1:1 am ${formatDateShort(meeting.date)} notiert` : 'Punkt notiert — 1:1 noch ohne Datum');
+  render();
 }
 
 function oneOnOneDueLabel(dateISO) {

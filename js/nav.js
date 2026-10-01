@@ -53,7 +53,8 @@ function navigate(view, state = {}) {
 }
 
 document.getElementById('nav').addEventListener('click', e => {
-  if (e.target.tagName === 'BUTTON') navigate(e.target.dataset.view);
+  const button = e.target.closest('button[data-view]');
+  if (button) navigate(button.dataset.view);
 });
 
 // ============================================================
@@ -97,6 +98,96 @@ function restoreScrollState(snapshot) {
   window.scrollTo(0, snapshot.window);
 }
 
+const PAGE_TITLES = {
+  reviews: 'Übersicht',
+  planung: 'Planung',
+  overview: 'Aufgaben',
+  meetings: 'Meetings',
+  team: 'Team',
+  kontakte: 'Team',
+  notizen: 'Notizen',
+  search: 'Suche',
+  woche: 'Wochenabschluss',
+};
+
+// Die Uebersicht bekommt Datum und die Zahlen, nach denen man morgens
+// zuerst fragt: was brennt, was ist heute, wer wartet auf ein 1:1.
+function renderPageHeadStats() {
+  const today = todayStr();
+  const open = data.items.filter(item => item.type === 'todo' && item.status !== 'done' && item.status !== 'backlog' && item.date);
+  const overdue = open.filter(item => item.date < today).length;
+  const dueToday = open.filter(item => item.date === today).length;
+  const weekEnd = toISO(addDays(parseISO(today), 6));
+  const meetingsToday = data.meetings.filter(meeting => meeting.date === today).length;
+  const oneOnOnes = data.meetings.filter(meeting => meeting.type === 'oneOnOne' && meeting.date >= today && meeting.date <= weekEnd).length;
+  const stat = (value, label, tone = '') => `<span class="page-stat${tone ? ' page-stat-' + tone : ''}"><strong>${value}</strong>${label}</span>`;
+  return `
+    <div class="page-head-stats">
+      ${stat(overdue, 'überfällig', overdue ? 'danger' : '')}
+      ${stat(dueToday, 'heute fällig', dueToday ? 'warning' : '')}
+      ${stat(meetingsToday, meetingsToday === 1 ? 'Meeting heute' : 'Meetings heute')}
+      ${stat(oneOnOnes, oneOnOnes === 1 ? '1:1 diese Woche' : '1:1s diese Woche')}
+    </div>
+  `;
+}
+
+// Anlegen gehoert pro Seite an dieselbe Stelle: rechts oben im Seitenkopf.
+function renderPageHeadActions(view) {
+  const btn = (label, onclick, primary = false, title = '') =>
+    `<button class="btn ${primary ? 'btn-primary' : 'btn-secondary'}" onclick="${onclick}"${title ? ` title="${esc(title)}"` : ''}>${label}</button>`;
+  switch (view) {
+    case 'meetings':
+      return btn('+ 1:1', "openMeetingForm('oneOnOne')")
+        + btn('+ Meeting', "openMeetingForm('meeting')")
+        + btn('+ Standup', 'openTodayStandup()', true, 'Heutigen Standup öffnen oder anlegen — alle Anwesenden sind schon eingetragen');
+    case 'notizen':
+      return isSudoMode() ? btn('+ Notiz', 'openNoteForm()', true) : '';
+    case 'planung':
+      return btn('+ Block', 'openBlockForm(null)', true);
+    case 'team':
+      return btn('+ Teammitglied', "openPersonForm(null, 'team')", true);
+    case 'kontakte':
+      return btn('+ Kontakt', "openPersonForm(null, 'kontakt')", true);
+    case 'overview':
+      return btn('+ Aufgabe', `openCapture({ type: 'todo', status: 'todo', month: '${viewState.month || currentMonth()}' })`, true);
+    case 'woche':
+      return btn('Export .md', 'exportWeeklyReview()', false, 'Wochenabschluss als Markdown herunterladen');
+    default:
+      return '';
+  }
+}
+
+function renderPageHead(view) {
+  const title = PAGE_TITLES[view];
+  if (!title) return '';
+  const isDashboard = view === 'reviews';
+  const week = view === 'woche' ? weekRange() : null;
+  const eyebrow = isDashboard
+    ? new Date().toLocaleDateString('de-AT', { weekday: 'long', day: 'numeric', month: 'long' })
+    : week ? `KW ${isoWeekNumber(week.start)} · ${formatDateShort(week.start)}–${formatDateShort(week.end)}` : '';
+  const side = isDashboard
+    ? renderPageHeadStats()
+    : week
+      ? `<div class="page-head-side">${renderWeeklyReviewStats()}<div class="page-head-actions">${renderPageHeadActions(view)}</div></div>`
+      : `<div class="page-head-actions">${renderPageHeadActions(view)}</div>`;
+  return `
+    <div class="page-head page-head-${view}">
+      <div>
+        ${eyebrow ? `<div class="page-head-eyebrow">${esc(eyebrow)}</div>` : ''}
+        <h1 class="page-head-title">${esc(title)}</h1>
+      </div>
+      ${side}
+    </div>
+  `;
+}
+
+// Der Wochenabschluss steht nur Freitag bis Sonntag in der Navigation —
+// ausser man ist gerade drin.
+function syncWeeklyNav() {
+  const button = document.querySelector('#nav button[data-view="woche"]');
+  if (button) button.hidden = !isWeekReviewDay() && currentView !== 'woche';
+}
+
 function render() {
   const app = document.getElementById('app');
   const scrollState = resetScrollOnNextRender ? null : captureScrollState();
@@ -115,8 +206,11 @@ function render() {
     case 'planung': app.innerHTML = renderPlanung(); break;
     case 'notizen': app.innerHTML = renderNotes(); setTimeout(initNotesView, 0); break;
     case 'search': app.innerHTML = renderSearch(); break;
+    case 'woche': app.innerHTML = renderWeeklyReview(); break;
     default: app.innerHTML = renderOverview();
   }
+  app.insertAdjacentHTML('afterbegin', renderPageHead(currentView.split(':')[0]));
+  syncWeeklyNav();
   if (scrollState) restoreScrollState(scrollState);
   else window.scrollTo(0, 0);
   restoreOverviewSearchFocus();

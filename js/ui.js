@@ -51,40 +51,40 @@ function renderThemeMenu() {
   }).join('');
   menu.innerHTML = `
     <div class="theme-menu-section" aria-label="Darstellung">
-      <div class="theme-menu-label">darstellung</div>
-      <div class="theme-work-options"><span class="theme-action-note">Ruhige Arbeitsfarben: daylight · nord</span></div>
+      <div class="theme-menu-label">Farbschema</div>
+      <div class="theme-work-options"><span class="theme-action-note">Ruhige Arbeitsfarben: Daylight · Nord</span></div>
       ${themeOptions}
     </div>
     <div class="theme-menu-divider" aria-hidden="true"></div>
     <div class="theme-menu-section" aria-label="Daten">
-      <div class="theme-menu-label">daten</div>
+      <div class="theme-menu-label">Daten</div>
       <button class="theme-action" type="button" role="menuitem" onclick="exportBackup()">
-        backup
+        Backup erstellen
         ${backupAgeLabel() ? `<span class="theme-action-note">${backupAgeLabel()}</span>` : ''}
       </button>
       <button class="theme-action" type="button" role="menuitem"
         aria-pressed="${autoBackupEnabled() ? 'true' : 'false'}"
         title="Tägliche Sicherung beim Start – gilt für alle Geräte in diesem Datenordner"
         onclick="toggleAutoBackup()">
-        auto-backup
+        Auto-Backup
         <span class="theme-action-toggle ${autoBackupEnabled() ? 'is-on' : ''}">${autoBackupEnabled() ? 'täglich' : 'aus'}</span>
       </button>
-      <button class="theme-action" type="button" role="menuitem" onclick="importBackup()">import</button>
-      <button class="theme-action" type="button" role="menuitem" onclick="openCleanupDialog()">cleanup</button>
-      <button class="theme-action" type="button" role="menuitem" onclick="configureJiraBase()">jira-url</button>
+      <button class="theme-action" type="button" role="menuitem" onclick="importBackup()">Import</button>
+      <button class="theme-action" type="button" role="menuitem" onclick="openCleanupDialog()">Aufräumen</button>
+      <button class="theme-action" type="button" role="menuitem" onclick="configureJiraBase()">Jira-URL</button>
       ${renderDeviceList()}
     </div>
     <div class="theme-menu-divider" aria-hidden="true"></div>
     <div class="theme-menu-section" aria-label="App">
-      <div class="theme-menu-label">app</div>
+      <div class="theme-menu-label">App</div>
       ${window.pendingUpdate ? `
         <button class="theme-action theme-action-update" type="button" role="menuitem" onclick="closeThemeMenu(); downloadUpdate()">
           <span class="theme-action-update-dot" aria-hidden="true"></span>
-          update herunterladen
+          Update herunterladen
           <span class="theme-action-update-version">v${APP_VERSION} → v${window.pendingUpdate.version}</span>
         </button>
       ` : ''}
-      <button class="theme-action" type="button" role="menuitem" onclick="closeThemeMenu(); checkForUpdate({ silent: false })">auf updates prüfen</button>
+      <button class="theme-action" type="button" role="menuitem" onclick="closeThemeMenu(); checkForUpdate({ silent: false })">Auf Updates prüfen</button>
       <div class="theme-menu-version">v${APP_VERSION}</div>
     </div>
   `;
@@ -243,48 +243,42 @@ function triggerStarfoxTargetShot(event) {
 }
 
 // ============================================================
-// QUICKNOTES
+// SIDEBAR
 // ============================================================
-const QUICKNOTES_KEY = 'tktool-quicknotes';
-const QUICKNOTES_OPEN_KEY = 'tktool-quicknotes-open';
+// Eingeklappt bleibt nur die Icon-Leiste. Pro Geraet gemerkt, weil es an
+// der Bildschirmbreite haengt, nicht an den Daten.
+const SIDEBAR_COLLAPSED_KEY = 'tktool-sidebar-collapsed';
 
-function updateQuickNotesIndicator(value) {
-  const indicator = document.getElementById('quicknotesIndicator');
-  if (!indicator) return;
-  const hasText = !!value.trim();
-  indicator.classList.toggle('has-content', hasText);
-  indicator.hidden = !hasText;
-  indicator.textContent = hasText ? 'notiz' : '';
-}
-
-function toggleQuickNotes() {
-  const el = document.getElementById('quicknotes');
-  const isOpen = el.classList.toggle('open');
-  try { localStorage.setItem(QUICKNOTES_OPEN_KEY, isOpen ? '1' : '0'); } catch {}
-  if (isOpen) {
-    setTimeout(() => document.getElementById('quicknotesEditor').focus(), 50);
+function applySidebarCollapsed(collapsed) {
+  document.body.classList.toggle('sidebar-collapsed', collapsed);
+  const toggle = document.getElementById('sidebarToggle');
+  if (toggle) {
+    const label = collapsed ? 'Seitenleiste ausklappen' : 'Seitenleiste einklappen';
+    toggle.setAttribute('aria-label', label);
+    toggle.title = `${label} (Ctrl+\\)`;
   }
 }
 
-function initQuickNotes() {
-  const editor = document.getElementById('quicknotesEditor');
-  try {
-    const saved = localStorage.getItem(QUICKNOTES_KEY);
-    if (saved) editor.value = saved;
-  } catch {}
-  updateQuickNotesIndicator(editor.value);
-  editor.addEventListener('input', () => {
-    try { localStorage.setItem(QUICKNOTES_KEY, editor.value); } catch {}
-    updateQuickNotesIndicator(editor.value);
-  });
-  try {
-    if (localStorage.getItem(QUICKNOTES_OPEN_KEY) === '1') {
-      document.getElementById('quicknotes').classList.add('open');
-    }
-  } catch {}
+function toggleSidebar() {
+  const collapsed = !document.body.classList.contains('sidebar-collapsed');
+  applySidebarCollapsed(collapsed);
+  try { localStorage.setItem(SIDEBAR_COLLAPSED_KEY, collapsed ? '1' : '0'); } catch {}
 }
 
-initQuickNotes();
+function initSidebar() {
+  let collapsed = false;
+  try { collapsed = localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1'; } catch {}
+  applySidebarCollapsed(collapsed);
+  // Eingeklappt ist das Suchfeld nur noch eine Lupe: Klick klappt auf und
+  // setzt den Cursor ins Feld.
+  document.querySelector('.sidebar .header-search')?.addEventListener('click', () => {
+    if (!document.body.classList.contains('sidebar-collapsed')) return;
+    toggleSidebar();
+    document.getElementById('globalSearchInput')?.focus();
+  });
+}
+
+initSidebar();
 
 // ============================================================
 // KEYBOARD SHORTCUTS
@@ -301,19 +295,12 @@ document.addEventListener('keydown', e => {
     e.preventDefault();
     openCapture(e.shiftKey ? { captureMode: 'teammate' } : {});
   }
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'j') {
+  if ((e.ctrlKey || e.metaKey) && e.key === '\\') {
     e.preventDefault();
-    toggleQuickNotes();
+    toggleSidebar();
   }
   if (e.key === 'Escape') {
     closeThemeMenu();
-    const qn = document.getElementById('quicknotes');
-    if (qn.classList.contains('open') && document.activeElement === document.getElementById('quicknotesEditor')) {
-      qn.classList.remove('open');
-      try { localStorage.setItem(QUICKNOTES_OPEN_KEY, '0'); } catch {}
-      document.getElementById('quicknotesEditor').blur();
-      return;
-    }
     closeOverlay();
   }
 });

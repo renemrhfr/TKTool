@@ -744,7 +744,6 @@ function renderPlanung() {
         </div>
         <div class="planner-primary-actions">
           <button class="jira-sync-stamp" onclick="openJiraImport()">Jira ${jiraSyncAgeLabel() || 'einspielen'} ↻</button>
-          <button class="btn btn-primary btn-sm" onclick="openBlockForm(null)">+ Block</button>
           <details class="overview-actions-menu"><summary>Mehr</summary><div class="overview-actions-menu-panel">
             <button class="btn btn-secondary btn-sm" onclick="openMarkerForm(null)">+ Marker</button>
             <button class="btn btn-secondary btn-sm" onclick="openSupportEditor()">Support-Rotation</button>
