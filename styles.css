@@ -7302,7 +7302,9 @@ body[data-theme] .sidebar .nav .nav-weekly:not(.active) .nav-icon { color: var(-
   align-items: start;
 }
 
-.week-col { display: grid; gap: 16px; min-width: 0; }
+/* Explizite Spur statt implizitem `auto`: sonst blaeht die min-content-Breite
+   einer nowrap-Zeile (langer Todo-Text) die Spalte auf und schiebt alles weg */
+.week-col { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; min-width: 0; }
 
 .week-col-title {
   margin: 4px 2px -6px;
@@ -7413,7 +7415,7 @@ body[data-theme] .week-card .card-header { margin-bottom: 6px; }
 .week-person-row + .week-person-row { border-top: 1px solid var(--line-soft); }
 .week-person-row > .week-person { padding-top: 2px; font-size: 14px; font-weight: 500; color: var(--text); }
 
-.week-signals { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.week-signals { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; min-width: 0; }
 
 .week-signal {
   padding: 3px 10px;
