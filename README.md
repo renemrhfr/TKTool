@@ -10,15 +10,29 @@ The UI is in German. So is the data model in places (`werktage`, `allokiert`,
 
 ## Screenshots
 
-![Dashboard](screenshots/dashboard.png)
-*Screenshot of the Dashboard View*
+All screenshots use made-up people and tickets (see [Regenerating the
+screenshots](#regenerating-the-screenshots)).
 
-![Planner](screenshots/planner.png)
-*Screenshot of the Planner View*
+![Übersicht](screenshots/dashboard.png)
+*Übersicht: what's due, the Jira review queue and what changed since the last import*
 
+![Planung](screenshots/planner.png)
+*Planung: one block per person and Jira Auftrag, markers, support rotation*
+
+![1:1](screenshots/one-on-one.png)
+*A 1:1 with its carryover: open follow-ups, todos and signals since the last one*
+
+![Standup](screenshots/standup.png)
+*Standup round: per person the Aufträge they're on, state and blockers*
+
+![Wochenabschluss](screenshots/weekly.png)
+*Weekly review: what got done, what's stuck, which gaps per person*
+
+![Team](screenshots/team.png)
+*Team member detail, with sensitive content hidden until sudo mode*
 
 ![Themes](screenshots/themes.png)
-*Various Themes for different Vibes*
+*Themes only change the palette; layout and type stay the same*
 
 ## Core concepts
 
@@ -101,7 +115,8 @@ work on but no block. Planning one appends it after the person's last block.
 The deliberate choice here is workday granularity and rough estimates — no
 hours, no story points. A team lead needs to see "when can this person take
 the next topic", not run a resource-leveling algorithm. People can be flagged
-for support duty per month (`supportMonate`), shown as a SUP badge.
+for support duty per month (`supportMonate`), shown as a SUP badge in the
+planner and as a year strip in the person's detail.
 
 ### 1:1 carryover
 
@@ -170,12 +185,17 @@ meeting; sudo mode keeps it that way.
 
 ## Design philosophy
 
-Terminal brutalism, more or less: system monospace everywhere, amber accent,
-near-zero border radius, lowercase labels, dense layouts. The reasoning is
-function over decoration — the tool should feel like an instrument you
-operate, not a SaaS landing page that happens to store data. There are
-thirteen themes (dawn, daylight, naboo, matrix, …) because theming a
-CSS-variable-based design is cheap and occasionally fun.
+Calm and dense rather than decorative: a sidebar on the left (`Ctrl+\`
+collapses it), one page per view with its title and create actions in the
+header, a sans-serif UI with tabular numbers so dates and counts line up in
+columns. The tool should read like an instrument you operate every day, not
+a SaaS landing page that happens to store data.
+
+There are thirteen themes (daylight, dawn, nord, matrix, kodama, arrakis,
+spaceship, …), but a theme is only a palette. Form, spacing, radii and type
+live once in `styles.css`; a theme file sets colors and at most a background
+or an effect. That split is what keeps thirteen themes cheap: a layout change
+lands once instead of thirteen times, and no theme can break the layout.
 
 ## Running it
 
@@ -218,3 +238,17 @@ the app's HTML, CSS, and JavaScript in one file and is refreshed with each updat
 - Not mobile-first. It's used on a desktop, next to a calendar.
 - Not configurable. Item types, block types, and views encode how I work;
   fork it if you work differently.
+
+## Regenerating the screenshots
+
+```
+node scripts/screenshots.js            # all of them
+node scripts/screenshots.js planner    # just one
+```
+
+`scripts/screenshot-mock-data.js` writes an invented team, Jira snapshot and
+history relative to a fixed date (`MOCK_TODAY`, default 2026-10-02, a Friday
+so the Wochenabschluss shows up). `scripts/screenshots.js` opens `index.html`
+in Playwright's Chromium with an in-memory stand-in for the data folder, the
+clock frozen on that date, and writes the PNGs into `screenshots/`. Needs
+Playwright with Chromium installed; nothing else in the repo depends on it.
