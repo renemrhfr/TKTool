@@ -322,6 +322,8 @@ function renderTeam() {
               </div>
             </div>
 
+            ${renderPersonSupportYears(selectedPerson)}
+
 	            ${sudo ? `<div class="team-section-block">
                 <div class="card-header">
                   <span class="card-title">Growth Journal</span>
@@ -365,6 +367,46 @@ function renderTeam() {
       </div>
     `}
   `;
+}
+
+// Support-Rotation auf einen Blick: pro Jahr eine Zeile mit 12 Monaten.
+// Klick auf einen Monat schaltet ihn um, dieselben Daten wie im Planungs-Editor.
+function renderPersonSupportYears(person) {
+  const months = (person.supportMonate || []).slice().sort();
+  const currentMonth = todayStr().slice(0, 7);
+  const currentYear = Number(currentMonth.slice(0, 4));
+  const years = months.map(m => Number(m.slice(0, 4)));
+  const firstYear = Math.min(currentYear - 1, ...years);
+  const lastYear = Math.max(currentYear, ...years);
+  const labels = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
+  const past = months.filter(m => m <= currentMonth);
+  const summary = months.length
+    ? `${months.length} ${months.length === 1 ? 'Monat' : 'Monate'}${past.length ? ` · zuletzt ${formatMonthName(past[past.length - 1])}` : ''}`
+    : 'Noch nie eingeteilt';
+
+  const rows = [];
+  for (let y = lastYear; y >= firstYear; y--) {
+    rows.push(`
+      <div class="support-year-row">
+        <span class="support-year-label">${y}</span>
+        ${labels.map((label, i) => {
+          const month = `${y}-${String(i + 1).padStart(2, '0')}`;
+          const active = months.includes(month);
+          const action = active ? 'removeSupportMonth' : 'addSupportMonth';
+          const classes = ['support-year-cell', active ? 'is-active' : '', month === currentMonth ? 'is-current' : ''].filter(Boolean).join(' ');
+          return `<button type="button" class="${classes}" onclick="${action}('${person.id}','${month}')" title="${esc(formatMonthName(month))}${active ? ' · Support (Klick entfernt)' : ' · Klick trägt ein'}" aria-pressed="${active}">${label}</button>`;
+        }).join('')}
+      </div>`);
+  }
+
+  return `
+    <div class="team-section-block">
+      <div class="card-header">
+        <span class="card-title">Support-Rotation</span>
+        <span class="support-year-summary">${summary}</span>
+      </div>
+      <div class="support-years">${rows.join('')}</div>
+    </div>`;
 }
 
 // ============================================================
