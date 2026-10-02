@@ -207,6 +207,8 @@ the app's HTML, CSS, and JavaScript in one file and is refreshed with each updat
   encapsulation — everything is still global, and inline `onclick` handlers
   depend on that. Load order matters: data and helpers first, init last.
 - **Keyboard-first capture.** `Ctrl+K` captures an item from anywhere.
+  Inside the capture, `Alt+1/2/3` jumps to Todo / Teamentwicklung / Meeting
+  and pressing `Ctrl+K` again cycles through them without losing the text.
   Friction at capture time is the main reason tracking tools die.
 
 ## Non-goals

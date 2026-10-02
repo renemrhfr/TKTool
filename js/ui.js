@@ -293,7 +293,20 @@ document.addEventListener('keydown', e => {
   }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     e.preventDefault();
-    openCapture(e.shiftKey ? { captureMode: 'teammate' } : {});
+    // Offenes Capture nicht neu aufbauen (Text waere weg), sondern Modus weiterschalten
+    if (isCaptureOpen()) cycleCaptureMode();
+    else openCapture(e.shiftKey ? { captureMode: 'teammate' } : {});
+    return;
+  }
+  // Alt+1/2/3 im Capture: Todo / Teamentwicklung / Meeting. e.code statt e.key,
+  // weil Option+Ziffer auf dem Mac Sonderzeichen liefert.
+  if (e.altKey && !e.ctrlKey && !e.metaKey && isCaptureOpen()) {
+    const mode = { Digit1: 'personal', Digit2: 'teammate', Digit3: 'meeting' }[e.code];
+    if (mode) {
+      e.preventDefault();
+      switchCaptureMode(mode);
+      return;
+    }
   }
   if ((e.ctrlKey || e.metaKey) && e.key === '\\') {
     e.preventDefault();

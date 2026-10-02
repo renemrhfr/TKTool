@@ -36,9 +36,31 @@ function currentCaptureMode() {
 function setCaptureMode(mode) {
   const input = document.getElementById('captureMode');
   if (!input) return;
-  input.value = ['personal', 'teammate', 'meeting'].includes(mode) ? mode : 'personal';
+  input.value = CAPTURE_MODES.includes(mode) ? mode : 'personal';
   updateCaptureModeUI();
   updateCaptureDateUI();
+}
+
+const CAPTURE_MODES = ['personal', 'teammate', 'meeting'];
+
+function isCaptureOpen() {
+  return !!document.getElementById('captureMode') && document.getElementById('overlay').classList.contains('open');
+}
+
+// Tastatur: Modus wechseln, ohne den getippten Text zu verlieren, und den
+// Cursor gleich ins erste sinnvolle Feld setzen.
+function switchCaptureMode(mode) {
+  setCaptureMode(mode);
+  const target = mode === 'meeting'
+    ? (currentCaptureMeetingType() === 'oneOnOne' ? 'meetingPerson' : 'meetingTitle')
+    : 'captureText';
+  const el = document.getElementById(target);
+  if (el) el.focus();
+}
+
+function cycleCaptureMode() {
+  const next = CAPTURE_MODES[(CAPTURE_MODES.indexOf(currentCaptureMode()) + 1) % CAPTURE_MODES.length];
+  switchCaptureMode(next);
 }
 
 function updateCaptureModeUI() {
@@ -183,14 +205,14 @@ function openCapture(prefill = {}) {
   document.getElementById('modal').innerHTML = `
     <div class="modal-header">
       <span class="modal-title">Quick Capture</span>
-      <div><span class="kbd">Ctrl+K</span> <button class="modal-close" onclick="closeOverlay()">&#x2715;</button></div>
+      <div><span class="kbd" title="Ctrl+K wechselt den Modus, Alt+1/2/3 springt direkt">Alt+1–3</span> <button class="modal-close" onclick="closeOverlay()">&#x2715;</button></div>
     </div>
     <div class="modal-body">
       <input type="hidden" id="captureMode" value="${captureMode}">
       <div class="segmented-toggle capture-mode-toggle">
-        <button type="button" class="segmented-toggle-btn" id="captureModePersonal" onclick="setCaptureMode('personal')">mein impact</button>
-        <button type="button" class="segmented-toggle-btn" id="captureModeTeammate" onclick="setCaptureMode('teammate')">teamentwicklung</button>
-        <button type="button" class="segmented-toggle-btn" id="captureModeMeeting" onclick="setCaptureMode('meeting')">meeting</button>
+        <button type="button" class="segmented-toggle-btn" id="captureModePersonal" onclick="setCaptureMode('personal')" title="Alt+1">todo <span class="capture-mode-key">1</span></button>
+        <button type="button" class="segmented-toggle-btn" id="captureModeTeammate" onclick="setCaptureMode('teammate')" title="Alt+2">teamentwicklung <span class="capture-mode-key">2</span></button>
+        <button type="button" class="segmented-toggle-btn" id="captureModeMeeting" onclick="setCaptureMode('meeting')" title="Alt+3">meeting <span class="capture-mode-key">3</span></button>
       </div>
       <div class="form-group" id="captureTextGroup">
         <textarea class="form-textarea" id="captureText" placeholder="Was ist passiert / was muss getan werden?" rows="3" autofocus>${esc(prefill.text || '')}</textarea>

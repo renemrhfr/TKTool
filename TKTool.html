@@ -7560,6 +7560,17 @@ body[data-theme] .review-due-item-age { white-space: nowrap; overflow-wrap: norm
 .support-year-cell.is-active { background: var(--warning-light); border-color: var(--warning); color: var(--warning); font-weight: 600; }
 .support-year-cell.is-current { box-shadow: inset 0 0 0 1px var(--accent); }
 
+/* Quick Capture: Ziffer fuer Alt+1/2/3 am Modus-Button */
+.capture-mode-key {
+  margin-left: 4px;
+  padding: 0 4px;
+  border: 1px solid var(--line-soft);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  opacity: 0.7;
+}
+
 </style>
 <style data-source="./themes/dark.css">
 body[data-theme="dark"],
@@ -9094,7 +9105,7 @@ body[data-theme="spaceship"] input[type="month"]::-webkit-calendar-picker-indica
 // ============================================================
 // DATA LAYER — File System Access API
 // ============================================================
-const APP_VERSION = '1.0.69';
+const APP_VERSION = '1.0.70';
 const DATA_FILENAME = 'tktool-data.json';
 const JIRA_SYNC_FILENAME = 'jira-tickets.json';
 const JIRA_QUERY_MAX_RESULTS = 100;
@@ -14865,9 +14876,31 @@ function currentCaptureMode() {
 function setCaptureMode(mode) {
   const input = document.getElementById('captureMode');
   if (!input) return;
-  input.value = ['personal', 'teammate', 'meeting'].includes(mode) ? mode : 'personal';
+  input.value = CAPTURE_MODES.includes(mode) ? mode : 'personal';
   updateCaptureModeUI();
   updateCaptureDateUI();
+}
+
+const CAPTURE_MODES = ['personal', 'teammate', 'meeting'];
+
+function isCaptureOpen() {
+  return !!document.getElementById('captureMode') && document.getElementById('overlay').classList.contains('open');
+}
+
+// Tastatur: Modus wechseln, ohne den getippten Text zu verlieren, und den
+// Cursor gleich ins erste sinnvolle Feld setzen.
+function switchCaptureMode(mode) {
+  setCaptureMode(mode);
+  const target = mode === 'meeting'
+    ? (currentCaptureMeetingType() === 'oneOnOne' ? 'meetingPerson' : 'meetingTitle')
+    : 'captureText';
+  const el = document.getElementById(target);
+  if (el) el.focus();
+}
+
+function cycleCaptureMode() {
+  const next = CAPTURE_MODES[(CAPTURE_MODES.indexOf(currentCaptureMode()) + 1) % CAPTURE_MODES.length];
+  switchCaptureMode(next);
 }
 
 function updateCaptureModeUI() {
@@ -15012,14 +15045,14 @@ function openCapture(prefill = {}) {
   document.getElementById('modal').innerHTML = `
     <div class="modal-header">
       <span class="modal-title">Quick Capture</span>
-      <div><span class="kbd">Ctrl+K</span> <button class="modal-close" onclick="closeOverlay()">&#x2715;</button></div>
+      <div><span class="kbd" title="Ctrl+K wechselt den Modus, Alt+1/2/3 springt direkt">Alt+1–3</span> <button class="modal-close" onclick="closeOverlay()">&#x2715;</button></div>
     </div>
     <div class="modal-body">
       <input type="hidden" id="captureMode" value="${captureMode}">
       <div class="segmented-toggle capture-mode-toggle">
-        <button type="button" class="segmented-toggle-btn" id="captureModePersonal" onclick="setCaptureMode('personal')">mein impact</button>
-        <button type="button" class="segmented-toggle-btn" id="captureModeTeammate" onclick="setCaptureMode('teammate')">teamentwicklung</button>
-        <button type="button" class="segmented-toggle-btn" id="captureModeMeeting" onclick="setCaptureMode('meeting')">meeting</button>
+        <button type="button" class="segmented-toggle-btn" id="captureModePersonal" onclick="setCaptureMode('personal')" title="Alt+1">todo <span class="capture-mode-key">1</span></button>
+        <button type="button" class="segmented-toggle-btn" id="captureModeTeammate" onclick="setCaptureMode('teammate')" title="Alt+2">teamentwicklung <span class="capture-mode-key">2</span></button>
+        <button type="button" class="segmented-toggle-btn" id="captureModeMeeting" onclick="setCaptureMode('meeting')" title="Alt+3">meeting <span class="capture-mode-key">3</span></button>
       </div>
       <div class="form-group" id="captureTextGroup">
         <textarea class="form-textarea" id="captureText" placeholder="Was ist passiert / was muss getan werden?" rows="3" autofocus>${esc(prefill.text || '')}</textarea>
@@ -19074,7 +19107,20 @@ document.addEventListener('keydown', e => {
   }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     e.preventDefault();
-    openCapture(e.shiftKey ? { captureMode: 'teammate' } : {});
+    // Offenes Capture nicht neu aufbauen (Text waere weg), sondern Modus weiterschalten
+    if (isCaptureOpen()) cycleCaptureMode();
+    else openCapture(e.shiftKey ? { captureMode: 'teammate' } : {});
+    return;
+  }
+  // Alt+1/2/3 im Capture: Todo / Teamentwicklung / Meeting. e.code statt e.key,
+  // weil Option+Ziffer auf dem Mac Sonderzeichen liefert.
+  if (e.altKey && !e.ctrlKey && !e.metaKey && isCaptureOpen()) {
+    const mode = { Digit1: 'personal', Digit2: 'teammate', Digit3: 'meeting' }[e.code];
+    if (mode) {
+      e.preventDefault();
+      switchCaptureMode(mode);
+      return;
+    }
   }
   if ((e.ctrlKey || e.metaKey) && e.key === '\\') {
     e.preventDefault();
