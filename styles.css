@@ -4201,6 +4201,14 @@ button.tf-metric {
   border-left: 2px solid color-mix(in srgb, var(--block-tone, var(--accent)) 75%, transparent);
 }
 .tl-block-overrun > :not(.tl-block-overrun-part) { position: relative; }
+/* Ueberlauf in Arbeitstagen, rechts beim Heute-Strich. */
+.tl-block-overrun-days {
+  flex: 0 0 auto;
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
 .tl-block-swatch-overrun {
   background: linear-gradient(90deg,
     color-mix(in srgb, var(--timeline-ticket) 30%, var(--surface)) 0 50%,
