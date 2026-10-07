@@ -139,7 +139,7 @@ function renderPageHeadActions(view) {
     case 'meetings':
       return btn('+ 1:1', "openMeetingForm('oneOnOne')")
         + btn('+ Meeting', "openMeetingForm('meeting')")
-        + btn('+ Standup', 'openTodayStandup()', true, 'Heutigen Standup öffnen oder anlegen — alle Anwesenden sind schon eingetragen');
+        + btn('+ Standup', 'openTodayStandup()', true, 'Standup für ein Datum öffnen oder anlegen — alle Anwesenden sind schon eingetragen');
     case 'notizen':
       return isSudoMode() ? btn('+ Notiz', 'openNoteForm()', true) : '';
     case 'planung':

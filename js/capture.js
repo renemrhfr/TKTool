@@ -842,7 +842,7 @@ function renderMeetingFormCarryoverPreview(isOneOnOne, personId, dateISO) {
       <span>Übernahme</span>
       <strong>${carryover.openFollowUps.length}</strong> Follow-ups
       <strong>${carryover.openTodos.length}</strong> Todos
-      <strong>${carryover.recentSignals.length}</strong> Signale
+      ${isSudoMode() ? `<strong>${carryover.recentSignals.length}</strong> Signale` : ''}
     </div>
   `;
 }
@@ -1660,6 +1660,10 @@ function handleImport(event) {
 // ============================================================
 function openOverlay() {
   document.getElementById('overlay').classList.add('open');
+}
+
+function isOverlayOpen() {
+  return document.getElementById('overlay').classList.contains('open');
 }
 
 function closeOverlay() {

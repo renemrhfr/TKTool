@@ -564,8 +564,9 @@ function oneOnOneCarryover(meeting) {
   return { openFollowUps, openTodos, recentSignals };
 }
 
+// Concerns/Wins zaehlen nur im Sudo Mode mit — sonst verraet schon die Zahl was.
 function carryoverCount(carryover) {
-  return carryover.openFollowUps.length + carryover.openTodos.length + carryover.recentSignals.length;
+  return carryover.openFollowUps.length + carryover.openTodos.length + (isSudoMode() ? carryover.recentSignals.length : 0);
 }
 
 function personActivitySummary(personId) {

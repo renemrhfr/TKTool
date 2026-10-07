@@ -230,6 +230,7 @@ the app's HTML, CSS, and JavaScript in one file and is refreshed with each updat
   Inside the capture, `Alt+1/2/3` jumps to Todo / Teamentwicklung / Meeting
   and pressing `Ctrl+K` again cycles through them without losing the text.
   Friction at capture time is the main reason tracking tools die.
+  Outside text fields, `Alt+1…7` switches between the pages in sidebar order.
 
 ## Non-goals
 

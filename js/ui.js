@@ -285,6 +285,10 @@ initSidebar();
 // ============================================================
 initTheme();
 
+function isTypingTarget(el) {
+  return !!el && (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName));
+}
+
 document.addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 's') {
     e.preventDefault();
@@ -305,6 +309,17 @@ document.addEventListener('keydown', e => {
     if (mode) {
       e.preventDefault();
       switchCaptureMode(mode);
+      return;
+    }
+  }
+  // Alt+1..7 springt zwischen den Seiten in Reihenfolge der Navigation.
+  // Nicht in Textfeldern: auf dem Mac tippt Option+5/6/7 dort [ ] |.
+  if (e.altKey && !e.ctrlKey && !e.metaKey && !isTypingTarget(e.target) && !isOverlayOpen()) {
+    const index = /^Digit[1-9]$/.test(e.code) ? Number(e.code.slice(5)) - 1 : -1;
+    const button = [...document.querySelectorAll('#nav button[data-view]')].filter(b => !b.hidden)[index];
+    if (button) {
+      e.preventDefault();
+      navigate(button.dataset.view);
       return;
     }
   }

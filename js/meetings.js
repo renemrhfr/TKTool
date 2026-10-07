@@ -310,7 +310,7 @@ function renderMeetingsDetailPlaceholder(upcoming) {
         <button class="meetings-empty-card meetings-empty-card-new" onclick="openTodayStandup()">
           <span class="meetings-empty-card-label">neu</span>
           <span class="meetings-empty-card-title">+ Standup</span>
-          <span class="meetings-empty-card-date">heute, alle Anwesenden</span>
+          <span class="meetings-empty-card-date">Datum wählen, alle Anwesenden</span>
         </button>
         <button class="meetings-empty-card meetings-empty-card-new" onclick="openMeetingForm('meeting')">
           <span class="meetings-empty-card-label">neu</span>
@@ -706,9 +706,11 @@ function renderOneOnOneCarryover(m) {
         </div>
         <div class="oneonone-carryover-column oneonone-carryover-column-signals">
           <div class="oneonone-carryover-title">Concerns / Wins seit letztem 1:1</div>
-          ${carryover.recentSignals.length
-            ? `<div class="oneonone-carryover-signals">${carryover.recentSignals.map(renderCarryoverSignal).join('')}</div>`
-            : '<div class="oneonone-carryover-empty">Noch keine Signale</div>'}
+          ${!isSudoMode()
+            ? sudoLockedPlaceholder('Concerns / Wins')
+            : carryover.recentSignals.length
+              ? `<div class="oneonone-carryover-signals">${carryover.recentSignals.map(renderCarryoverSignal).join('')}</div>`
+              : '<div class="oneonone-carryover-empty">Noch keine Signale</div>'}
         </div>
       </div>
     </details>
@@ -933,9 +935,39 @@ function setMeetingFormat(meetingId, format) {
 // Der Standup kommt jeden Tag: ein Klick, und er ist offen — gibt es fuer
 // heute schon einen, wird der geoeffnet statt ein zweiter angelegt. Der Titel
 // kommt vom letzten Standup, damit die Serie (Uebernahme) zusammenhaengt.
+// "+ Standup" fragt kurz nach dem Tag (vorbelegt mit heute, Enter reicht) —
+// so laesst sich auch ein vergessener oder kommender Standup anlegen.
 function openTodayStandup() {
-  const today = todayStr();
-  const existing = data.meetings.find(m => m.date === today && isStandupMeeting(m));
+  document.getElementById('modal').innerHTML = `
+    <div class="modal-header">
+      <span class="modal-title">Standup</span>
+      <button class="modal-close" onclick="closeOverlay()">&#x2715;</button>
+    </div>
+    <div class="modal-body" onkeydown="if(event.key==='Enter'){event.preventDefault();confirmStandupDate()}">
+      <div class="form-group">
+        <label class="form-label">Datum</label>
+        <input type="date" class="form-input" id="standupDate" value="${todayStr()}">
+        <div class="form-hint">Gibt es an dem Tag schon einen Standup, wird der geöffnet.</div>
+      </div>
+      <button class="btn btn-primary" style="width:100%" onclick="confirmStandupDate()">Öffnen</button>
+    </div>
+  `;
+  openOverlay();
+  setTimeout(() => document.getElementById('standupDate')?.focus(), 100);
+}
+
+function confirmStandupDate() {
+  const date = document.getElementById('standupDate')?.value;
+  if (!date) {
+    toast('Datum wählen');
+    return;
+  }
+  closeOverlay();
+  openStandupOn(date);
+}
+
+function openStandupOn(date) {
+  const existing = data.meetings.find(m => m.date === date && isStandupMeeting(m));
   if (existing) { navigate('meetings:detail', { meetingId: existing.id }); return; }
   const last = data.meetings
     .filter(m => isStandupMeeting(m) && m.date)
@@ -946,9 +978,9 @@ function openTodayStandup() {
     isTeamMeeting: true,
     isStandup: true,
     title: (last && last.title) || 'Standup',
-    date: today,
+    date,
     personId: null,
-    participants: defaultStandupParticipants(today),
+    participants: defaultStandupParticipants(date),
     prep: '',
     notes: '',
   };
