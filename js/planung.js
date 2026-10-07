@@ -464,6 +464,8 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
         const oIdx = b.plannedEnd < startDate ? sIdx : startIdxOf(toISO(addDays(parseISO(b.plannedEnd), 1)));
         if (oIdx >= 0 && oIdx <= eIdx) overrunPct = ((eIdx - oIdx + 1) / (eIdx - sIdx + 1)) * 100;
       }
+      // Wie lange schon drueber — rechts am Balken, also beim Heute-Strich.
+      const overrunDays = b.overrun ? workdaysBetween(toISO(addDays(parseISO(b.plannedEnd), 1)), b.end) : 0;
       // Nur Subtasks zaehlen — steht nur der Auftrag selbst offen, sagt eine 1 nichts.
       const openSubtasks = open.filter(t => String(t.key).toUpperCase() !== key);
 
@@ -490,7 +492,7 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
         onclick="event.stopPropagation();if(_suppressNextBlockClick)return;if((event.metaKey||event.ctrlKey)&&openBlockJira('${b.id}'))return;openBlockForm('${b.id}')"
         onpointerdown="onBlockPointerDown(event,'${b.id}')">
         ${overrunPct ? `<span class="tl-block-overrun-part" style="width:${overrunPct.toFixed(3)}%"></span>` : ''}
-        ${b.state === 'done' ? '<span class="tl-block-check">&#x2713;</span>' : ''}${isBlockBlocked(b) && b.state !== 'done' ? '<span class="tl-block-blocked-mark" aria-label="blockiert">⛔</span>' : ''}${waitingStatus ? `<span class="tl-block-handover">${esc(waitingStatus.toLowerCase())}</span>` : ''}<span class="tl-block-label">${esc(label)}</span>${openSubtasks.length ? `<span class="tl-block-group-count" title="Offene Subtasks">${openSubtasks.length} offen</span>` : ''}
+        ${b.state === 'done' ? '<span class="tl-block-check">&#x2713;</span>' : ''}${isBlockBlocked(b) && b.state !== 'done' ? '<span class="tl-block-blocked-mark" aria-label="blockiert">⛔</span>' : ''}${waitingStatus ? `<span class="tl-block-handover">${esc(waitingStatus.toLowerCase())}</span>` : ''}<span class="tl-block-label">${esc(label)}</span>${openSubtasks.length ? `<span class="tl-block-group-count" title="Offene Subtasks">${openSubtasks.length} offen</span>` : ''}${overrunDays ? `<span class="tl-block-overrun-days" title="geplant bis ${formatDate(b.plannedEnd)}">+${overrunDays} wt</span>` : ''}
       </div>`;
     }).join('');
 

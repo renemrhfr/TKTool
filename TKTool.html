@@ -4272,22 +4272,32 @@ button.tf-metric {
   background: rgba(0, 0, 0, 0.22);
 }
 /* Ueberzogen: laut Jira noch offen, Schaetzung vorbei. Der Balken waechst bis
-   heute mit, der Teil nach der Schaetzung ist schraffiert — sichtbar, aber
-   kein Alarm. */
+   heute mit. Bis zur Schaetzung voll, danach nur noch ein blasser Fortsatz mit
+   klarer Kante am geplanten Ende — Information, kein Alarm. Bewusst ohne
+   Muster, damit der Text darueber lesbar bleibt. */
 .tl-block-overrun-part {
   position: absolute;
   top: 0;
   right: 0;
   bottom: 0;
   pointer-events: none;
-  background: repeating-linear-gradient(135deg,
-    color-mix(in srgb, var(--block-tone, var(--accent)) 45%, transparent) 0 4px,
-    transparent 4px 8px);
-  border-left: 1px dashed color-mix(in srgb, var(--block-tone, var(--accent)) 70%, transparent);
+  background: color-mix(in srgb, var(--block-tone, var(--accent)) 5%, var(--surface));
+  border-left: 2px solid color-mix(in srgb, var(--block-tone, var(--accent)) 75%, transparent);
 }
 .tl-block-overrun > :not(.tl-block-overrun-part) { position: relative; }
+/* Ueberlauf in Arbeitstagen, rechts beim Heute-Strich. */
+.tl-block-overrun-days {
+  flex: 0 0 auto;
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
 .tl-block-swatch-overrun {
-  background: repeating-linear-gradient(135deg, var(--timeline-ticket) 0 2px, transparent 2px 4px);
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--timeline-ticket) 30%, var(--surface)) 0 50%,
+    color-mix(in srgb, var(--timeline-ticket) 5%, var(--surface)) 50%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--timeline-ticket) 45%, transparent);
 }
 
 .tl-block-preview {
@@ -4518,11 +4528,9 @@ button.person-blocks-toggle:hover { color: var(--accent); }
   white-space: nowrap;
 }
 .person-block-range { color: var(--text-muted); font-size: 11px; flex: 0 0 auto; }
+/* Ueberlauf ist Information, keine Warnung: ruhig, ohne Rahmen. */
 .person-block-overdue {
-  color: var(--danger);
-  border: 1px solid var(--danger);
-  border-radius: 3px;
-  padding: 0 5px;
+  color: var(--text-muted);
   font-size: 10px;
   text-transform: lowercase;
   flex: 0 0 auto;
@@ -5430,7 +5438,7 @@ body {
 }
 .standup-chip-muted { color: var(--text-muted); }
 .standup-chip-blocked { color: var(--danger); border-color: var(--danger); }
-.standup-chip-overrun { color: var(--warning); border-color: var(--warning); }
+.standup-chip-overrun { color: var(--text-secondary); }
 .standup-previous { font-size: 12px; color: var(--text-muted); }
 .standup-own { display: flex; align-items: center; gap: 8px; font-size: 13px; }
 .standup-own > span { flex: 1; min-width: 0; }
@@ -9105,7 +9113,7 @@ body[data-theme="spaceship"] input[type="month"]::-webkit-calendar-picker-indica
 // ============================================================
 // DATA LAYER — File System Access API
 // ============================================================
-const APP_VERSION = '1.0.70';
+const APP_VERSION = '1.0.71';
 const DATA_FILENAME = 'tktool-data.json';
 const JIRA_SYNC_FILENAME = 'jira-tickets.json';
 const JIRA_QUERY_MAX_RESULTS = 100;
@@ -17057,6 +17065,8 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
         const oIdx = b.plannedEnd < startDate ? sIdx : startIdxOf(toISO(addDays(parseISO(b.plannedEnd), 1)));
         if (oIdx >= 0 && oIdx <= eIdx) overrunPct = ((eIdx - oIdx + 1) / (eIdx - sIdx + 1)) * 100;
       }
+      // Wie lange schon drueber — rechts am Balken, also beim Heute-Strich.
+      const overrunDays = b.overrun ? workdaysBetween(toISO(addDays(parseISO(b.plannedEnd), 1)), b.end) : 0;
       // Nur Subtasks zaehlen — steht nur der Auftrag selbst offen, sagt eine 1 nichts.
       const openSubtasks = open.filter(t => String(t.key).toUpperCase() !== key);
 
@@ -17083,7 +17093,7 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
         onclick="event.stopPropagation();if(_suppressNextBlockClick)return;if((event.metaKey||event.ctrlKey)&&openBlockJira('${b.id}'))return;openBlockForm('${b.id}')"
         onpointerdown="onBlockPointerDown(event,'${b.id}')">
         ${overrunPct ? `<span class="tl-block-overrun-part" style="width:${overrunPct.toFixed(3)}%"></span>` : ''}
-        ${b.state === 'done' ? '<span class="tl-block-check">&#x2713;</span>' : ''}${isBlockBlocked(b) && b.state !== 'done' ? '<span class="tl-block-blocked-mark" aria-label="blockiert">⛔</span>' : ''}${waitingStatus ? `<span class="tl-block-handover">${esc(waitingStatus.toLowerCase())}</span>` : ''}<span class="tl-block-label">${esc(label)}</span>${openSubtasks.length ? `<span class="tl-block-group-count" title="Offene Subtasks">${openSubtasks.length} offen</span>` : ''}
+        ${b.state === 'done' ? '<span class="tl-block-check">&#x2713;</span>' : ''}${isBlockBlocked(b) && b.state !== 'done' ? '<span class="tl-block-blocked-mark" aria-label="blockiert">⛔</span>' : ''}${waitingStatus ? `<span class="tl-block-handover">${esc(waitingStatus.toLowerCase())}</span>` : ''}<span class="tl-block-label">${esc(label)}</span>${openSubtasks.length ? `<span class="tl-block-group-count" title="Offene Subtasks">${openSubtasks.length} offen</span>` : ''}${overrunDays ? `<span class="tl-block-overrun-days" title="geplant bis ${formatDate(b.plannedEnd)}">+${overrunDays} wt</span>` : ''}
       </div>`;
     }).join('');
 
