@@ -284,8 +284,8 @@ function monthProgress(month) {
   const end = monthEnd(month);
   const today = parseISO(todayStr());
   const clamped = today < start ? start : today > end ? end : today;
-  const totalDays = daysBetween(toISO(start), toISO(end)) + 1;
-  const elapsedDays = daysBetween(toISO(start), toISO(clamped)) + 1;
+  const totalDays = daysBetween(toISO(start), toISO(end));
+  const elapsedDays = daysBetween(toISO(start), toISO(clamped));
   return {
     totalDays,
     elapsedDays,

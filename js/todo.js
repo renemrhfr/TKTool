@@ -139,7 +139,7 @@ function renderTeamGrowthPersonChips(perPerson, emptyText, options = {}) {
   return `
     <div class="impact-person-strip${extraClass}">
       ${perPerson.length ? perPerson.map(entry => `
-        <button class="impact-person-chip" onclick="${onClick(entry.personId)}">
+        <button class="impact-person-chip" onclick="${onClick(entry.personId)}" title="${esc(personName(entry.personId))}">
           ${personAvatar(personById(entry.personId), 'sm')}
           <span class="impact-person-copy">
             <span class="impact-person-name">${esc(personName(entry.personId))}</span>
