@@ -9,3 +9,4 @@ scripts/generate-mock-data.js
 scripts/test-jira-mock.js
 scripts/validate-mock-data.js
 scripts/test-planner-workflow.js
+TKTool-demo.html
