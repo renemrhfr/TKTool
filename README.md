@@ -185,7 +185,7 @@ meeting; sudo mode keeps it that way.
 
 ## Design philosophy
 
-Calm and dense rather than decorative: a sidebar on the left (`Ctrl+\`
+Calm and dense rather than decorative: a sidebar on the left (`Ctrl+B`
 collapses it), one page per view with its title and create actions in the
 header, a sans-serif UI with tabular numbers so dates and counts line up in
 columns. The tool should read like an instrument you operate every day, not

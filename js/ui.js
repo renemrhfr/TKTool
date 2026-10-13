@@ -255,7 +255,7 @@ function applySidebarCollapsed(collapsed) {
   if (toggle) {
     const label = collapsed ? 'Seitenleiste ausklappen' : 'Seitenleiste einklappen';
     toggle.setAttribute('aria-label', label);
-    toggle.title = `${label} (Ctrl+\\)`;
+    toggle.title = `${label} (Ctrl+B)`;
   }
 }
 
@@ -323,7 +323,8 @@ document.addEventListener('keydown', e => {
       return;
     }
   }
-  if ((e.ctrlKey || e.metaKey) && e.key === '\\') {
+  // Ctrl/Cmd+B wie in VS Code. Ohne Shift, damit Ctrl+Shift+B (Lesezeichenleiste) frei bleibt.
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'b') {
     e.preventDefault();
     toggleSidebar();
   }
