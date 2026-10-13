@@ -9226,7 +9226,7 @@ body[data-theme="spaceship"] input[type="month"]::-webkit-calendar-picker-indica
 // ============================================================
 // DATA LAYER — File System Access API
 // ============================================================
-const APP_VERSION = '1.0.75';
+const APP_VERSION = '1.0.76';
 const DATA_FILENAME = 'tktool-data.json';
 const JIRA_SYNC_FILENAME = 'jira-tickets.json';
 const JIRA_QUERY_MAX_RESULTS = 100;
@@ -11151,8 +11151,9 @@ function oneOnOneCarryover(meeting) {
   const previousMeeting = previousOneOnOneMeeting(meeting);
   const personItems = data.items.filter(item => item.personId === meeting.personId);
   const openItems = personItems.filter(item => item.status !== 'done' && item.id && item.meetingId !== meeting.id);
+  // Backlog-Punkte aus früheren Terminen sind bewusst geparkt — kein Follow-up.
   const openFollowUps = openItems
-    .filter(item => item.meetingId)
+    .filter(item => item.meetingId && item.status !== 'backlog')
     .sort(compareByDueDate);
   const openTodos = openItems
     .filter(item => !item.meetingId && item.type === 'todo')
@@ -12873,7 +12874,7 @@ function seriesCarryover(meeting) {
   if (!earlier.length) return empty;
   const byId = new Map(earlier.map(entry => [entry.id, entry]));
   const openFollowUps = data.items
-    .filter(item => item.meetingId && byId.has(item.meetingId) && item.status !== 'done')
+    .filter(item => item.meetingId && byId.has(item.meetingId) && item.status !== 'done' && item.status !== 'backlog')
     .sort(compareByDueDate);
   const sourceCount = new Set(openFollowUps.map(item => item.meetingId)).size;
   return { openFollowUps, lastMeeting: earlier[0], sourceCount };
@@ -12923,7 +12924,7 @@ function meetingListExcerpt(m, query) {
 
 function meetingHasOpenFollowups(meeting) {
   const counts = meetingFollowupCounts(meeting.id);
-  return counts.todo + counts.waiting + counts.backlog > 0;
+  return counts.todo + counts.waiting > 0;
 }
 
 function meetingMatchesRange(meeting, range, today) {

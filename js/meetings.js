@@ -102,7 +102,7 @@ function seriesCarryover(meeting) {
   if (!earlier.length) return empty;
   const byId = new Map(earlier.map(entry => [entry.id, entry]));
   const openFollowUps = data.items
-    .filter(item => item.meetingId && byId.has(item.meetingId) && item.status !== 'done')
+    .filter(item => item.meetingId && byId.has(item.meetingId) && item.status !== 'done' && item.status !== 'backlog')
     .sort(compareByDueDate);
   const sourceCount = new Set(openFollowUps.map(item => item.meetingId)).size;
   return { openFollowUps, lastMeeting: earlier[0], sourceCount };
@@ -152,7 +152,7 @@ function meetingListExcerpt(m, query) {
 
 function meetingHasOpenFollowups(meeting) {
   const counts = meetingFollowupCounts(meeting.id);
-  return counts.todo + counts.waiting + counts.backlog > 0;
+  return counts.todo + counts.waiting > 0;
 }
 
 function meetingMatchesRange(meeting, range, today) {

@@ -546,8 +546,9 @@ function oneOnOneCarryover(meeting) {
   const previousMeeting = previousOneOnOneMeeting(meeting);
   const personItems = data.items.filter(item => item.personId === meeting.personId);
   const openItems = personItems.filter(item => item.status !== 'done' && item.id && item.meetingId !== meeting.id);
+  // Backlog-Punkte aus früheren Terminen sind bewusst geparkt — kein Follow-up.
   const openFollowUps = openItems
-    .filter(item => item.meetingId)
+    .filter(item => item.meetingId && item.status !== 'backlog')
     .sort(compareByDueDate);
   const openTodos = openItems
     .filter(item => !item.meetingId && item.type === 'todo')
