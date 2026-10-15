@@ -7800,9 +7800,27 @@ body[data-theme] .shutdown-side > .card { margin-bottom: 0; }
 
 /* --- Jira-/GitLab-Stand oben rechts auf der Übersicht --- */
 .dashboard-header-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; margin-left: auto; }
+/* Markenfarben, damit man die beiden auf einen Blick auseinanderhaelt.
+   color-mix statt fixer Hintergruende, damit es in jedem Theme traegt. */
+.dashboard-sync-jira { --sync-tone: #2684ff; }
+.dashboard-sync-gitlab { --sync-tone: #fc6d26; }
+body[data-theme] .dashboard-sync {
+  border-color: color-mix(in srgb, var(--sync-tone) 55%, var(--border));
+  background: color-mix(in srgb, var(--sync-tone) 12%, var(--surface));
+  color: color-mix(in srgb, var(--sync-tone) 70%, var(--text));
+  font-weight: 600;
+}
+body[data-theme] .dashboard-sync:hover {
+  border-color: var(--sync-tone);
+  background: color-mix(in srgb, var(--sync-tone) 20%, var(--surface));
+}
+.dashboard-sync-icon { display: inline-flex; color: var(--sync-tone); }
+.dashboard-sync-icon svg { width: 15px; height: 15px; fill: currentColor; }
+.dashboard-sync-gitlab .dashboard-sync-icon svg { fill: none; }
 .dashboard-sync-age { color: var(--text-muted); font-weight: 400; }
-.dashboard-sync-stale { border-color: var(--warning); color: var(--warning); }
-.dashboard-sync-stale .dashboard-sync-age { color: var(--warning); }
+/* Veraltet: Markenfarbe bleibt, das Alter wird zur Warnung */
+.dashboard-sync-stale .dashboard-sync-age { color: var(--warning); font-weight: 600; }
+.dashboard-sync-stale .dashboard-sync-age::before { content: "● "; }
 
 </style>
 <style data-source="./themes/dark.css">
@@ -9339,7 +9357,7 @@ body[data-theme="spaceship"] input[type="month"]::-webkit-calendar-picker-indica
 // ============================================================
 // DATA LAYER — File System Access API
 // ============================================================
-const APP_VERSION = '1.0.81';
+const APP_VERSION = '1.0.82';
 const DATA_FILENAME = 'tktool-data.json';
 const JIRA_SYNC_FILENAME = 'jira-tickets.json';
 const JIRA_QUERY_MAX_RESULTS = 100;
@@ -15044,11 +15062,19 @@ function renderDashboardReviewAction() {
 // Ab einem Tag wird der Knopf gelb: dann zeigen die Karten gestern.
 const SYNC_STALE_HOURS = 24;
 
-function renderDashboardSyncButton(label, generatedAt, onclick) {
+const SYNC_ICONS = {
+  // Jira: zwei verschraenkte Rauten, angelehnt ans Logo
+  jira: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5 14.5 8 8 14.5 1.5 8z" opacity=".45"/><path d="M8 4.5 11.5 8 8 11.5 4.5 8z"/></svg>',
+  // GitLab: Merge-Symbol, zwei Zweige laufen zusammen
+  gitlab: '<svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="4" cy="3.5" r="1.8"/><circle cx="4" cy="12.5" r="1.8"/><circle cx="12" cy="12.5" r="1.8"/><path d="M4 5.3v5.4M5.6 4.4c4 0 6.4 2 6.4 6.3"/></svg>',
+};
+
+function renderDashboardSyncButton(kind, label, generatedAt, onclick) {
   const ageHours = generatedAt ? (Date.now() - Date.parse(generatedAt)) / 3600000 : Infinity;
   const stale = !(ageHours < SYNC_STALE_HOURS);
   return `
-    <button class="btn btn-secondary btn-sm dashboard-review-action dashboard-sync ${stale ? 'dashboard-sync-stale' : ''}" onclick="${onclick}" title="${label}-Stand aktualisieren">
+    <button class="btn btn-secondary btn-sm dashboard-review-action dashboard-sync dashboard-sync-${kind} ${stale ? 'dashboard-sync-stale' : ''}" onclick="${onclick}" title="${label}-Stand aktualisieren${stale ? ' (älter als ein Tag)' : ''}">
+      <span class="dashboard-sync-icon">${SYNC_ICONS[kind]}</span>
       <span>${label}</span>
       <span class="dashboard-sync-age">${esc(generatedAt ? agoLabel(generatedAt) : 'nie')}</span>
       <span aria-hidden="true">&#8635;</span>
@@ -15057,10 +15083,10 @@ function renderDashboardSyncButton(label, generatedAt, onclick) {
 
 function renderDashboardSyncButtons() {
   const jira = jiraSyncData || getJiraBaseUrl()
-    ? renderDashboardSyncButton('Jira', jiraSyncData && jiraSyncData.generatedAt, 'openJiraImport()')
+    ? renderDashboardSyncButton('jira', 'Jira', jiraSyncData && jiraSyncData.generatedAt, 'openJiraImport()')
     : '';
   const gitlab = gitlabSyncData || getGitlabGroupUrl()
-    ? renderDashboardSyncButton('GitLab', gitlabSyncData && gitlabSyncData.generatedAt, 'openGitlabImport()')
+    ? renderDashboardSyncButton('gitlab', 'GitLab', gitlabSyncData && gitlabSyncData.generatedAt, 'openGitlabImport()')
     : '';
   return jira + gitlab;
 }

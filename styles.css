@@ -7716,6 +7716,24 @@ body[data-theme] .shutdown-side > .card { margin-bottom: 0; }
 
 /* --- Jira-/GitLab-Stand oben rechts auf der Übersicht --- */
 .dashboard-header-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; margin-left: auto; }
+/* Markenfarben, damit man die beiden auf einen Blick auseinanderhaelt.
+   color-mix statt fixer Hintergruende, damit es in jedem Theme traegt. */
+.dashboard-sync-jira { --sync-tone: #2684ff; }
+.dashboard-sync-gitlab { --sync-tone: #fc6d26; }
+body[data-theme] .dashboard-sync {
+  border-color: color-mix(in srgb, var(--sync-tone) 55%, var(--border));
+  background: color-mix(in srgb, var(--sync-tone) 12%, var(--surface));
+  color: color-mix(in srgb, var(--sync-tone) 70%, var(--text));
+  font-weight: 600;
+}
+body[data-theme] .dashboard-sync:hover {
+  border-color: var(--sync-tone);
+  background: color-mix(in srgb, var(--sync-tone) 20%, var(--surface));
+}
+.dashboard-sync-icon { display: inline-flex; color: var(--sync-tone); }
+.dashboard-sync-icon svg { width: 15px; height: 15px; fill: currentColor; }
+.dashboard-sync-gitlab .dashboard-sync-icon svg { fill: none; }
 .dashboard-sync-age { color: var(--text-muted); font-weight: 400; }
-.dashboard-sync-stale { border-color: var(--warning); color: var(--warning); }
-.dashboard-sync-stale .dashboard-sync-age { color: var(--warning); }
+/* Veraltet: Markenfarbe bleibt, das Alter wird zur Warnung */
+.dashboard-sync-stale .dashboard-sync-age { color: var(--warning); font-weight: 600; }
+.dashboard-sync-stale .dashboard-sync-age::before { content: "● "; }
