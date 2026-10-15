@@ -7608,7 +7608,6 @@ body[data-theme] .tf-work-metric > :not(.tf-now) { grid-row: 1; white-space: now
 /* --- GitLab Merge Requests (Snapshot gitlab-mrs.json) --- */
 .gitlab-card { margin-bottom: 16px; }
 .gitlab-card .card-header { display: flex; align-items: center; gap: 10px; }
-.gitlab-card .card-header .jira-sync-stamp { margin-left: auto; }
 .gitlab-card .review-due-item-main { width: 100%; }
 .gitlab-item-calm .review-due-item-day { color: var(--text-secondary); }
 .gitlab-ref { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; color: var(--text-muted); }
@@ -7703,7 +7702,6 @@ body[data-theme] .shutdown-side > .card { margin-bottom: 0; }
 /* --- Auftraege: was laenger braucht als geplant --- */
 .auftraege-card { margin-bottom: 16px; }
 .auftraege-card .card-header { display: flex; align-items: center; gap: 10px; }
-.auftraege-card .card-header .jira-sync-stamp { margin-left: auto; }
 .auftraege-card .review-due-item-main { width: 100%; }
 .auftraege-key { margin-right: 4px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; font-weight: 500; color: var(--text-muted); }
 .auftraege-person-row { display: flex; align-items: baseline; gap: 10px; margin-top: 6px; font-size: 12px; }
@@ -7715,3 +7713,9 @@ body[data-theme] .shutdown-side > .card { margin-bottom: 0; }
 .auftraege-item-calm .review-due-item-day { color: var(--text-secondary); }
 .review-due-section-success .review-due-section-title,
 .review-due-section-success .review-due-section-count { color: var(--success); }
+
+/* --- Jira-/GitLab-Stand oben rechts auf der Übersicht --- */
+.dashboard-header-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; margin-left: auto; }
+.dashboard-sync-age { color: var(--text-muted); font-weight: 400; }
+.dashboard-sync-stale { border-color: var(--warning); color: var(--warning); }
+.dashboard-sync-stale .dashboard-sync-age { color: var(--warning); }

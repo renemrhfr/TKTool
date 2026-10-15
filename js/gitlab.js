@@ -155,21 +155,16 @@ function gitlabAgeLabel(iso, prefix) {
   return `${prefix} ${days} Tagen`;
 }
 
-function gitlabSyncAgeLabel() {
-  return gitlabSyncData ? agoLabel(gitlabSyncData.generatedAt) : '';
-}
-
 // ------------------------------------------------------------
 // Karte auf der Übersicht
 // ------------------------------------------------------------
 function renderGitlabMergeRequests() {
   if (!gitlabSyncData && !getGitlabGroupUrl()) return '';
-  const stamp = `<button class="jira-sync-stamp" type="button" onclick="openGitlabImport()" title="GitLab-Abfrage öffnen und Antwort einspielen">stand: ${esc(gitlabSyncAgeLabel() || 'unbekannt')} &#8635;</button>`;
   if (!gitlabSyncData) {
     return `
       <div class="card gitlab-card">
-        <div class="card-header"><span class="card-title">Merge Requests</span>${stamp}</div>
-        <div class="review-due-empty">Noch nichts eingespielt. Klick auf den Stand öffnet die Abfrage.</div>
+        <div class="card-header"><span class="card-title">Merge Requests</span></div>
+        <div class="review-due-empty">Noch nichts eingespielt. Oben rechts auf „GitLab“ klicken.</div>
       </div>`;
   }
   const open = gitlabSyncData.open || [];
@@ -177,7 +172,7 @@ function renderGitlabMergeRequests() {
   const unapproved = merged.filter(mr => !gitlabApprovalCount(mr)).length;
   return `
     <div class="card gitlab-card">
-      <div class="card-header"><span class="card-title">Merge Requests</span>${stamp}</div>
+      <div class="card-header"><span class="card-title">Merge Requests</span></div>
       <div class="review-due-panel">
         <div class="review-due-sections">
           <div class="review-due-section review-due-section-warning">

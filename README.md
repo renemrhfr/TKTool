@@ -121,6 +121,12 @@ the next topic", not run a resource-leveling algorithm. People can be flagged
 for support duty per month (`supportMonate`), shown as a SUP badge in the
 planner and as a year strip in the person's detail.
 
+### Jira and GitLab freshness
+
+Top right on the Übersicht, next to Monatsrückblicke, one button each for
+Jira and GitLab shows how old the last import is and opens the import. It
+turns yellow after a day, because the cards below then show yesterday.
+
 ### Aufträge on the Übersicht
 
 The Übersicht doesn't list every open ticket — the planner already does.
@@ -140,9 +146,10 @@ approval is red; an approval from the author doesn't count. An open MR
 that has waited five days without one turns yellow.
 
 It is fetched like Jira: the app runs under `file://`, so CORS blocks any
-request to a self-managed GitLab. The import dialog (theme menu → GitLab, or
-the stand stamp on the card) opens one GraphQL query in a browser tab where
-you are logged in; you copy the JSON and paste it back. GraphQL rather than
+request to a self-managed GitLab. The import dialog (theme menu → GitLab,
+or the GitLab button at the top right of the Übersicht) opens one GraphQL
+query in a browser tab where you are logged in; you copy the JSON and paste
+it back. GraphQL rather than
 REST because the REST list has no approvals — that would be one request per
 MR. GitLab allows `GET /api/graphql` for read-only queries with the session
 cookie. The snapshot lands in `gitlab-mrs.json` next to the data file.

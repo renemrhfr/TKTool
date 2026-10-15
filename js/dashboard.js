@@ -228,6 +228,32 @@ function renderDashboardReviewAction() {
   `;
 }
 
+// Wie alt sind Jira- und GitLab-Stand? Steht oben rechts, damit man vor dem
+// Lesen der Karten weiss, ob sie noch stimmen. Klick oeffnet den Import.
+// Ab einem Tag wird der Knopf gelb: dann zeigen die Karten gestern.
+const SYNC_STALE_HOURS = 24;
+
+function renderDashboardSyncButton(label, generatedAt, onclick) {
+  const ageHours = generatedAt ? (Date.now() - Date.parse(generatedAt)) / 3600000 : Infinity;
+  const stale = !(ageHours < SYNC_STALE_HOURS);
+  return `
+    <button class="btn btn-secondary btn-sm dashboard-review-action dashboard-sync ${stale ? 'dashboard-sync-stale' : ''}" onclick="${onclick}" title="${label}-Stand aktualisieren">
+      <span>${label}</span>
+      <span class="dashboard-sync-age">${esc(generatedAt ? agoLabel(generatedAt) : 'nie')}</span>
+      <span aria-hidden="true">&#8635;</span>
+    </button>`;
+}
+
+function renderDashboardSyncButtons() {
+  const jira = jiraSyncData || getJiraBaseUrl()
+    ? renderDashboardSyncButton('Jira', jiraSyncData && jiraSyncData.generatedAt, 'openJiraImport()')
+    : '';
+  const gitlab = gitlabSyncData || getGitlabGroupUrl()
+    ? renderDashboardSyncButton('GitLab', gitlabSyncData && gitlabSyncData.generatedAt, 'openGitlabImport()')
+    : '';
+  return jira + gitlab;
+}
+
 // Muss zur max-height von .tf-blocks-list passen: so viele Zeilen stehen ohne
 // Scrollen da, der Rest wird als "+n" angekuendigt.
 const TF_VISIBLE_BLOCKS = 10;
@@ -497,7 +523,7 @@ function renderJiraAuftraegeCard() {
   const resolved = jiraResolvedLastWeek();
   return `
     <div class="card auftraege-card">
-      <div class="card-header"><span class="card-title">Aufträge</span>${jiraSyncStamp()}</div>
+      <div class="card-header"><span class="card-title">Aufträge</span></div>
       <div class="review-due-panel">
         <div class="review-due-sections">
           <div class="review-due-section review-due-section-danger">
@@ -571,7 +597,10 @@ function renderReviews() {
   return `
     <div class="section-header">
       ${renderDashboardLinks()}
-      ${renderDashboardReviewAction()}
+      <div class="dashboard-header-actions">
+        ${renderDashboardSyncButtons()}
+        ${renderDashboardReviewAction()}
+      </div>
     </div>
 
     ${jiraWaitingTickets().length ? `<button class="dashboard-waiting" onclick="openWaitingQueue()"><strong>Warteschlange · ${jiraWaitingTickets().length} Tickets</strong><span>${esc(waitingStatusCounts(jiraWaitingTickets()))}</span><span>Teamweit ansehen →</span></button>` : ''}
