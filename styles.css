@@ -7737,3 +7737,26 @@ body[data-theme] .dashboard-sync:hover {
 /* Veraltet: Markenfarbe bleibt, das Alter wird zur Warnung */
 .dashboard-sync-stale .dashboard-sync-age { color: var(--warning); font-weight: 600; }
 .dashboard-sync-stale .dashboard-sync-age::before { content: "● "; }
+
+/* Stoppzeichen wie in der Planung, auch auf der Uebersicht. */
+.blocked-mark {
+  flex: 0 0 auto;
+  margin-right: 4px;
+  font-size: 0.85em;
+}
+
+.tf-block-blocked {
+  border-color: color-mix(in srgb, var(--danger) 50%, var(--border));
+}
+
+.tf-block-blocked .tf-block-mark { background: var(--danger); }
+
+.tf-block-blocked .tf-block-timing {
+  color: color-mix(in srgb, var(--danger) 82%, var(--text));
+  font-weight: 700;
+}
+
+.auftraege-blocked {
+  color: color-mix(in srgb, var(--danger) 82%, var(--text));
+  font-weight: 600;
+}
