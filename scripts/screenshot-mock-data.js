@@ -245,8 +245,40 @@ function buildMockData(TODAY) {
     { id: 'jira-status', excluded: ['Storniert'], seen: ['Offen', 'In Arbeit', 'Code Review', 'QA', 'Erledigt', 'Storniert'], handover: ['Code Review', 'QA'] },
   ];
 
+  // --- GitLab --------------------------------------------------------
+  // Offene MRs und was zuletzt gemerged wurde; zwei davon ohne Approval.
+  const at = (n, time) => `${day(n)}T${time}:00.000Z`;
+  const gl = user => user === 'dependabot'
+    ? { username: 'dependabot', name: 'dependabot' }
+    : { username: user, name: persons.find(p => p.id === 'p_' + user).name };
+  const mr = (project, iid, title, author, createdAt, extra = {}) => ({
+    iid: String(iid), project, title, url: `https://gitlab.example.com/tk/${project}/-/merge_requests/${iid}`,
+    draft: false, targetBranch: 'develop', createdAt, mergedAt: '', author: gl(author), mergedBy: null,
+    approvedBy: [], pipeline: 'success', ...extra,
+  });
+  const merged = (project, iid, title, author, mergedAt, by, approvedBy) =>
+    mr(project, iid, title, author, mergedAt, { mergedAt, mergedBy: gl(by), approvedBy, pipeline: '' });
+  const gitlab = {
+    generatedAt: day(0) + 'T06:20:00.000Z',
+    source: 'https://gitlab.example.com/tk',
+    open: [
+      mr('schaden-api', 214, 'Upload-Endpoint mit Virenscan (POL-418)', 'lena', at(-6, '09:12')),
+      mr('tarifrechner', 88, 'Tarifmatrix 2027 aus Excel importieren', 'david', at(-3, '14:40'), { approvedBy: ['lena'] }),
+      mr('tarifrechner', 91, 'Regressionstests gegen Tarif 2026', 'david', at(-1, '10:05'), { pipeline: 'failed' }),
+      mr('kundenportal', 57, 'Kündigungsstrecke: Fokus-Reihenfolge und ARIA-Labels', 'miriam', at(0, '05:30'), { draft: true, pipeline: 'running' }),
+    ],
+    merged: [
+      merged('schaden-api', 212, 'Hotfix: Timeout beim PDF-Export erhöht', 'felix', at(-1, '16:10'), 'felix', []),
+      merged('tarifrechner', 86, 'Selbstbehalt-Stufen als Enum statt Magic Numbers', 'david', at(-1, '09:30'), 'lena', ['lena']),
+      merged('kundenportal', 55, 'Spring Boot 3.5.6', 'dependabot', at(-2, '11:00'), 'jonas', ['jonas']),
+      merged('kundenportal', 54, 'Logging: PII aus Request-Bodies maskieren', 'jonas', at(-3, '15:45'), 'jonas', []),
+      merged('schaden-api', 209, 'OpenAPI-Spec auf 3.1 gehoben', 'lena', at(-4, '13:20'), 'lena', ['david', 'felix']),
+    ],
+    truncated: false,
+  };
+
   const store = { items, persons, meetings, notes, focuses, dashboardLinks, monthReviews, blocks, markers, settings };
-  return { store, jira };
+  return { store, jira, gitlab };
 }
 
 if (typeof module !== 'undefined' && require.main === module) {
@@ -254,10 +286,11 @@ if (typeof module !== 'undefined' && require.main === module) {
   const path = require('path');
   const TODAY = process.env.MOCK_TODAY || '2026-10-02';
   const outDir = path.resolve(process.argv[2] || path.join(__dirname, '..', 'mock-data'));
-  const { store, jira } = buildMockData(TODAY);
+  const { store, jira, gitlab } = buildMockData(TODAY);
   fs.mkdirSync(outDir, { recursive: true });
   fs.writeFileSync(path.join(outDir, 'tktool-data.json'), JSON.stringify(store, null, 2));
   fs.writeFileSync(path.join(outDir, 'jira-tickets.json'), JSON.stringify(jira, null, 2));
+  fs.writeFileSync(path.join(outDir, 'gitlab-mrs.json'), JSON.stringify(gitlab, null, 2));
   console.log(`Mock-Daten fuer ${TODAY} nach ${path.relative(process.cwd(), outDir) || '.'} geschrieben`);
 }
 

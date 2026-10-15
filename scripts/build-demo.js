@@ -32,8 +32,12 @@ function demoBoot() {
     if (saved && saved.today === today) files = saved.files;
   } catch {}
   if (!files) {
-    const { store, jira } = buildMockData(today);
-    files = { 'tktool-data.json': JSON.stringify(store, null, 2), 'jira-tickets.json': JSON.stringify(jira, null, 2) };
+    const { store, jira, gitlab } = buildMockData(today);
+    files = {
+      'tktool-data.json': JSON.stringify(store, null, 2),
+      'jira-tickets.json': JSON.stringify(jira, null, 2),
+      'gitlab-mrs.json': JSON.stringify(gitlab, null, 2),
+    };
   }
   installFakeFs(files);
   window.__mockOnWrite = dir => {
@@ -43,6 +47,7 @@ function demoBoot() {
   window.resetDemo = () => { ls.del(KEY); location.reload(); };
   if (!ls.get('tktool-theme')) ls.set('tktool-theme', 'daylight');
   if (!ls.get('tktool-jira-base')) ls.set('tktool-jira-base', 'https://jira.example.com');
+  if (!ls.get('tktool-gitlab-group')) ls.set('tktool-gitlab-group', 'https://gitlab.example.com/tk');
   if (!ls.get('tktool-device-id')) ls.set('tktool-device-id', 'demo-device');
   // Kein Update-Check gegen GitHub aus der Demo heraus.
   const realFetch = window.fetch.bind(window);

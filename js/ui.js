@@ -72,6 +72,7 @@ function renderThemeMenu() {
       <button class="theme-action" type="button" role="menuitem" onclick="importBackup()">Import</button>
       <button class="theme-action" type="button" role="menuitem" onclick="openCleanupDialog()">Aufräumen</button>
       <button class="theme-action" type="button" role="menuitem" onclick="configureJiraBase()">Jira-URL</button>
+      <button class="theme-action" type="button" role="menuitem" onclick="closeThemeMenu(); openGitlabImport()">GitLab</button>
       ${renderDeviceList()}
     </div>
     <div class="theme-menu-divider" aria-hidden="true"></div>

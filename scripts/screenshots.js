@@ -22,6 +22,7 @@ execFileSync('node', [path.join(__dirname, 'screenshot-mock-data.js'), mockDir],
 const files = {
   'tktool-data.json': fs.readFileSync(path.join(mockDir, 'tktool-data.json'), 'utf8'),
   'jira-tickets.json': fs.readFileSync(path.join(mockDir, 'jira-tickets.json'), 'utf8'),
+  'gitlab-mrs.json': fs.readFileSync(path.join(mockDir, 'gitlab-mrs.json'), 'utf8'),
 };
 
 // Jeder Screenshot: Theme, Ansicht, optional Vorbereitung im Browser.
@@ -56,6 +57,7 @@ async function openApp(browser, theme, height = 900) {
   await page.addInitScript(([t]) => {
     localStorage.setItem('tktool-theme', t);
     localStorage.setItem('tktool-jira-base', 'https://jira.example.com');
+    localStorage.setItem('tktool-gitlab-group', 'https://gitlab.example.com/tk');
     localStorage.setItem('tktool-device-id', 'mock-device');
   }, [theme]);
   await page.goto('file://' + path.join(root, 'index.html'));

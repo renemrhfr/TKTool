@@ -489,6 +489,7 @@ function renderReviews() {
 
     ${jiraWaitingTickets().length ? `<button class="dashboard-waiting" onclick="openWaitingQueue()"><strong>Warteschlange · ${jiraWaitingTickets().length} Tickets</strong><span>${esc(waitingStatusCounts(jiraWaitingTickets()))}</span><span>Teamweit ansehen →</span></button>` : ''}
     ${renderJiraChanges()}
+    ${renderGitlabMergeRequests()}
     <div class="review-grid">
       <div class="card review-due-card">
         <div class="card-header">

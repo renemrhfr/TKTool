@@ -7607,3 +7607,20 @@ body[data-theme] .tf-work-overdue { flex-basis: auto; padding: 0 7px; font-size:
   body[data-theme] .tf-name-line { min-width: 0; }
   body[data-theme] .tf-name-link { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 }
+
+/* --- GitLab Merge Requests (Snapshot gitlab-mrs.json) --- */
+.gitlab-card { margin-bottom: 16px; }
+.gitlab-card .card-header { display: flex; align-items: center; gap: 10px; }
+.gitlab-card .card-header .jira-sync-stamp { margin-left: auto; }
+.gitlab-card .review-due-item-main { width: 100%; }
+.gitlab-item-calm .review-due-item-day { color: var(--text-secondary); }
+.gitlab-ref { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; color: var(--text-muted); }
+.gitlab-item-unapproved .gitlab-ref { color: var(--danger); font-weight: 600; }
+.gitlab-draft { font-size: 11px; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--border); color: var(--text-muted); font-weight: 500; vertical-align: 1px; }
+.gitlab-pipe { font-size: 12px; }
+.gitlab-pipe-ok { color: var(--success); }
+.gitlab-pipe-fail { color: var(--danger); }
+.gitlab-pipe-run { color: var(--warning); }
+.gitlab-badge-unapproved { background: var(--danger); color: #fff; border: 1px solid var(--danger); }
+.gitlab-item-unapproved { border-color: var(--danger); box-shadow: inset 3px 0 0 var(--danger); }
+.gitlab-item-unapproved .review-due-item-main { background: var(--danger-light); }
