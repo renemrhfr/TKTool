@@ -33,6 +33,7 @@ const shots = [
   { name: 'standup', theme: 'daylight', view: 'meetings', prepare: 'openStandup' },
   { name: 'team', theme: 'daylight', view: 'team' },
   { name: 'weekly', theme: 'daylight', view: 'woche' },
+  { name: 'shutdown', theme: 'daylight', view: 'abschluss', prepare: 'fillShutdown' },
 ];
 const THEME_GRID = ['daylight', 'dark', 'rose-pine-dawn', 'nord', 'matrix', 'kodama', 'arrakis', 'spaceship', 'starfox'];
 
@@ -41,6 +42,16 @@ const prepares = {
   openOneOnOne: () => {
     const m = data.meetings.find(x => x.type === 'oneOnOne' && x.personId === 'p_david' && x.date === todayStr());
     navigate('meetings:detail', { meetingId: m.id });
+  },
+  fillShutdown: () => {
+    getShutdownState().text = [
+      'Release Freitag: reicht die Testabdeckung im Tarifrechner?',
+      '@Sophie wirkte im Standup gereizt, weiß nicht ob wegen mir',
+      'Bereichsleitung will Kapazitätsplanung, hab noch keine Zahlen',
+      'Reorg-Gerüchte im Bereich',
+    ].join('\n');
+    goShutdownStep(2);
+    setShutdownRoute(getShutdownState().thoughts[3].id, 'drop');
   },
   openStandup: () => {
     const m = data.meetings.find(x => x.isStandup && x.date === todayStr());

@@ -108,6 +108,7 @@ const PAGE_TITLES = {
   notizen: 'Notizen',
   search: 'Suche',
   woche: 'Wochenabschluss',
+  abschluss: 'Tagesabschluss',
 };
 
 // Die Uebersicht bekommt Datum und die Zahlen, nach denen man morgens
@@ -162,14 +163,16 @@ function renderPageHead(view) {
   if (!title) return '';
   const isDashboard = view === 'reviews';
   const week = view === 'woche' ? weekRange() : null;
-  const eyebrow = isDashboard
+  const eyebrow = isDashboard || view === 'abschluss'
     ? new Date().toLocaleDateString('de-AT', { weekday: 'long', day: 'numeric', month: 'long' })
     : week ? `KW ${isoWeekNumber(week.start)} · ${formatDateShort(week.start)}–${formatDateShort(week.end)}` : '';
   const side = isDashboard
     ? renderPageHeadStats()
     : week
       ? `<div class="page-head-side">${renderWeeklyReviewStats()}<div class="page-head-actions">${renderPageHeadActions(view)}</div></div>`
-      : `<div class="page-head-actions">${renderPageHeadActions(view)}</div>`;
+      : view === 'abschluss'
+        ? `<div class="page-head-side">${renderShutdownStepper()}</div>`
+        : `<div class="page-head-actions">${renderPageHeadActions(view)}</div>`;
   return `
     <div class="page-head page-head-${view}">
       <div>
@@ -181,11 +184,17 @@ function renderPageHead(view) {
   `;
 }
 
-// Der Wochenabschluss steht nur Freitag bis Sonntag in der Navigation —
-// ausser man ist gerade drin.
+// Der Wochenabschluss steht nur Freitag bis Sonntag in der Navigation, der
+// Tagesabschluss ab Mittag — ausser man ist gerade drin. Der Punkt am
+// Tagesabschluss verschwindet, sobald der Tag abgeschlossen ist.
 function syncWeeklyNav() {
   const button = document.querySelector('#nav button[data-view="woche"]');
   if (button) button.hidden = !isWeekReviewDay() && currentView !== 'woche';
+  const shutdown = document.querySelector('#nav button[data-view="abschluss"]');
+  if (shutdown) {
+    shutdown.hidden = !isShutdownTime() && currentView !== 'abschluss';
+    shutdown.classList.toggle('is-done', shutdownDoneToday());
+  }
 }
 
 function render() {
@@ -207,6 +216,7 @@ function render() {
     case 'notizen': app.innerHTML = renderNotes(); setTimeout(initNotesView, 0); break;
     case 'search': app.innerHTML = renderSearch(); break;
     case 'woche': app.innerHTML = renderWeeklyReview(); break;
+    case 'abschluss': app.innerHTML = renderShutdown(); setTimeout(initShutdownView, 0); break;
     default: app.innerHTML = renderOverview();
   }
   app.insertAdjacentHTML('afterbegin', renderPageHead(currentView.split(':')[0]));

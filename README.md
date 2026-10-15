@@ -28,6 +28,9 @@ screenshots](#regenerating-the-screenshots)).
 ![Wochenabschluss](screenshots/weekly.png)
 *Weekly review: what got done, what's stuck, which gaps per person*
 
+![Tagesabschluss](screenshots/shutdown.png)
+*Daily shutdown: every thought from the brain dump gets a place, or is let go*
+
 ![Team](screenshots/team.png)
 *Team member detail, with sensitive content hidden until sudo mode*
 
@@ -159,6 +162,20 @@ three or more tickets in parallel, Jira work without a planning block. It
 maintains nothing of its own: "done this week" comes from the per-field sync
 timestamps, resolved tickets from the regular Jira import (which also asks
 for the team's Aufträge resolved in the last 7 days). Exports as Markdown.
+
+### Daily shutdown
+
+From noon on, the sidebar shows a "Tagesabschluss": a five-minute ritual to
+stop carrying work home. First a brain dump, one line per thought, with a
+soft timer and a few prompts. Then every thought gets a place in structures
+that already exist: a todo for the next workday (the default), a point for
+the next 1:1 when it mentions `@Name` (typing `@` suggests team members), the
+backlog, or "Loslassen", which stores nothing. Todos due today that are still
+open can be marked done or moved to tomorrow in the same pass. An optional
+"what went well" line becomes a win, or a highlight in that person's journal
+when it mentions someone. There is deliberately no separate inbox: a list of
+"things to look at tomorrow" would just be one more thing to process. The
+unsent brain dump survives a reload until the day ends.
 
 ### Standup round
 
