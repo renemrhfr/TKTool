@@ -14,7 +14,7 @@ All screenshots use made-up people and tickets (see [Regenerating the
 screenshots](#regenerating-the-screenshots)).
 
 ![Übersicht](screenshots/dashboard.png)
-*Übersicht: what's due, the Jira review queue, what changed since the last import and the GitLab merge requests*
+*Übersicht: the Jira review queue, Aufträge running over plan, GitLab merge requests and what's due*
 
 ![Planung](screenshots/planner.png)
 *Planung: one block per person and Jira Auftrag, markers, support rotation*
@@ -120,6 +120,17 @@ hours, no story points. A team lead needs to see "when can this person take
 the next topic", not run a resource-leveling algorithm. People can be flagged
 for support duty per month (`supportMonate`), shown as a SUP badge in the
 planner and as a year strip in the person's detail.
+
+### Aufträge on the Übersicht
+
+The Übersicht doesn't list every open ticket — the planner already does.
+It shows only the Aufträge that take longer than planned: Jira still has
+them open after the block's estimate ran out. They are grouped per Auftrag
+with how many workdays over, who is on it and their open subtasks; next to
+it, what the team finished in the last seven days. Tickets waiting in QA or
+review are left out on purpose: they sit with another team and already show
+up in the Warteschlange. The Teamfokus below is about people only — next
+1:1, a quick point for it, what someone is working on right now.
 
 ### Merge requests
 

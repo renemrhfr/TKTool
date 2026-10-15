@@ -233,10 +233,6 @@ function renderDashboardReviewAction() {
 const TF_VISIBLE_BLOCKS = 10;
 let openTeamFocusPersonId = null;
 
-function ticketCountLabel(count) {
-  return `${count} ${count === 1 ? 'ticket' : 'tickets'}`;
-}
-
 // Die Zahl am Avatar zaehlt nicht die Arbeit, sondern den Handlungsbedarf:
 // Jira-Auftraege, an denen die Person arbeitet, die aber noch keinen Block
 // haben. Zehn saubere Tickets sind kein Signal — und nur ein Signal gehoert
@@ -267,10 +263,6 @@ function teamFocusBlockHandoverStatus(block) {
   if (!block.jiraRef) return '';
   const ref = jiraStatusForBlock(block);
   return ref && isJiraHandoverStatus(ref.status) ? String(ref.status || '') : '';
-}
-
-function teamFocusWaitingBlocks(entry) {
-  return jiraWaitingTickets(entry.person.id);
 }
 
 function teamFocusWorkingBlocks(entry) {
@@ -363,29 +355,6 @@ function renderTeamFocusBlocks(entry) {
   `;
 }
 
-function renderTeamFocusJiraMetric(entry) {
-  if (!jiraSyncData) return '';
-  if (entry.jiraTickets === null) {
-    return `
-      <button class="tf-metric tf-metric-action" type="button" onclick="event.preventDefault(); event.stopPropagation(); openPersonForm('${entry.person.id}')" title="jira-user im Profil ergänzen">
-        <span class="tf-metric-label">Jira</span>
-        <span class="tf-metric-value">&ndash;</span>
-        <span class="tf-metric-note">kein jira-user</span>
-      </button>`;
-  }
-  const unplanned = entry.drift.unplanned;
-  const driftDetail = unplanned.length ? `Ohne Block: ${unplanned.map(a => a.key).join(', ')}` : '';
-  const jiraSig = unplanned.length ? 'tf-sig-warn' : 'tf-sig-ok';
-  const jiraValue = unplanned.length ? `${unplanned.length} nicht eingeplant` : 'synchron';
-  const jiraNote = entry.jiraTickets.length ? ticketCountLabel(entry.jiraTickets.length) : 'keine tickets';
-  return `
-    <button class="tf-metric tf-metric-action ${jiraSig}" type="button" onclick="event.preventDefault(); event.stopPropagation(); navigate('planung',{planungPerson:'${entry.person.id}'})" title="${esc(`Jira-Tickets von ${entry.person.name} ansehen (Stand: ${jiraSyncAgeLabel() || 'unbekannt'})${driftDetail ? '\n' + driftDetail : ''}`)}">
-      <span class="tf-metric-label">Jira</span>
-      <span class="tf-metric-value">${esc(jiraValue)}</span>
-      <span class="tf-metric-note">${esc(jiraNote)}</span>
-    </button>`;
-}
-
 // Vorschau statt Rueckschau: bei woechentlichem Rhythmus ist "wann war das
 // letzte" immer dieselbe Antwort. Der Klick fuehrt in jedem Zustand ans Ziel —
 // notfalls legt er das Gespraech gleich an.
@@ -441,6 +410,125 @@ function renderTeamFocusNow(entry, workingBlocks) {
   return '<span class="tf-now tf-now-empty"><span class="tf-now-label">Nichts eingeplant</span></span>';
 }
 
+// ------------------------------------------------------------
+// Auftraege: nur was Aufmerksamkeit braucht
+// ------------------------------------------------------------
+// Bewusst keine Liste aller offenen Tickets — die steht in der Planung.
+// Hier landet nur, was laenger braucht als geplant (laut Jira offen, die
+// Schaetzung ist vorbei), gruppiert nach Auftrag mit den offenen Subtasks.
+// Wartende Tickets (QA, Review) fehlen absichtlich: die liegen bei einem
+// anderen Team und stehen schon in der Warteschlange.
+function jiraOverrunGroups() {
+  const today = todayStr();
+  const groups = new Map();
+  for (const block of (data.blocks || []).map(blockView)) {
+    if (!block.overrun || isAbsenceBlock(block)) continue;
+    const key = blockAuftragKey(block);
+    if (!key) continue;
+    const person = data.persons.find(p => p.id === block.personId) || null;
+    const days = workdaysBetween(toISO(addDays(parseISO(block.plannedEnd), 1)), today);
+    const subtasks = person ? (jiraPersonAuftragTickets(person, key) || []).filter(t => t.key !== key) : [];
+    if (!groups.has(key)) groups.set(key, { key, title: blockDisplayLabel(block), rows: [], maxDays: 0 });
+    const group = groups.get(key);
+    group.rows.push({ block, person, days, subtasks });
+    group.maxDays = Math.max(group.maxDays, days);
+  }
+  return [...groups.values()].sort((a, b) => b.maxDays - a.maxDays);
+}
+
+function jiraResolvedLastWeek() {
+  if (!jiraSyncData || !Array.isArray(jiraSyncData.resolved)) return [];
+  const cutoff = Date.now() - 7 * 86400000;
+  const byAccount = new Map(data.persons.filter(p => p.jiraAccountId).map(p => [p.jiraAccountId.trim(), p]));
+  return jiraSyncData.resolved
+    .filter(t => Date.parse(t.resolvedAt) >= cutoff)
+    .sort((a, b) => b.resolvedAt.localeCompare(a.resolvedAt))
+    .map(t => ({ ...t, person: byAccount.get(t.accountId) || null }));
+}
+
+function renderJiraOverrunItem(group) {
+  return `
+    <li class="review-due-item review-due-item-danger">
+      <button class="review-due-item-main" onclick="navigateToPlanungBlock('${group.rows[0].block.id}')" title="In der Planung zeigen">
+        <span class="review-due-item-date">
+          <span class="review-due-item-day">+${group.maxDays} wt</span>
+          <span class="review-due-item-age">über Plan</span>
+        </span>
+        <span class="review-due-item-body">
+          <span class="review-due-item-title"><span class="auftraege-key">${esc(group.key)}</span> ${esc(group.title)}</span>
+          ${group.rows.map(row => `
+            <span class="auftraege-person-row">
+              <span class="auftraege-person">@${esc(row.person ? row.person.name : '?')}</span>
+              <span class="auftraege-plan">geplant bis ${formatDateShort(row.block.plannedEnd)}</span>
+            </span>
+            ${row.subtasks.length ? `<span class="auftraege-subtasks">${row.subtasks.map(t => `
+              <span class="auftraege-subtask"><span class="auftraege-key">${esc(t.key)}</span> ${esc(t.summary)}
+                <span class="badge ${isJiraHandoverStatus(t.status) ? 'badge-waiting' : 'badge-todo'}">${esc(String(t.status || '').toLocaleLowerCase('de-AT'))}</span></span>`).join('')}
+            </span>` : ''}
+          `).join('')}
+        </span>
+      </button>
+    </li>`;
+}
+
+function renderJiraResolvedItem(ticket) {
+  const href = jiraUrl(ticket.key);
+  return `
+    <li class="review-due-item auftraege-item-calm">
+      <button class="review-due-item-main" ${href ? `onclick="window.open('${esc(href)}', '_blank', 'noopener')" title="In Jira öffnen"` : ''}>
+        <span class="review-due-item-date">
+          <span class="review-due-item-day">${formatDateShort(ticket.resolvedAt)}</span>
+          <span class="review-due-item-age">${esc(formatWeekdayShort(ticket.resolvedAt))}</span>
+        </span>
+        <span class="review-due-item-body">
+          <span class="review-due-item-title"><span class="auftraege-key">${esc(ticket.key)}</span> ${esc(ticket.summary)}</span>
+          <span class="review-due-item-meta">
+            <span class="badge badge-done">erledigt</span>
+            ${ticket.person ? `<span>@${esc(ticket.person.name)}</span>` : ''}
+          </span>
+        </span>
+      </button>
+    </li>`;
+}
+
+function renderJiraAuftraegeCard() {
+  if (!jiraSyncData) return '';
+  const overrun = jiraOverrunGroups();
+  const resolved = jiraResolvedLastWeek();
+  return `
+    <div class="card auftraege-card">
+      <div class="card-header"><span class="card-title">Aufträge</span>${jiraSyncStamp()}</div>
+      <div class="review-due-panel">
+        <div class="review-due-sections">
+          <div class="review-due-section review-due-section-danger">
+            <div class="review-due-section-head">
+              <div>
+                <div class="review-due-section-title">Läuft über</div>
+                <div class="review-due-section-hint">Laut Jira offen, Schätzung vorbei</div>
+              </div>
+              <span class="review-due-section-count">${overrun.length}</span>
+            </div>
+            ${overrun.length
+              ? `<ul class="review-due-item-list">${overrun.map(renderJiraOverrunItem).join('')}</ul>`
+              : '<div class="review-due-empty">Alles im Plan</div>'}
+          </div>
+          <div class="review-due-section review-due-section-success">
+            <div class="review-due-section-head">
+              <div>
+                <div class="review-due-section-title">Diese Woche erledigt</div>
+                <div class="review-due-section-hint">Letzte 7 Tage</div>
+              </div>
+              <span class="review-due-section-count">${resolved.length}</span>
+            </div>
+            ${resolved.length
+              ? `<ul class="review-due-item-list">${resolved.map(renderJiraResolvedItem).join('')}</ul>`
+              : '<div class="review-due-empty">Noch nichts abgeschlossen</div>'}
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
 function renderReviews() {
   const currentMonthLabel = currentMonth();
   const dueItems = data.items
@@ -463,14 +551,13 @@ function renderReviews() {
       // Ohne Fenster: die Liste scrollt ohnehin, und "ab 12.08." sagt mehr
       // als eine Stichtagsgrenze, die man nicht mehr einstellen kann.
       const upcomingBlocks = personUpcomingBlocks(person.id, today);
-      const jiraTickets = jiraTicketsForPerson(person);
       const drift = jiraDriftForPerson(person);
       const nextOneOnOne = personNextOneOnOne(person.id);
       const unscheduledOneOnOne = nextOneOnOne ? null : personUnscheduledOneOnOne(person.id);
       const oneOnOneMissing = !nextOneOnOne;
       const entry = {
         person, absenceToday, activeBlocks, upcomingBlocks,
-        jiraTickets, drift, nextOneOnOne, unscheduledOneOnOne, oneOnOneMissing,
+        drift, nextOneOnOne, unscheduledOneOnOne, oneOnOneMissing,
       };
       entry.attentionLevel = 'low';
       return entry;
@@ -489,6 +576,7 @@ function renderReviews() {
 
     ${jiraWaitingTickets().length ? `<button class="dashboard-waiting" onclick="openWaitingQueue()"><strong>Warteschlange · ${jiraWaitingTickets().length} Tickets</strong><span>${esc(waitingStatusCounts(jiraWaitingTickets()))}</span><span>Teamweit ansehen →</span></button>` : ''}
     ${renderJiraChanges()}
+    ${renderJiraAuftraegeCard()}
     ${renderGitlabMergeRequests()}
     <div class="review-grid">
       <div class="card review-due-card">
@@ -507,7 +595,6 @@ function renderReviews() {
           const cardStateClass = entry.absenceToday ? 'absent' : entry.attentionLevel;
           const supportThisMonth = personSupportInMonth(entry.person, currentMonthLabel);
           const workingBlocks = teamFocusWorkingBlocks(entry);
-          const waitingBlocks = teamFocusWaitingBlocks(entry);
           const open = entry.person.id === openTeamFocusPersonId;
           const detailId = `team-focus-${entry.person.id}`;
           return `
@@ -525,12 +612,9 @@ function renderReviews() {
               </div>
               <div class="tf-metric-row">
                 ${renderTeamFocusOneOnOneMetric(entry)}
-                ${renderTeamFocusJiraMetric(entry)}
               </div>
               <div class="tf-work-metric">
                 ${renderTeamFocusNow(entry, workingBlocks)}
-                ${waitingBlocks.length ? `<span class="tf-work-chip tf-work-waiting" title="Wartet in Review, QA oder einem anderen Übergabestatus">${waitingBlocks.length} wartet</span>` : ''}
-                ${entry.drift?.unplanned.length ? `<button class="filter-btn tf-work-overdue" onclick="event.stopPropagation();navigate('planung',{planungPerson:'${entry.person.id}',planungShowInbox:true})">${entry.drift.unplanned.length} einplanen</button>` : ''}
               </div>
               <span class="tf-card-actions">
                 <button class="tf-point-add" type="button" onclick="event.stopPropagation(); openOneOnOnePointForm('${entry.person.id}')" title="Punkt fürs nächste 1:1 notieren" aria-label="Punkt fürs 1:1 mit ${esc(entry.person.name)} notieren">

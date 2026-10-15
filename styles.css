@@ -2817,8 +2817,6 @@ textarea {
   white-space: nowrap;
 }
 
-.tf-work-overdue { flex-basis: 100%; text-align: left; }
-
 .tf-work-metric .tf-metric-value {
   text-align: right;
 }
@@ -7570,7 +7568,6 @@ body[data-theme] .tf-work-metric {
 }
 
 body[data-theme] .tf-work-metric > :not(.tf-now) { grid-row: 1; white-space: nowrap; }
-body[data-theme] .tf-work-overdue { flex-basis: auto; padding: 0 7px; font-size: 11px; line-height: 18px; }
 
 .tf-card-actions { justify-self: end; }
 
@@ -7702,3 +7699,19 @@ body[data-theme] .shutdown-side > .card { margin-bottom: 0; }
   .shutdown-row { grid-template-columns: minmax(0, 1fr); }
   .shutdown-routes { justify-content: flex-start; }
 }
+
+/* --- Auftraege: was laenger braucht als geplant --- */
+.auftraege-card { margin-bottom: 16px; }
+.auftraege-card .card-header { display: flex; align-items: center; gap: 10px; }
+.auftraege-card .card-header .jira-sync-stamp { margin-left: auto; }
+.auftraege-card .review-due-item-main { width: 100%; }
+.auftraege-key { margin-right: 4px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; font-weight: 500; color: var(--text-muted); }
+.auftraege-person-row { display: flex; align-items: baseline; gap: 10px; margin-top: 6px; font-size: 12px; }
+.auftraege-person { font-weight: 600; color: var(--text); }
+.auftraege-plan { color: var(--danger); }
+.auftraege-subtasks { display: grid; gap: 3px; margin: 4px 0 0 2px; padding-left: 10px; border-left: 2px solid color-mix(in srgb, var(--danger) 35%, var(--border)); }
+.auftraege-subtask { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; font-size: 12px; color: var(--text-secondary); }
+.auftraege-subtask .badge { padding: 0 6px; font-size: 10px; }
+.auftraege-item-calm .review-due-item-day { color: var(--text-secondary); }
+.review-due-section-success .review-due-section-title,
+.review-due-section-success .review-due-section-count { color: var(--success); }
