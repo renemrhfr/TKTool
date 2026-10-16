@@ -125,8 +125,10 @@ function shutdownOpenTodos() {
     .sort(compareByDueDate);
 }
 
+// Zuordnung ueber die urspruengliche Zeile: wer in Schritt 2 umformuliert und
+// nochmal zurueck in Schritt 1 geht, behaelt Formulierung und Ziel.
 function parseShutdownThoughts(state) {
-  const previous = new Map(state.thoughts.map(t => [t.text, t]));
+  const previous = new Map(state.thoughts.map(t => [t.source, t]));
   state.thoughts = state.text
     .split('\n')
     .map(line => line.replace(/^\s*[-*•]\s*/, '').trim())
@@ -134,7 +136,7 @@ function parseShutdownThoughts(state) {
     .map(text => {
       if (previous.has(text)) return previous.get(text);
       const person = mentionedPerson(text);
-      return { id: uid(), text, personId: person ? person.id : '', route: person ? 'oneOnOne' : 'todo' };
+      return { id: uid(), source: text, text, personId: person ? person.id : '', route: person ? 'oneOnOne' : 'todo' };
     });
 }
 
@@ -218,12 +220,12 @@ function renderShutdownSort(state) {
           ${person ? `<span>${target && target.date ? `nächstes 1:1 am ${formatDateShort(target.date)}` : '1:1 noch ohne Datum'}</span>` : ''}
         </div>`;
     } else if (t.route === 'todo') {
-      const mention = mentionedPerson(t.text);
+      const mention = mentionedPerson(t.text) || mentionedPerson(t.source);
       extra = `<div class="shutdown-row-extra">fällig ${formatDateShort(nextDay)}${mention ? ` · @${esc(mention.name)}` : ''}</div>`;
     }
     return `
       <li class="shutdown-row shutdown-route-${t.route}">
-        <div class="shutdown-row-text">${esc(t.text)}</div>
+        <input class="shutdown-row-input" value="${esc(t.text)}" title="Zum Umformulieren klicken" aria-label="Gedanke umformulieren" oninput="setShutdownText('${t.id}', this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();focusNextShutdownRow(this)}">
         <div class="shutdown-routes">${routeButtons}</div>
         ${extra}
       </li>`;
@@ -252,7 +254,7 @@ function renderShutdownSort(state) {
           <span class="card-title">Jedem Gedanken einen Platz geben</span>
           <span class="search-summary">${state.thoughts.length} ${state.thoughts.length === 1 ? 'Gedanke' : 'Gedanken'}</span>
         </div>
-        <div class="shutdown-sub shutdown-sub-pad">Voreingestellt ist <strong>Todo für ${esc(weekday)}</strong>, mit @Name ein Punkt fürs 1:1. Nur umklicken, wenn es nicht passt.</div>
+        <div class="shutdown-sub shutdown-sub-pad">Voreingestellt ist <strong>Todo für ${esc(weekday)}</strong>, mit @Name ein Punkt fürs 1:1. Nur umklicken, wenn es nicht passt. Den Text kannst du direkt umformulieren.</div>
         ${state.thoughts.length ? `<ul class="shutdown-list">${thoughtRows}</ul>` : '<div class="week-empty">Nichts aufgeschrieben. Auch gut.</div>'}
       </section>
       ${open.length ? `
@@ -366,6 +368,19 @@ function setShutdownRoute(id, route) {
   render();
 }
 
+// Ohne render(): der Fokus bliebe sonst nicht im Feld.
+function setShutdownText(id, text) {
+  const thought = getShutdownState().thoughts.find(t => t.id === id);
+  if (thought) thought.text = text;
+}
+
+function focusNextShutdownRow(input) {
+  const inputs = [...document.querySelectorAll('.shutdown-row-input')];
+  const next = inputs[inputs.indexOf(input) + 1];
+  if (next) next.focus();
+  else input.blur();
+}
+
 function setShutdownPerson(id, personId) {
   const thought = getShutdownState().thoughts.find(t => t.id === id);
   if (thought) thought.personId = personId;
@@ -399,11 +414,14 @@ function finishShutdown() {
   let meetingId = '';
 
   state.thoughts.forEach(t => {
-    const mention = mentionedPerson(t.text);
+    // Leer umformuliert heisst nicht "weg": dann gilt die Zeile aus Schritt 1.
+    // Die Person bleibt auch, wenn das @Name beim Umformulieren rausfliegt.
+    const text = t.text.trim() || t.source;
+    const mention = mentionedPerson(text) || mentionedPerson(t.source);
     if (t.route === 'todo') {
-      data.items.push(newItem({ text: t.text, personId: mention ? mention.id : null, date: nextDay, month: nextDay.slice(0, 7) }));
+      data.items.push(newItem({ text, personId: mention ? mention.id : null, date: nextDay, month: nextDay.slice(0, 7) }));
     } else if (t.route === 'backlog') {
-      data.items.push(newItem({ text: t.text, status: 'backlog', personId: mention ? mention.id : null }));
+      data.items.push(newItem({ text, status: 'backlog', personId: mention ? mention.id : null }));
     } else if (t.route === 'oneOnOne') {
       let meeting = shutdownOneOnOneTarget(t.personId);
       if (!meeting) {
@@ -414,7 +432,7 @@ function finishShutdown() {
         data.meetings.push(meeting);
       }
       // Wie bei "Punkt fuers 1:1": das Datum steht im Punkt selbst.
-      meeting.prep = serializePrepBullets([...parsePrepBullets(meeting.prep), { text: `${t.text} (notiert ${formatDateShort(today)})`, done: false }]);
+      meeting.prep = serializePrepBullets([...parsePrepBullets(meeting.prep), { text: `${text} (notiert ${formatDateShort(today)})`, done: false }]);
       meetingId = meeting.id;
     }
   });

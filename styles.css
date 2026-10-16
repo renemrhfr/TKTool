@@ -7666,6 +7666,9 @@ body[data-theme] .shutdown-side > .card { margin-bottom: 0; }
 .shutdown-list { gap: 8px; }
 .shutdown-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 16px; align-items: center; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); }
 .shutdown-row-text { font-size: 15px; line-height: 1.4; color: var(--text); overflow-wrap: anywhere; }
+.shutdown-row-input { width: calc(100% + 8px); min-width: 0; box-sizing: border-box; margin: -5px 0 -5px -8px; padding: 4px 7px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--text); font: inherit; font-size: 15px; line-height: 1.4; }
+.shutdown-row-input:hover { border-color: var(--border); }
+.shutdown-row-input:focus { outline: none; border-color: var(--accent); background: var(--surface); box-shadow: 0 0 0 3px var(--accent-light); text-decoration: none; color: var(--text); }
 .shutdown-row-meta { color: var(--text-muted); font-size: 13px; margin-top: 2px; }
 .shutdown-row-extra { grid-column: 1 / -1; display: flex; gap: 10px; align-items: center; font-size: 13px; color: var(--text-secondary); }
 .shutdown-row-extra select { font: inherit; padding: 3px 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); }
@@ -7673,7 +7676,7 @@ body[data-theme] .shutdown-side > .card { margin-bottom: 0; }
 .shutdown-route { font: inherit; font-size: 13px; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--text-secondary); cursor: pointer; white-space: nowrap; }
 .shutdown-route:hover { background: var(--surface-hover); }
 .shutdown-route.is-on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
-.shutdown-route-drop .shutdown-row-text, .shutdown-rollover-done .shutdown-row-text { color: var(--text-muted); text-decoration: line-through; text-decoration-color: var(--border); }
+.shutdown-route-drop .shutdown-row-input, .shutdown-rollover-done .shutdown-row-text { color: var(--text-muted); text-decoration: line-through; text-decoration-color: var(--border); }
 .shutdown-route-drop .shutdown-route.is-on { background: var(--text-muted); border-color: var(--text-muted); }
 
 .shutdown-summary { gap: 8px; font-size: 15px; margin-bottom: 6px; }
