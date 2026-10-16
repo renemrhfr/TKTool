@@ -139,10 +139,120 @@ function gitlabApprovalCount(mr) {
   return mr.approvedBy.filter(u => u && u !== author).length;
 }
 
+// ------------------------------------------------------------
+// Filter: welche Ziel-Branches und Projekte zaehlen
+// ------------------------------------------------------------
+// Liegt in data.settings statt im localStorage, damit es auf allen Geraeten
+// mit demselben Datenordner gilt. Gefiltert wird beim Anzeigen, nicht beim
+// Import: eine Aenderung wirkt sofort auf den aktuellen Stand.
+const GITLAB_FILTER_SETTING_ID = 'gitlab-filter';
+const GITLAB_DEFAULT_BRANCHES = ['develop'];
+
+function gitlabFilterSetting() {
+  return (data.settings || []).find(s => s.id === GITLAB_FILTER_SETTING_ID) || null;
+}
+
+function updateGitlabFilterSetting(patch) {
+  const current = gitlabFilterSetting();
+  const next = {
+    id: GITLAB_FILTER_SETTING_ID,
+    targetBranches: patch.targetBranches ?? gitlabTargetBranches(),
+    excludedProjects: patch.excludedProjects ?? gitlabExcludedProjects(),
+  };
+  if (current) Object.assign(current, next);
+  else (data.settings = data.settings || []).push(next);
+  saveData(data);
+}
+
+// Leere Liste heisst "alle Branches"; ohne Einstellung gilt develop.
+function gitlabTargetBranches() {
+  const setting = gitlabFilterSetting();
+  return setting && Array.isArray(setting.targetBranches) ? setting.targetBranches : GITLAB_DEFAULT_BRANCHES;
+}
+
+function gitlabExcludedProjects() {
+  const setting = gitlabFilterSetting();
+  return setting && Array.isArray(setting.excludedProjects) ? setting.excludedProjects : [];
+}
+
+// "release/*" passt auf release/1.0 — Stern als Platzhalter, sonst exakt.
+function gitlabBranchMatches(branch, pattern) {
+  const re = new RegExp('^' + pattern.split('*').map(part => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('.*') + '$');
+  return re.test(branch);
+}
+
+function gitlabMrVisible(mr) {
+  if (gitlabExcludedProjects().includes(mr.project)) return false;
+  const branches = gitlabTargetBranches();
+  return !branches.length || branches.some(pattern => gitlabBranchMatches(mr.targetBranch, pattern));
+}
+
+function gitlabOpenVisible() {
+  return gitlabSyncData ? (gitlabSyncData.open || []).filter(gitlabMrVisible) : [];
+}
+
 function gitlabMergedRecently() {
   if (!gitlabSyncData) return [];
   const cutoff = Date.now() - GITLAB_MERGED_DAYS * 86400000;
-  return (gitlabSyncData.merged || []).filter(mr => Date.parse(mr.mergedAt) >= cutoff);
+  return (gitlabSyncData.merged || []).filter(mr => Date.parse(mr.mergedAt) >= cutoff && gitlabMrVisible(mr));
+}
+
+// Alle Projekte aus dem Stand plus die ausgeblendeten — ein ausgeblendetes
+// soll in der Auswahl bleiben, auch wenn es gerade keine MRs hat.
+function gitlabKnownProjects() {
+  const seen = gitlabSyncData ? [...(gitlabSyncData.open || []), ...(gitlabSyncData.merged || [])].map(mr => mr.project) : [];
+  return [...new Set([...seen, ...gitlabExcludedProjects()].filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, 'de-AT'));
+}
+
+function saveGitlabBranchesFromInput() {
+  const input = document.getElementById('gitlabBranchesInput');
+  const branches = String(input ? input.value : '').split(',').map(b => b.trim()).filter(Boolean);
+  updateGitlabFilterSetting({ targetBranches: [...new Set(branches)] });
+  reopenGitlabImportKeepingDraft();
+}
+
+function toggleGitlabProject(project) {
+  const excluded = gitlabExcludedProjects();
+  updateGitlabFilterSetting({
+    excludedProjects: excluded.includes(project) ? excluded.filter(p => p !== project) : excluded.concat(project),
+  });
+  reopenGitlabImportKeepingDraft();
+}
+
+function renderGitlabFilter() {
+  const branches = gitlabTargetBranches();
+  const projects = gitlabKnownProjects();
+  const excluded = gitlabExcludedProjects();
+  return `
+    <div class="form-group">
+      <label class="form-label">Ziel-Branches</label>
+      <input class="form-input" id="gitlabBranchesInput" value="${esc(branches.join(', ')).replace(/"/g, '&quot;')}" placeholder="leer = alle" onchange="saveGitlabBranchesFromInput()">
+      <div class="form-hint">Nur MRs in diese Branches erscheinen, mit Komma getrennt. <span class="form-hint-code">release/*</span> passt auf alle Release-Branches.</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Projekte &mdash; welche zählen</label>
+      ${projects.length ? `
+        <div class="jira-status-filter">
+          ${projects.map(project => `
+            <button type="button" class="jira-status-chip ${excluded.includes(project) ? 'off' : 'on'}"
+              data-project="${esc(project).replace(/"/g, '&quot;')}" onclick="toggleGitlabProject(this.dataset.project)">${esc(project)}</button>
+          `).join('')}
+        </div>
+        <div class="form-hint">${excluded.length
+          ? `${excluded.length} ${excluded.length === 1 ? 'Projekt wird' : 'Projekte werden'} ausgeblendet — wirkt sofort, auch auf den aktuellen Stand.`
+          : 'Alle Projekte zählen. Klick blendet ein Projekt aus.'}</div>`
+        : '<div class="form-hint">Nach dem ersten Einspielen lässt sich hier wählen, welche Projekte zählen.</div>'}
+    </div>`;
+}
+
+function reopenGitlabImportKeepingDraft() {
+  const field = document.getElementById('gitlabImportText');
+  const draft = field ? field.value : '';
+  render();
+  openGitlabImport();
+  const restored = document.getElementById('gitlabImportText');
+  if (restored && draft) restored.value = draft;
 }
 
 function gitlabAgeLabel(iso, prefix) {
@@ -167,8 +277,10 @@ function renderGitlabMergeRequests() {
         <div class="review-due-empty">Noch nichts eingespielt. Oben rechts auf „GitLab“ klicken.</div>
       </div>`;
   }
-  const open = gitlabSyncData.open || [];
+  const open = gitlabOpenVisible();
   const merged = gitlabMergedRecently();
+  const branches = gitlabTargetBranches();
+  const branchNote = branches.length ? ` · nach ${esc(branches.join(', '))}` : '';
   const unapproved = merged.filter(mr => !gitlabApprovalCount(mr)).length;
   return `
     <div class="card gitlab-card">
@@ -179,7 +291,7 @@ function renderGitlabMergeRequests() {
             <div class="review-due-section-head">
               <div>
                 <div class="review-due-section-title">Offen</div>
-                <div class="review-due-section-hint">Älteste zuerst</div>
+                <div class="review-due-section-hint">Älteste zuerst${branchNote}</div>
               </div>
               <span class="review-due-section-count">${open.length}</span>
             </div>
@@ -191,7 +303,7 @@ function renderGitlabMergeRequests() {
             <div class="review-due-section-head">
               <div>
                 <div class="review-due-section-title">Zuletzt gemerged</div>
-                <div class="review-due-section-hint">Letzte ${GITLAB_MERGED_DAYS} Tage</div>
+                <div class="review-due-section-hint">Letzte ${GITLAB_MERGED_DAYS} Tage${branchNote}</div>
               </div>
               <span class="review-due-section-count" title="ohne Approval / gemerged">${unapproved}/${merged.length}</span>
             </div>
@@ -304,6 +416,7 @@ function openGitlabImport() {
              <div class="form-hint">Öffnet einen Tab mit der JSON-Antwort: offene MRs und was in den letzten ${GITLAB_MERGED_DAYS} Tagen gemerged wurde. Dort alles markieren und kopieren.</div>`
           : `<div class="team-empty-copy">${group ? 'Aus dieser URL lässt sich keine Gruppe lesen.' : 'Erst die Gruppen-URL eintragen.'}</div>`}
       </div>
+      ${renderGitlabFilter()}
       <div class="form-group">
         <label class="form-label">2 &middot; Antwort hier einfügen</label>
         <textarea class="form-textarea" id="gitlabImportText" rows="8" placeholder='{"data":{"group":{...}}}'></textarea>
@@ -322,13 +435,8 @@ function openGitlabImport() {
 // neu bauen, ohne eingefuegten Text zu verlieren.
 function saveGitlabGroupFromInput() {
   const input = document.getElementById('gitlabGroupInput');
-  const field = document.getElementById('gitlabImportText');
-  const draft = field ? field.value : '';
   setGitlabGroupUrl(input ? input.value : '');
-  render();
-  openGitlabImport();
-  const restored = document.getElementById('gitlabImportText');
-  if (restored && draft) restored.value = draft;
+  reopenGitlabImportKeepingDraft();
 }
 
 async function submitGitlabImport() {
@@ -340,7 +448,7 @@ async function submitGitlabImport() {
     closeOverlay();
     render();
     const unapproved = gitlabMergedRecently().filter(mr => !gitlabApprovalCount(mr)).length;
-    toast(`${snapshot.open.length} offen, ${gitlabMergedRecently().length} gemerged`
+    toast(`${gitlabOpenVisible().length} offen, ${gitlabMergedRecently().length} gemerged`
       + (unapproved ? ` · ${unapproved} ohne Approval` : ''));
   } catch (error) {
     toast(error.message || 'Einspielen fehlgeschlagen');

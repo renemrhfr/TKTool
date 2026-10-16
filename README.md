@@ -143,7 +143,10 @@ up in the Warteschlange. The Teamfokus below is about people only — next
 The Übersicht shows a GitLab group's merge requests: the open ones, oldest
 first, and what was merged in the last seven days. A merge without an
 approval is red; an approval from the author doesn't count. An open MR
-that has waited five days without one turns yellow.
+that has waited five days without one turns yellow. Only MRs into the
+configured target branches count (default `develop`, `*` as wildcard, e.g.
+`release/*`), and whole projects can be hidden; both live in the import
+dialog and are stored in the data file, so they hold on every device.
 
 It is fetched like Jira: the app runs under `file://`, so CORS blocks any
 request to a self-managed GitLab. The import dialog (theme menu → GitLab,

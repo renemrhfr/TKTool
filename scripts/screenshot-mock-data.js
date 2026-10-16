@@ -273,6 +273,8 @@ function buildMockData(TODAY) {
       merged('kundenportal', 55, 'Spring Boot 3.5.6', 'dependabot', at(-2, '11:00'), 'jonas', ['jonas']),
       merged('kundenportal', 54, 'Logging: PII aus Request-Bodies maskieren', 'jonas', at(-3, '15:45'), 'jonas', []),
       merged('schaden-api', 209, 'OpenAPI-Spec auf 3.1 gehoben', 'lena', at(-4, '13:20'), 'lena', ['david', 'felix']),
+      // Release-Merge ohne Approval: wird nur mit passendem Ziel-Branch-Filter gezeigt.
+      { ...merged('kundenportal', 53, 'Release 4.12 vorbereiten', 'jonas', at(-2, '08:40'), 'jonas', []), targetBranch: 'release/1.0' },
     ],
     truncated: false,
   };
