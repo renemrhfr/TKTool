@@ -825,7 +825,7 @@ function renderPlanungInbox(inbox) {
           <span class="planung-inbox-date">${auftrag.tickets.length} ${auftrag.tickets.length === 1 ? 'ticket' : 'tickets'}${statuses ? ' · ' + esc(statuses.toLowerCase()) : ''}</span>
         </span>
         <span class="planung-inbox-actions">
-          <span class="planung-inbox-from">ab ${formatDateShort(from)}</span>
+          <button class="planung-inbox-from" type="button" onclick="openPlanStartDialog('auftrag','${esc(auftrag.key)}','${person.id}')" title="Start wählen: hinter letztem Block, ab heute oder konkretes Datum">ab ${formatDateShort(from)} ▾</button>
           ${weeksButtons(n => `planAuftrag('${person.id}','${esc(auftrag.key)}',${n})`, n => `${n} ${n === 1 ? 'Woche' : 'Wochen'} ab ${formatDate(from)} — hinten angestellt`)}
         </span>
       </div>`;
@@ -838,13 +838,13 @@ function renderPlanungInbox(inbox) {
         <span class="planung-inbox-date">ohne datum</span>
       </span>
       <span class="planung-inbox-actions">
-        <span class="planung-inbox-from">ab ${formatDateShort(personFreeFrom(b.personId))}</span>
+        <button class="planung-inbox-from" type="button" onclick="openPlanStartDialog('parked','${b.id}','${b.personId}')" title="Start wählen: hinter letztem Block, ab heute oder konkretes Datum">ab ${formatDateShort(personFreeFrom(b.personId))} ▾</button>
         ${weeksButtons(n => `scheduleParkedBlock('${b.id}',${n})`, n => `${n} ${n === 1 ? 'Woche' : 'Wochen'} einplanen — hinten angestellt`)}
       </span>
     </div>`).join('');
   return `
     <div class="planung-inbox-panel planung-inbox" id="planung-inbox">
-      <div class="planung-inbox-head">Einzuplanen · Stand ${esc(jiraSyncAgeLabel() || 'unbekannt')} — wird hinter die letzte geplante Arbeit gestellt, Dauer danach per Ziehen anpassen</div>
+      <div class="planung-inbox-head">Einzuplanen · Stand ${esc(jiraSyncAgeLabel() || 'unbekannt')} — wird hinter die letzte geplante Arbeit gestellt, über „ab …“ anderer Start, Dauer danach per Ziehen anpassen</div>
       ${auftragRows}
       ${parkedRows}
     </div>`;
@@ -862,17 +862,75 @@ function openPlanungInbox(personId) {
   document.getElementById('planung-inbox')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
 
-function planSpanFor(personId, weeks) {
-  const start = personFreeFrom(personId);
+function planSpanFor(personId, weeks, fromISO) {
+  const start = fromISO ? nextWorkdayOnOrAfter(fromISO) : personFreeFrom(personId);
   return { start, end: addWorkdays(start, Math.max(1, weeks * 5) - 1) };
 }
 
-function planAuftrag(personId, key, weeks) {
+// Start fuer einen Einzuplanen-Eintrag waehlen: hinter dem letzten Block
+// (wie die Schnellknoepfe), ab heute oder ein konkretes Datum.
+function openPlanStartDialog(kind, ref, personId) {
+  const title = kind === 'auftrag'
+    ? `${ref} · ${jiraSummaryForKey(ref) || ''}`
+    : blockDisplayLabel(data.blocks.find(x => x.id === ref) || {});
+  const after = personFreeFrom(personId);
+  const today = nextWorkdayOnOrAfter(todayStr());
+  document.getElementById('overlay').classList.remove('overlay-drawer');
+  document.getElementById('modal').innerHTML = `
+    <div class="modal-header">
+      <span class="modal-title">Einplanen</span>
+      <button class="modal-close" onclick="closeOverlay()">&#x2715;</button>
+    </div>
+    <div class="modal-body" id="planStartDialog" data-kind="${kind}" data-ref="${esc(ref)}" data-person="${personId}">
+      <p class="form-hint" style="margin-bottom:10px">${esc(personName(personId))} · ${esc(title)}</p>
+      <label class="form-label">Start</label>
+      <div class="segmented-toggle plan-start-toggle">
+        <button type="button" class="segmented-toggle-btn active" data-mode="after" onclick="setPlanStartMode('after')">nach letztem Block · ${formatDateShort(after)}</button>
+        <button type="button" class="segmented-toggle-btn" data-mode="today" onclick="setPlanStartMode('today')">ab heute · ${formatDateShort(today)}</button>
+        <button type="button" class="segmented-toggle-btn" data-mode="date" onclick="setPlanStartMode('date')">datum</button>
+      </div>
+      <div class="form-group" id="planStartDateGroup" hidden>
+        <input type="date" class="form-input" id="planStartDate" value="${after}">
+      </div>
+      <label class="form-label">Dauer</label>
+      <div style="display:flex;gap:8px">
+        ${[1, 2, 3, 4].map(n => `<button class="btn btn-secondary" style="flex:1" onclick="confirmPlanStart(${n})">${n} ${n === 1 ? 'Woche' : 'Wochen'}</button>`).join('')}
+      </div>
+    </div>
+  `;
+  openOverlay();
+}
+
+function setPlanStartMode(mode) {
+  document.querySelectorAll('#planStartDialog .plan-start-toggle .segmented-toggle-btn')
+    .forEach(btn => btn.classList.toggle('active', btn.dataset.mode === mode));
+  const group = document.getElementById('planStartDateGroup');
+  group.hidden = mode !== 'date';
+  if (mode === 'date') document.getElementById('planStartDate').focus();
+}
+
+function confirmPlanStart(weeks) {
+  const dlg = document.getElementById('planStartDialog');
+  if (!dlg) return;
+  const mode = dlg.querySelector('.plan-start-toggle .active')?.dataset.mode || 'after';
+  let fromISO = null;
+  if (mode === 'today') fromISO = todayStr();
+  if (mode === 'date') {
+    fromISO = document.getElementById('planStartDate').value;
+    if (!fromISO) { toast('Bitte ein Datum wählen'); return; }
+  }
+  const { kind, ref, person } = dlg.dataset;
+  closeOverlay();
+  if (kind === 'auftrag') planAuftrag(person, ref, weeks, fromISO);
+  else scheduleParkedBlock(ref, weeks, fromISO);
+}
+
+function planAuftrag(personId, key, weeks, fromISO) {
   const ref = jiraAuftragKey(key);
   if (!ref) return;
   const exists = data.blocks.some(b => b.personId === personId && !b.done && blockAuftragKey(b) === ref);
   if (exists) { toast(`${ref} hat schon einen Block`); render(); return; }
-  const { start, end } = planSpanFor(personId, weeks);
+  const { start, end } = planSpanFor(personId, weeks, fromISO);
   const summary = jiraSummaryForKey(ref);
   data.blocks.push({
     id: uid(), personId, typ: 'ticket', label: summary || ref, start, end, done: false,
@@ -883,10 +941,10 @@ function planAuftrag(personId, key, weeks) {
   render();
 }
 
-function scheduleParkedBlock(id, weeks) {
+function scheduleParkedBlock(id, weeks, fromISO) {
   const b = data.blocks.find(x => x.id === id);
   if (!b) return;
-  Object.assign(b, planSpanFor(b.personId, weeks));
+  Object.assign(b, planSpanFor(b.personId, weeks, fromISO));
   saveData(data);
   toast(`Eingeplant: ${formatDateShort(b.start)}–${formatDateShort(b.end)}`);
   render();

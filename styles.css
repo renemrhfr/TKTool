@@ -4364,7 +4364,12 @@ button.tf-metric {
   color: var(--text-muted);
   border-bottom: 1px solid var(--border);
 }
-.planung-inbox-from { color: var(--text-muted); font-size: 11px; align-self: center; }
+.planung-inbox-from {
+  color: var(--text-muted); font-size: 11px; align-self: center;
+  background: none; border: 1px dashed transparent; padding: 2px 4px; cursor: pointer; font-family: inherit;
+}
+.planung-inbox-from:hover { color: var(--text); border-color: var(--border); }
+.plan-start-toggle { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; }
 .planung-inbox-row {
   display: flex;
   align-items: center;
