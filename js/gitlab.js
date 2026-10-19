@@ -8,7 +8,10 @@
 // /api/graphql fuer reine Leseabfragen, mit Session-Cookie und ohne
 // CSRF-Token.
 
-const GITLAB_GROUP_KEY = 'tktool-gitlab-group';
+// Frueher genau eine Gruppen-URL unter tktool-gitlab-group; jetzt eine Liste.
+// Der alte Schluessel wird beim ersten Lesen uebernommen.
+const GITLAB_GROUPS_KEY = 'tktool-gitlab-groups';
+const GITLAB_LEGACY_GROUP_KEY = 'tktool-gitlab-group';
 const GITLAB_SYNC_FILENAME = 'gitlab-mrs.json';
 const GITLAB_MERGED_DAYS = 7;
 // Ab hier wird ein offener MR ohne Approval gelb.
@@ -16,23 +19,36 @@ const GITLAB_STALE_DAYS = 5;
 
 let gitlabSyncData = null;
 
-function getGitlabGroupUrl() {
-  try { return localStorage.getItem(GITLAB_GROUP_KEY) || ''; } catch { return ''; }
-}
-
-function setGitlabGroupUrl(value) {
+function normalizeGitlabGroupUrl(value) {
   let val = String(value || '').trim().replace(/\/+$/, '');
   if (val && !/^https?:\/\//i.test(val)) val = 'https://' + val;
-  try {
-    if (val) localStorage.setItem(GITLAB_GROUP_KEY, val);
-    else localStorage.removeItem(GITLAB_GROUP_KEY);
-  } catch {}
   return val;
+}
+
+function getGitlabGroupUrls() {
+  try {
+    const stored = localStorage.getItem(GITLAB_GROUPS_KEY);
+    if (stored) {
+      const list = JSON.parse(stored);
+      if (Array.isArray(list)) return list.map(String).filter(Boolean);
+    }
+    const legacy = localStorage.getItem(GITLAB_LEGACY_GROUP_KEY);
+    return legacy ? [legacy] : [];
+  } catch { return []; }
+}
+
+function setGitlabGroupUrls(values) {
+  const list = [...new Set((values || []).map(normalizeGitlabGroupUrl).filter(Boolean))];
+  try {
+    localStorage.setItem(GITLAB_GROUPS_KEY, JSON.stringify(list));
+    localStorage.removeItem(GITLAB_LEGACY_GROUP_KEY);
+  } catch {}
+  return list;
 }
 
 // Aus der kopierten Gruppen-URL Server und Gruppenpfad machen. Akzeptiert
 // auch /groups/x und angehaengte Unterseiten wie /-/merge_requests.
-function gitlabGroupParts(url = getGitlabGroupUrl()) {
+function gitlabGroupParts(url) {
   let parsed;
   try { parsed = new URL(url); } catch { return null; }
   const fullPath = parsed.pathname
@@ -43,18 +59,28 @@ function gitlabGroupParts(url = getGitlabGroupUrl()) {
   return { origin: parsed.origin, fullPath };
 }
 
+// Alle Gruppen landen in einer einzigen GraphQL-Abfrage (Aliase g0, g1, ...),
+// damit es bei einem Tab und einem Einfuegen bleibt. Das geht nur auf einem
+// Server; Gruppen auf einem anderen Server als der ersten fallen raus.
+function gitlabQueryGroups() {
+  const parts = getGitlabGroupUrls().map(gitlabGroupParts).filter(Boolean);
+  const origin = parts.length ? parts[0].origin : '';
+  const seen = new Set();
+  return parts.filter(p => p.origin === origin && !seen.has(p.fullPath) && seen.add(p.fullPath));
+}
+
 function gitlabQueryUrl() {
-  const parts = gitlabGroupParts();
-  if (!parts) return '';
+  const groups = gitlabQueryGroups();
+  if (!groups.length) return '';
   const since = new Date(Date.now() - GITLAB_MERGED_DAYS * 86400000).toISOString().slice(0, 10);
   const fields = 'iid title webUrl draft createdAt mergedAt targetBranch'
     + ' author{username name} mergeUser{username name} approvedBy{nodes{username}}'
     + ' project{path} headPipeline{status}';
   const list = args => `mergeRequests(${args},includeSubgroups:true,first:100){pageInfo{hasNextPage} nodes{${fields}}}`;
-  const query = `{group(fullPath:${JSON.stringify(parts.fullPath)}){`
+  const query = '{' + groups.map((g, i) => `g${i}:group(fullPath:${JSON.stringify(g.fullPath)}){fullPath `
     + `open:${list('state:opened,sort:CREATED_ASC')} `
-    + `merged:${list(`state:merged,mergedAfter:${JSON.stringify(since)},sort:MERGED_AT_DESC`)}}}`;
-  return `${parts.origin}/api/graphql?${new URLSearchParams({ query })}`;
+    + `merged:${list(`state:merged,mergedAfter:${JSON.stringify(since)},sort:MERGED_AT_DESC`)}}`).join(' ') + '}';
+  return `${groups[0].origin}/api/graphql?${new URLSearchParams({ query })}`;
 }
 
 async function loadGitlabSync() {
@@ -90,23 +116,44 @@ function gitlabMrFromNode(node) {
   };
 }
 
+// Antwort enthaelt je Gruppe einen Alias g0, g1, ...; eine aeltere Abfrage
+// liefert noch data.group. Ueberlappen sich Gruppen (Obergruppe plus
+// Untergruppe), kommt ein MR doppelt — die URL entscheidet.
 function gitlabSnapshotFromResponse(parsed) {
   if (parsed && Array.isArray(parsed.errors) && parsed.errors.length) {
     throw new Error(`GitLab meldet: ${parsed.errors.map(e => e.message).join('; ')}`);
   }
-  const group = parsed && parsed.data && parsed.data.group;
-  if (parsed && parsed.data && parsed.data.group === null) {
-    throw new Error('Gruppe nicht gefunden — Pfad prüfen oder in GitLab angemeldet?');
+  const payload = parsed && parsed.data;
+  if (!payload || typeof payload !== 'object') {
+    throw new Error('Das sieht nicht nach der GitLab-Antwort aus (kein data).');
   }
-  if (!group || !group.open || !group.merged) {
-    throw new Error('Das sieht nicht nach der GitLab-Antwort aus (kein data.group).');
+  const keys = Object.keys(payload).filter(key => key === 'group' || /^g\d+$/.test(key));
+  if (!keys.length) {
+    throw new Error('Das sieht nicht nach der GitLab-Antwort aus (keine Gruppe).');
   }
+  const queried = gitlabQueryGroups();
+  const missing = keys.filter(key => payload[key] === null)
+    .map(key => (key === 'group' ? null : queried[Number(key.slice(1))]))
+    .map(g => (g ? g.fullPath : 'Gruppe'));
+  if (missing.length) {
+    throw new Error(`Nicht gefunden: ${missing.join(', ')} — Pfad prüfen oder in GitLab angemeldet?`);
+  }
+  const groups = keys.map(key => payload[key]);
+  if (groups.some(g => !g.open || !g.merged)) {
+    throw new Error('Das sieht nicht nach der GitLab-Antwort aus (keine MR-Listen).');
+  }
+  const collect = (field, sortKey, dir) => {
+    const byUrl = new Map();
+    groups.forEach(g => (g[field].nodes || []).map(gitlabMrFromNode)
+      .forEach(mr => byUrl.set(mr.url || `${mr.project}!${mr.iid}`, mr)));
+    return [...byUrl.values()].sort((a, b) => dir * (Date.parse(a[sortKey]) - Date.parse(b[sortKey])));
+  };
   return {
     generatedAt: new Date().toISOString(),
-    source: getGitlabGroupUrl(),
-    open: (group.open.nodes || []).map(gitlabMrFromNode),
-    merged: (group.merged.nodes || []).map(gitlabMrFromNode),
-    truncated: !!(group.open.pageInfo?.hasNextPage || group.merged.pageInfo?.hasNextPage),
+    source: getGitlabGroupUrls().join(', '),
+    open: collect('open', 'createdAt', 1),
+    merged: collect('merged', 'mergedAt', -1),
+    truncated: groups.some(g => g.open.pageInfo?.hasNextPage || g.merged.pageInfo?.hasNextPage),
   };
 }
 
@@ -269,7 +316,7 @@ function gitlabAgeLabel(iso, prefix) {
 // Karte auf der Übersicht
 // ------------------------------------------------------------
 function renderGitlabMergeRequests() {
-  if (!gitlabSyncData && !getGitlabGroupUrl()) return '';
+  if (!gitlabSyncData && !getGitlabGroupUrls().length) return '';
   if (!gitlabSyncData) {
     return `
       <div class="card gitlab-card">
@@ -398,7 +445,14 @@ function renderGitlabMergedRow(mr) {
 // ------------------------------------------------------------
 function openGitlabImport() {
   const url = gitlabQueryUrl();
-  const group = getGitlabGroupUrl();
+  const groups = getGitlabGroupUrls();
+  const queried = gitlabQueryGroups();
+  const unreadable = groups.filter(g => !gitlabGroupParts(g));
+  const otherServer = groups.filter(g => {
+    const parts = gitlabGroupParts(g);
+    return parts && queried.length && parts.origin !== queried[0].origin;
+  });
+  const skipped = [...unreadable, ...otherServer];
   document.getElementById('modal').innerHTML = `
     <div class="modal-header">
       <span class="modal-title">GitLab-MRs einspielen</span>
@@ -406,20 +460,21 @@ function openGitlabImport() {
     </div>
     <div class="modal-body">
       <div class="form-group">
-        <label class="form-label">GitLab-Gruppe</label>
-        <input class="form-input" id="gitlabGroupInput" placeholder="https://gitlab.firma.at/meine-gruppe" value="${esc(group).replace(/"/g, '&quot;')}" onchange="saveGitlabGroupFromInput()">
-        <div class="form-hint">URL der Gruppe aus dem Browser. Alle Projekte darunter, inklusive Untergruppen, werden abgefragt.</div>
+        <label class="form-label">GitLab-Gruppen</label>
+        <textarea class="form-textarea" id="gitlabGroupInput" rows="${Math.max(2, groups.length + 1)}" placeholder="https://gitlab.firma.at/meine-gruppe" onchange="saveGitlabGroupFromInput()">${esc(groups.join('\n'))}</textarea>
+        <div class="form-hint">Eine Gruppen-URL pro Zeile, aus dem Browser kopiert. Alle Projekte darunter, inklusive Untergruppen, werden in einer Abfrage geholt.</div>
+        ${skipped.length ? `<div class="form-hint">Wird übersprungen (${unreadable.length && !otherServer.length ? 'keine Gruppe lesbar' : 'nur ein GitLab-Server pro Abfrage'}): ${skipped.map(esc).join(', ')}</div>` : ''}
       </div>
       <div class="form-group">
         ${url
           ? `<a class="btn btn-primary" style="display:block;text-align:center" href="${esc(url)}" target="_blank" rel="noopener">1 &middot; Abfrage in GitLab öffnen</a>
-             <div class="form-hint">Öffnet einen Tab mit der JSON-Antwort: offene MRs und was in den letzten ${GITLAB_MERGED_DAYS} Tagen gemerged wurde. Dort alles markieren und kopieren.</div>`
-          : `<div class="team-empty-copy">${group ? 'Aus dieser URL lässt sich keine Gruppe lesen.' : 'Erst die Gruppen-URL eintragen.'}</div>`}
+             <div class="form-hint">Öffnet einen Tab mit der JSON-Antwort${queried.length > 1 ? ` für alle ${queried.length} Gruppen` : ''}: offene MRs und was in den letzten ${GITLAB_MERGED_DAYS} Tagen gemerged wurde. Dort alles markieren und kopieren.</div>`
+          : `<div class="team-empty-copy">${groups.length ? 'Aus diesen URLs lässt sich keine Gruppe lesen.' : 'Erst eine Gruppen-URL eintragen.'}</div>`}
       </div>
       ${renderGitlabFilter()}
       <div class="form-group">
         <label class="form-label">2 &middot; Antwort hier einfügen</label>
-        <textarea class="form-textarea" id="gitlabImportText" rows="8" placeholder='{"data":{"group":{...}}}'></textarea>
+        <textarea class="form-textarea" id="gitlabImportText" rows="8" placeholder='{"data":{"g0":{...}}}'></textarea>
       </div>
       <button class="btn btn-primary" style="width:100%" onclick="submitGitlabImport()">3 &middot; Einspielen</button>
       <div class="form-hint" style="margin-top:10px;text-align:center">
@@ -431,11 +486,11 @@ function openGitlabImport() {
   openOverlay();
 }
 
-// Neue Gruppe sofort speichern und den Dialog mit dem neuen Abfrage-Link
+// Gruppen sofort speichern und den Dialog mit dem neuen Abfrage-Link
 // neu bauen, ohne eingefuegten Text zu verlieren.
 function saveGitlabGroupFromInput() {
   const input = document.getElementById('gitlabGroupInput');
-  setGitlabGroupUrl(input ? input.value : '');
+  setGitlabGroupUrls(String(input ? input.value : '').split(/[\n,]+/));
   reopenGitlabImportKeepingDraft();
 }
 

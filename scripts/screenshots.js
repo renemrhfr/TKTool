@@ -68,7 +68,7 @@ async function openApp(browser, theme, height = 900) {
   await page.addInitScript(([t]) => {
     localStorage.setItem('tktool-theme', t);
     localStorage.setItem('tktool-jira-base', 'https://jira.example.com');
-    localStorage.setItem('tktool-gitlab-group', 'https://gitlab.example.com/tk');
+    localStorage.setItem('tktool-gitlab-groups', JSON.stringify(['https://gitlab.example.com/tk', 'https://gitlab.example.com/plattform']));
     localStorage.setItem('tktool-device-id', 'mock-device');
   }, [theme]);
   await page.goto('file://' + path.join(root, 'index.html'));

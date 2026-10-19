@@ -256,7 +256,7 @@ function renderDashboardSyncButtons() {
   const jira = jiraSyncData || getJiraBaseUrl()
     ? renderDashboardSyncButton('jira', 'Jira', jiraSyncData && jiraSyncData.generatedAt, 'openJiraImport()')
     : '';
-  const gitlab = gitlabSyncData || getGitlabGroupUrl()
+  const gitlab = gitlabSyncData || getGitlabGroupUrls().length
     ? renderDashboardSyncButton('gitlab', 'GitLab', gitlabSyncData && gitlabSyncData.generatedAt, 'openGitlabImport()')
     : '';
   return jira + gitlab;

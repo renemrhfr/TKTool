@@ -47,7 +47,9 @@ function demoBoot() {
   window.resetDemo = () => { ls.del(KEY); location.reload(); };
   if (!ls.get('tktool-theme')) ls.set('tktool-theme', 'daylight');
   if (!ls.get('tktool-jira-base')) ls.set('tktool-jira-base', 'https://jira.example.com');
-  if (!ls.get('tktool-gitlab-group')) ls.set('tktool-gitlab-group', 'https://gitlab.example.com/tk');
+  if (!ls.get('tktool-gitlab-groups') && !ls.get('tktool-gitlab-group')) {
+    ls.set('tktool-gitlab-groups', JSON.stringify(['https://gitlab.example.com/tk', 'https://gitlab.example.com/plattform']));
+  }
   if (!ls.get('tktool-device-id')) ls.set('tktool-device-id', 'demo-device');
   // Kein Update-Check gegen GitHub aus der Demo heraus.
   const realFetch = window.fetch.bind(window);
