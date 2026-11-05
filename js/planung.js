@@ -273,6 +273,54 @@ function blockOpenTickets(b) {
   return (person && jiraPersonAuftragTickets(person, key)) || [];
 }
 
+// Wartet der Block auf jemand anderen (QA, Review)? Entweder liegt alles
+// Offene der Person in einem Uebergabe-Status, oder der Auftrag selbst steht
+// dort — oft wird er fuer QA ja gleich auf den Tester umgehaengt.
+function blockWaitingStatus(b) {
+  if (!b || isAbsenceBlock(b) || b.done) return '';
+  const state = b.state || blockState(b);
+  if (state === 'done') return '';
+  if (state === 'waiting') return String(blockOpenTickets(b)[0]?.status || 'wartet');
+  const ref = jiraStatusForBlock(b);
+  return ref && isJiraHandoverStatus(ref.status) ? String(ref.status || '') : '';
+}
+
+// Block steht nur noch im Tool: laut Jira hat die Person am Auftrag nichts
+// mehr, er haengt bei jemand anderem (oder bei niemandem). Liefert, bei wem
+// er jetzt liegt, sonst null.
+// Bewusst vorsichtig, damit vorausgeplante Bloecke nicht rot werden:
+//  - ohne Snapshot, ohne Account-ID oder unbekanntem Key keine Aussage
+//  - erledigt oder in Uebergabe (QA) ist "wartet", nicht "weg"
+//  - niemandem zugewiesen zaehlt erst, wenn der Block schon begonnen hat
+// Gelesen wird die rohe Ticketliste, nicht die gefilterte: ein Ticket in
+// einem ausgeblendeten Status gehoert der Person trotzdem noch.
+function blockJiraElsewhere(b) {
+  if (!jiraSyncData || !b || isAbsenceBlock(b) || b.done) return null;
+  const key = blockAuftragKey(b);
+  const person = key && data.persons.find(p => p.id === b.personId);
+  const accountId = person && person.jiraAccountId ? person.jiraAccountId.trim() : '';
+  if (!accountId) return null;
+  const auftrag = jiraTicketInfo(key);
+  if (!auftrag || !('assignee' in auftrag) || auftrag.statusCategory === 'done') return null;
+  if (isJiraHandoverStatus(auftrag.status)) return null;
+  if (auftrag.assignee === accountId) return null;
+  const own = (jiraSyncData.assignees || {})[accountId] || [];
+  if (own.some(t => t.statusCategory !== 'done' && jiraAuftragKey(t.key) === key)) return null;
+  if (!auftrag.assignee && !(b.start && b.start <= todayStr())) return null;
+  const owner = auftrag.assignee && data.persons.find(p => (p.jiraAccountId || '').trim() === auftrag.assignee);
+  return {
+    assignee: auftrag.assignee || null,
+    label: !auftrag.assignee ? 'niemandem zugewiesen'
+      : owner ? `bei ${owner.name}` : 'bei jemand anderem',
+  };
+}
+
+function blockJiraElsewhereTitle(b, elsewhere = blockJiraElsewhere(b)) {
+  return elsewhere
+    ? `Nicht mehr bei ${personName(b.personId) || 'der Person'} — laut Jira ${elsewhere.label} (Stand: ${jiraSyncAgeLabel() || 'unbekannt'}). Block nur noch im Tool.`
+    : '';
+}
+
 function renderTimeline({ personIds, startDate, endDate, options = {} }) {
   const {
     weekendsOnly = false,
@@ -456,6 +504,8 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
       if (b.state === 'waiting') classes.push('tl-block-handover-on');
       if (b.overrun) classes.push('tl-block-overrun');
       if (isBlockBlocked(b) && b.state !== 'done') classes.push('tl-block-blocked');
+      const elsewhere = absence ? null : blockJiraElsewhere(b);
+      if (elsewhere) classes.push('tl-block-elsewhere');
       const latest = blockLatestUpdate(b);
 
       // Schraffierter Teil: ab dem ersten sichtbaren Tag nach der Schaetzung.
@@ -475,6 +525,7 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
         absence ? `${formatDate(b.start)}–${formatDate(b.end)}` : `geschätzt ${formatDate(b.start)}–${formatDate(b.plannedEnd)}`,
         b.overrun ? `läuft über — laut Jira noch offen (Stand: ${syncAge})` : '',
         isBlockBlocked(b) && b.state !== 'done' ? `⛔ ${blockBlockedLabel(b)}` : '',
+        elsewhere ? `↪ ${blockJiraElsewhereTitle(b, elsewhere)}` : '',
         latest ? `zuletzt ${formatDateShort(latest.date)}: ${latest.text}` : '',
         b.state === 'done' ? (b.done ? 'erledigt' : 'erledigt laut Jira') : '',
         waitingStatus ? `wartet: ${waitingStatus} — Person ist hier faktisch frei` : '',
@@ -492,7 +543,7 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
         onclick="event.stopPropagation();if(_suppressNextBlockClick)return;if((event.metaKey||event.ctrlKey)&&openBlockJira('${b.id}'))return;openBlockForm('${b.id}')"
         onpointerdown="onBlockPointerDown(event,'${b.id}')">
         ${overrunPct ? `<span class="tl-block-overrun-part" style="width:${overrunPct.toFixed(3)}%"></span>` : ''}
-        ${b.state === 'done' ? '<span class="tl-block-check">&#x2713;</span>' : ''}${isBlockBlocked(b) && b.state !== 'done' ? '<span class="tl-block-blocked-mark" aria-label="blockiert">⛔</span>' : ''}${waitingStatus ? `<span class="tl-block-handover">${esc(waitingStatus.toLowerCase())}</span>` : ''}<span class="tl-block-label">${esc(label)}</span>${openSubtasks.length ? `<span class="tl-block-group-count" title="Offene Subtasks">${openSubtasks.length} offen</span>` : ''}${overrunDays ? `<span class="tl-block-overrun-days" title="geplant bis ${formatDate(b.plannedEnd)}">+${overrunDays} wt</span>` : ''}
+        ${b.state === 'done' ? '<span class="tl-block-check">&#x2713;</span>' : ''}${isBlockBlocked(b) && b.state !== 'done' ? '<span class="tl-block-blocked-mark" aria-label="blockiert">⛔</span>' : ''}${elsewhere ? '<span class="tl-block-elsewhere-mark" aria-label="nicht mehr zugewiesen">↪</span>' : ''}${waitingStatus ? `<span class="tl-block-handover">${esc(waitingStatus.toLowerCase())}</span>` : ''}<span class="tl-block-label">${esc(label)}</span>${openSubtasks.length ? `<span class="tl-block-group-count" title="Offene Subtasks">${openSubtasks.length} offen</span>` : ''}${overrunDays ? `<span class="tl-block-overrun-days" title="geplant bis ${formatDate(b.plannedEnd)}">+${overrunDays} wt</span>` : ''}
       </div>`;
     }).join('');
 

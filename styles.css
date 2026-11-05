@@ -7768,3 +7768,37 @@ body[data-theme] .dashboard-sync:hover {
   color: color-mix(in srgb, var(--danger) 82%, var(--text));
   font-weight: 600;
 }
+
+/* Block steht nur noch im Tool: das Ticket liegt in Jira nicht mehr bei der
+   Person. Gestrichelt wie etwas Vorlaeufiges, mit dem Pfeil "ist weiter". */
+.jira-elsewhere-mark,
+.tl-block-elsewhere-mark {
+  flex: 0 0 auto;
+  margin-right: 4px;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--danger) 80%, var(--text));
+}
+.tl-block-elsewhere-mark { font-size: 11px; margin-right: 0; }
+.tf-block-elsewhere {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+}
+.tf-block-elsewhere .tf-block-mark { background: color-mix(in srgb, var(--danger) 55%, transparent); }
+.tf-block-elsewhere .tf-block-title { color: var(--text-secondary); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--danger) 55%, transparent); }
+.tf-block-elsewhere .tf-block-timing { color: color-mix(in srgb, var(--danger) 80%, var(--text)); font-weight: 700; }
+.tl-block.tl-block-elsewhere { outline: 1px dashed color-mix(in srgb, var(--danger) 70%, transparent); outline-offset: -1px; }
+.tl-block.tl-block-elsewhere .tl-block-label { text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--danger) 60%, transparent); }
+
+/* Stand-up: nicht mehr zugewiesen markieren, wartet woanders zuruecknehmen. */
+.standup-block.is-elsewhere { border-left-style: dashed; border-left-color: color-mix(in srgb, var(--danger) 70%, var(--border)); }
+.standup-block.is-elsewhere .standup-block-title { text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--danger) 55%, transparent); }
+.standup-chip-elsewhere {
+  color: color-mix(in srgb, var(--danger) 82%, var(--text));
+  border-color: color-mix(in srgb, var(--danger) 55%, var(--border));
+  border-style: dashed;
+}
+.standup-block.is-waiting { border-left-color: var(--text-muted); opacity: .55; }
+.standup-block.is-waiting:hover,
+.standup-block.is-waiting:focus-within { opacity: 1; }
+.standup-block.is-waiting .standup-block-title { color: var(--text-secondary); font-weight: 500; }
+.standup-chip-waiting { border-style: dashed; color: var(--text-muted); }

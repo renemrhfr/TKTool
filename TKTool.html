@@ -7853,6 +7853,40 @@ body[data-theme] .dashboard-sync:hover {
   font-weight: 600;
 }
 
+/* Block steht nur noch im Tool: das Ticket liegt in Jira nicht mehr bei der
+   Person. Gestrichelt wie etwas Vorlaeufiges, mit dem Pfeil "ist weiter". */
+.jira-elsewhere-mark,
+.tl-block-elsewhere-mark {
+  flex: 0 0 auto;
+  margin-right: 4px;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--danger) 80%, var(--text));
+}
+.tl-block-elsewhere-mark { font-size: 11px; margin-right: 0; }
+.tf-block-elsewhere {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+}
+.tf-block-elsewhere .tf-block-mark { background: color-mix(in srgb, var(--danger) 55%, transparent); }
+.tf-block-elsewhere .tf-block-title { color: var(--text-secondary); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--danger) 55%, transparent); }
+.tf-block-elsewhere .tf-block-timing { color: color-mix(in srgb, var(--danger) 80%, var(--text)); font-weight: 700; }
+.tl-block.tl-block-elsewhere { outline: 1px dashed color-mix(in srgb, var(--danger) 70%, transparent); outline-offset: -1px; }
+.tl-block.tl-block-elsewhere .tl-block-label { text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--danger) 60%, transparent); }
+
+/* Stand-up: nicht mehr zugewiesen markieren, wartet woanders zuruecknehmen. */
+.standup-block.is-elsewhere { border-left-style: dashed; border-left-color: color-mix(in srgb, var(--danger) 70%, var(--border)); }
+.standup-block.is-elsewhere .standup-block-title { text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--danger) 55%, transparent); }
+.standup-chip-elsewhere {
+  color: color-mix(in srgb, var(--danger) 82%, var(--text));
+  border-color: color-mix(in srgb, var(--danger) 55%, var(--border));
+  border-style: dashed;
+}
+.standup-block.is-waiting { border-left-color: var(--text-muted); opacity: .55; }
+.standup-block.is-waiting:hover,
+.standup-block.is-waiting:focus-within { opacity: 1; }
+.standup-block.is-waiting .standup-block-title { color: var(--text-secondary); font-weight: 500; }
+.standup-chip-waiting { border-style: dashed; color: var(--text-muted); }
+
 </style>
 <style data-source="./themes/dark.css">
 body[data-theme="dark"],
@@ -9388,7 +9422,7 @@ body[data-theme="spaceship"] input[type="month"]::-webkit-calendar-picker-indica
 // ============================================================
 // DATA LAYER — File System Access API
 // ============================================================
-const APP_VERSION = '1.0.87';
+const APP_VERSION = '1.0.88';
 const DATA_FILENAME = 'tktool-data.json';
 const JIRA_SYNC_FILENAME = 'jira-tickets.json';
 const JIRA_QUERY_MAX_RESULTS = 100;
@@ -13991,7 +14025,7 @@ function standupBlocksFor(personId, meeting) {
       || blockUpdates(b).some(u => u.meetingId === meeting.id)))
     .sort((a, b) => (isBlockBlocked(b) - isBlockBlocked(a))
       || (b.overrun - a.overrun)
-      || (a.state === 'waiting') - (b.state === 'waiting')
+      || !!blockWaitingStatus(a) - !!blockWaitingStatus(b)
       || a.end.localeCompare(b.end));
 }
 
@@ -14003,15 +14037,19 @@ function renderStandupBlock(meeting, b) {
   const key = blockAuftragKey(b);
   const previous = blockLatestUpdate(b, meeting.id);
   const own = blockUpdates(b).filter(u => u.meetingId === meeting.id);
-  const waiting = b.state === 'waiting' ? String(blockOpenTickets(b)[0]?.status || 'wartet') : '';
+  // Wartet woanders (QA, Review): steht noch da, damit man nachfragen kann,
+  // tritt aber zurueck — die Person muss sich gerade nicht drum kuemmern.
+  const waiting = isBlockBlocked(b) ? '' : blockWaitingStatus(b);
+  const elsewhere = blockJiraElsewhere(b);
   const chips = [
     isBlockBlocked(b) ? `<span class="standup-chip standup-chip-blocked">${esc(blockBlockedLabel(b))}</span>` : '',
+    elsewhere ? `<span class="standup-chip standup-chip-elsewhere" title="${esc(blockJiraElsewhereTitle(b, elsewhere))}">↪ nicht mehr zugewiesen · ${esc(elsewhere.label)}</span>` : '',
     b.overrun ? `<span class="standup-chip standup-chip-overrun">über seit ${formatDateShort(b.plannedEnd)}</span>` : '',
-    waiting ? `<span class="standup-chip">${esc(waiting.toLowerCase())}</span>` : '',
+    waiting ? `<span class="standup-chip standup-chip-waiting" title="Wartet woanders — liegt gerade nicht bei der Person">wartet · ${esc(waiting.toLowerCase())}</span>` : '',
     !b.overrun && !waiting ? `<span class="standup-chip standup-chip-muted">bis ${formatDateShort(b.end)}</span>` : '',
   ].join('');
   return `
-    <div class="standup-block ${isBlockBlocked(b) ? 'is-blocked' : ''}">
+    <div class="standup-block ${isBlockBlocked(b) ? 'is-blocked' : ''} ${waiting ? 'is-waiting' : ''} ${elsewhere ? 'is-elsewhere' : ''}">
       <div class="standup-block-head">
         <button class="standup-block-title" type="button" onclick="openBlockForm('${b.id}')" title="Block öffnen">${esc(blockDisplayLabel(b))}</button>
         ${key ? jiraKeyLink(key) : ''}
@@ -15334,6 +15372,13 @@ function blockStuckMark(block) {
     : '';
 }
 
+// Pendant fuer Bloecke, deren Ticket in Jira nicht mehr bei der Person liegt.
+function blockElsewhereMark(block, elsewhere = blockJiraElsewhere(block)) {
+  return elsewhere
+    ? `<span class="jira-elsewhere-mark" title="${esc(blockJiraElsewhereTitle(block, elsewhere))}" aria-label="nicht mehr zugewiesen">↪</span>`
+    : '';
+}
+
 function teamFocusWorkingBlocks(entry) {
   return entry.activeBlocks.map(block => ({ block, kind: 'active' }));
 }
@@ -15368,12 +15413,15 @@ function renderTeamFocusBlockRow(block, kind) {
   const label = blockDisplayLabel(block);
   const ref = blockAuftragKey(block);
   const stuck = kind === 'active' && isBlockStuck(block);
-  const timing = kind === 'upcoming' ? `ab ${formatDateShort(block.start)}`
-    : stuck ? blockBlockedLabel(block)
+  const elsewhere = blockJiraElsewhere(block);
+  const timing = stuck ? blockBlockedLabel(block)
+    : elsewhere ? `jira: ${elsewhere.label}`
+    : kind === 'upcoming' ? `ab ${formatDateShort(block.start)}`
     : handover ? 'wartet'
     : block.overrun ? `über seit ${formatDateShort(block.plannedEnd)}`
     : `noch ${workdaysBetween(todayStr(), block.end)} wt`;
   const state = stuck ? blockBlockedLabel(block)
+    : elsewhere ? blockJiraElsewhereTitle(block, elsewhere)
     : handover ? `wartet auf ${handover}`
     : block.overrun ? 'läuft über — laut Jira noch offen'
     : '';
@@ -15383,10 +15431,10 @@ function renderTeamFocusBlockRow(block, kind) {
     canOpenJira ? `Jira: ${ref} (Cmd/Strg-Klick öffnet)` : '',
   ].filter(Boolean).join('\n');
   return `
-    <button class="tf-block tf-block-${kind} ${handover ? 'tf-block-handover' : ''} ${block.overrun ? 'tf-block-overrun' : ''} ${stuck ? 'tf-block-blocked' : ''}" type="button" onclick="if((event.metaKey||event.ctrlKey)&&openBlockJira('${block.id}'))return;navigateToPlanungBlock('${block.id}')" title="${esc(title)}">
+    <button class="tf-block tf-block-${kind} ${handover ? 'tf-block-handover' : ''} ${block.overrun ? 'tf-block-overrun' : ''} ${stuck ? 'tf-block-blocked' : ''} ${elsewhere ? 'tf-block-elsewhere' : ''}" type="button" onclick="if((event.metaKey||event.ctrlKey)&&openBlockJira('${block.id}'))return;navigateToPlanungBlock('${block.id}')" title="${esc(title)}">
       <span class="tf-block-mark"></span>
       <span class="tf-block-body">
-        ${stuck ? blockStuckMark(block) : ''}<span class="tf-block-title">${esc(label)}</span>
+        ${stuck ? blockStuckMark(block) : ''}${blockElsewhereMark(block, elsewhere)}<span class="tf-block-title">${esc(label)}</span>
         ${ref ? `<span class="tf-block-ref">${esc(ref)}</span>` : ''}
       </span>
       <span class="tf-block-timing">${esc(timing)}</span>
@@ -15467,18 +15515,18 @@ function renderTeamFocusNow(entry, workingBlocks) {
     // Bei mehreren parallelen steht das zuerst endende da. Die Anzahl gehoert
     // in die Label-Zeile: viel Parallelarbeit ist selbst das Signal.
     const count = workingBlocks.length;
-    const all = workingBlocks.map(({ block }) => `${isBlockStuck(block) ? '⛔ ' : ''}${blockDisplayLabel(block)}`).join('\n');
+    const all = workingBlocks.map(({ block }) => `${isBlockStuck(block) ? '⛔ ' : ''}${blockJiraElsewhere(block) ? '↪ ' : ''}${blockDisplayLabel(block)}`).join('\n');
     return `
       <span class="tf-now"${count > 1 ? ` title="${esc(all)}"` : ''}>
         <span class="tf-now-label">${count > 1 ? `Arbeitet an <span class="tf-now-count${count >= 3 ? ' is-high' : ''}">${count} parallel</span>` : 'Arbeitet an'}</span>
-        <span class="tf-now-title">${blockStuckMark(current)}${esc(blockDisplayLabel(current))}</span>
+        <span class="tf-now-title">${blockStuckMark(current)}${blockElsewhereMark(current)}${esc(blockDisplayLabel(current))}</span>
       </span>`;
   }
   if (next) {
     return `
       <span class="tf-now tf-now-next">
         <span class="tf-now-label">Ab ${esc(formatDateShort(next.start))}</span>
-        <span class="tf-now-title">${esc(blockDisplayLabel(next))}</span>
+        <span class="tf-now-title">${blockElsewhereMark(next)}${esc(blockDisplayLabel(next))}</span>
       </span>`;
   }
   return '<span class="tf-now tf-now-empty"><span class="tf-now-label">Nichts eingeplant</span></span>';
@@ -17852,6 +17900,54 @@ function blockOpenTickets(b) {
   return (person && jiraPersonAuftragTickets(person, key)) || [];
 }
 
+// Wartet der Block auf jemand anderen (QA, Review)? Entweder liegt alles
+// Offene der Person in einem Uebergabe-Status, oder der Auftrag selbst steht
+// dort — oft wird er fuer QA ja gleich auf den Tester umgehaengt.
+function blockWaitingStatus(b) {
+  if (!b || isAbsenceBlock(b) || b.done) return '';
+  const state = b.state || blockState(b);
+  if (state === 'done') return '';
+  if (state === 'waiting') return String(blockOpenTickets(b)[0]?.status || 'wartet');
+  const ref = jiraStatusForBlock(b);
+  return ref && isJiraHandoverStatus(ref.status) ? String(ref.status || '') : '';
+}
+
+// Block steht nur noch im Tool: laut Jira hat die Person am Auftrag nichts
+// mehr, er haengt bei jemand anderem (oder bei niemandem). Liefert, bei wem
+// er jetzt liegt, sonst null.
+// Bewusst vorsichtig, damit vorausgeplante Bloecke nicht rot werden:
+//  - ohne Snapshot, ohne Account-ID oder unbekanntem Key keine Aussage
+//  - erledigt oder in Uebergabe (QA) ist "wartet", nicht "weg"
+//  - niemandem zugewiesen zaehlt erst, wenn der Block schon begonnen hat
+// Gelesen wird die rohe Ticketliste, nicht die gefilterte: ein Ticket in
+// einem ausgeblendeten Status gehoert der Person trotzdem noch.
+function blockJiraElsewhere(b) {
+  if (!jiraSyncData || !b || isAbsenceBlock(b) || b.done) return null;
+  const key = blockAuftragKey(b);
+  const person = key && data.persons.find(p => p.id === b.personId);
+  const accountId = person && person.jiraAccountId ? person.jiraAccountId.trim() : '';
+  if (!accountId) return null;
+  const auftrag = jiraTicketInfo(key);
+  if (!auftrag || !('assignee' in auftrag) || auftrag.statusCategory === 'done') return null;
+  if (isJiraHandoverStatus(auftrag.status)) return null;
+  if (auftrag.assignee === accountId) return null;
+  const own = (jiraSyncData.assignees || {})[accountId] || [];
+  if (own.some(t => t.statusCategory !== 'done' && jiraAuftragKey(t.key) === key)) return null;
+  if (!auftrag.assignee && !(b.start && b.start <= todayStr())) return null;
+  const owner = auftrag.assignee && data.persons.find(p => (p.jiraAccountId || '').trim() === auftrag.assignee);
+  return {
+    assignee: auftrag.assignee || null,
+    label: !auftrag.assignee ? 'niemandem zugewiesen'
+      : owner ? `bei ${owner.name}` : 'bei jemand anderem',
+  };
+}
+
+function blockJiraElsewhereTitle(b, elsewhere = blockJiraElsewhere(b)) {
+  return elsewhere
+    ? `Nicht mehr bei ${personName(b.personId) || 'der Person'} — laut Jira ${elsewhere.label} (Stand: ${jiraSyncAgeLabel() || 'unbekannt'}). Block nur noch im Tool.`
+    : '';
+}
+
 function renderTimeline({ personIds, startDate, endDate, options = {} }) {
   const {
     weekendsOnly = false,
@@ -18035,6 +18131,8 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
       if (b.state === 'waiting') classes.push('tl-block-handover-on');
       if (b.overrun) classes.push('tl-block-overrun');
       if (isBlockBlocked(b) && b.state !== 'done') classes.push('tl-block-blocked');
+      const elsewhere = absence ? null : blockJiraElsewhere(b);
+      if (elsewhere) classes.push('tl-block-elsewhere');
       const latest = blockLatestUpdate(b);
 
       // Schraffierter Teil: ab dem ersten sichtbaren Tag nach der Schaetzung.
@@ -18054,6 +18152,7 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
         absence ? `${formatDate(b.start)}–${formatDate(b.end)}` : `geschätzt ${formatDate(b.start)}–${formatDate(b.plannedEnd)}`,
         b.overrun ? `läuft über — laut Jira noch offen (Stand: ${syncAge})` : '',
         isBlockBlocked(b) && b.state !== 'done' ? `⛔ ${blockBlockedLabel(b)}` : '',
+        elsewhere ? `↪ ${blockJiraElsewhereTitle(b, elsewhere)}` : '',
         latest ? `zuletzt ${formatDateShort(latest.date)}: ${latest.text}` : '',
         b.state === 'done' ? (b.done ? 'erledigt' : 'erledigt laut Jira') : '',
         waitingStatus ? `wartet: ${waitingStatus} — Person ist hier faktisch frei` : '',
@@ -18071,7 +18170,7 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
         onclick="event.stopPropagation();if(_suppressNextBlockClick)return;if((event.metaKey||event.ctrlKey)&&openBlockJira('${b.id}'))return;openBlockForm('${b.id}')"
         onpointerdown="onBlockPointerDown(event,'${b.id}')">
         ${overrunPct ? `<span class="tl-block-overrun-part" style="width:${overrunPct.toFixed(3)}%"></span>` : ''}
-        ${b.state === 'done' ? '<span class="tl-block-check">&#x2713;</span>' : ''}${isBlockBlocked(b) && b.state !== 'done' ? '<span class="tl-block-blocked-mark" aria-label="blockiert">⛔</span>' : ''}${waitingStatus ? `<span class="tl-block-handover">${esc(waitingStatus.toLowerCase())}</span>` : ''}<span class="tl-block-label">${esc(label)}</span>${openSubtasks.length ? `<span class="tl-block-group-count" title="Offene Subtasks">${openSubtasks.length} offen</span>` : ''}${overrunDays ? `<span class="tl-block-overrun-days" title="geplant bis ${formatDate(b.plannedEnd)}">+${overrunDays} wt</span>` : ''}
+        ${b.state === 'done' ? '<span class="tl-block-check">&#x2713;</span>' : ''}${isBlockBlocked(b) && b.state !== 'done' ? '<span class="tl-block-blocked-mark" aria-label="blockiert">⛔</span>' : ''}${elsewhere ? '<span class="tl-block-elsewhere-mark" aria-label="nicht mehr zugewiesen">↪</span>' : ''}${waitingStatus ? `<span class="tl-block-handover">${esc(waitingStatus.toLowerCase())}</span>` : ''}<span class="tl-block-label">${esc(label)}</span>${openSubtasks.length ? `<span class="tl-block-group-count" title="Offene Subtasks">${openSubtasks.length} offen</span>` : ''}${overrunDays ? `<span class="tl-block-overrun-days" title="geplant bis ${formatDate(b.plannedEnd)}">+${overrunDays} wt</span>` : ''}
       </div>`;
     }).join('');
 

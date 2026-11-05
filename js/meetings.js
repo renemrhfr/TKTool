@@ -532,7 +532,7 @@ function standupBlocksFor(personId, meeting) {
       || blockUpdates(b).some(u => u.meetingId === meeting.id)))
     .sort((a, b) => (isBlockBlocked(b) - isBlockBlocked(a))
       || (b.overrun - a.overrun)
-      || (a.state === 'waiting') - (b.state === 'waiting')
+      || !!blockWaitingStatus(a) - !!blockWaitingStatus(b)
       || a.end.localeCompare(b.end));
 }
 
@@ -544,15 +544,19 @@ function renderStandupBlock(meeting, b) {
   const key = blockAuftragKey(b);
   const previous = blockLatestUpdate(b, meeting.id);
   const own = blockUpdates(b).filter(u => u.meetingId === meeting.id);
-  const waiting = b.state === 'waiting' ? String(blockOpenTickets(b)[0]?.status || 'wartet') : '';
+  // Wartet woanders (QA, Review): steht noch da, damit man nachfragen kann,
+  // tritt aber zurueck — die Person muss sich gerade nicht drum kuemmern.
+  const waiting = isBlockBlocked(b) ? '' : blockWaitingStatus(b);
+  const elsewhere = blockJiraElsewhere(b);
   const chips = [
     isBlockBlocked(b) ? `<span class="standup-chip standup-chip-blocked">${esc(blockBlockedLabel(b))}</span>` : '',
+    elsewhere ? `<span class="standup-chip standup-chip-elsewhere" title="${esc(blockJiraElsewhereTitle(b, elsewhere))}">↪ nicht mehr zugewiesen · ${esc(elsewhere.label)}</span>` : '',
     b.overrun ? `<span class="standup-chip standup-chip-overrun">über seit ${formatDateShort(b.plannedEnd)}</span>` : '',
-    waiting ? `<span class="standup-chip">${esc(waiting.toLowerCase())}</span>` : '',
+    waiting ? `<span class="standup-chip standup-chip-waiting" title="Wartet woanders — liegt gerade nicht bei der Person">wartet · ${esc(waiting.toLowerCase())}</span>` : '',
     !b.overrun && !waiting ? `<span class="standup-chip standup-chip-muted">bis ${formatDateShort(b.end)}</span>` : '',
   ].join('');
   return `
-    <div class="standup-block ${isBlockBlocked(b) ? 'is-blocked' : ''}">
+    <div class="standup-block ${isBlockBlocked(b) ? 'is-blocked' : ''} ${waiting ? 'is-waiting' : ''} ${elsewhere ? 'is-elsewhere' : ''}">
       <div class="standup-block-head">
         <button class="standup-block-title" type="button" onclick="openBlockForm('${b.id}')" title="Block öffnen">${esc(blockDisplayLabel(b))}</button>
         ${key ? jiraKeyLink(key) : ''}

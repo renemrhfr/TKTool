@@ -311,6 +311,13 @@ function blockStuckMark(block) {
     : '';
 }
 
+// Pendant fuer Bloecke, deren Ticket in Jira nicht mehr bei der Person liegt.
+function blockElsewhereMark(block, elsewhere = blockJiraElsewhere(block)) {
+  return elsewhere
+    ? `<span class="jira-elsewhere-mark" title="${esc(blockJiraElsewhereTitle(block, elsewhere))}" aria-label="nicht mehr zugewiesen">↪</span>`
+    : '';
+}
+
 function teamFocusWorkingBlocks(entry) {
   return entry.activeBlocks.map(block => ({ block, kind: 'active' }));
 }
@@ -345,12 +352,15 @@ function renderTeamFocusBlockRow(block, kind) {
   const label = blockDisplayLabel(block);
   const ref = blockAuftragKey(block);
   const stuck = kind === 'active' && isBlockStuck(block);
-  const timing = kind === 'upcoming' ? `ab ${formatDateShort(block.start)}`
-    : stuck ? blockBlockedLabel(block)
+  const elsewhere = blockJiraElsewhere(block);
+  const timing = stuck ? blockBlockedLabel(block)
+    : elsewhere ? `jira: ${elsewhere.label}`
+    : kind === 'upcoming' ? `ab ${formatDateShort(block.start)}`
     : handover ? 'wartet'
     : block.overrun ? `über seit ${formatDateShort(block.plannedEnd)}`
     : `noch ${workdaysBetween(todayStr(), block.end)} wt`;
   const state = stuck ? blockBlockedLabel(block)
+    : elsewhere ? blockJiraElsewhereTitle(block, elsewhere)
     : handover ? `wartet auf ${handover}`
     : block.overrun ? 'läuft über — laut Jira noch offen'
     : '';
@@ -360,10 +370,10 @@ function renderTeamFocusBlockRow(block, kind) {
     canOpenJira ? `Jira: ${ref} (Cmd/Strg-Klick öffnet)` : '',
   ].filter(Boolean).join('\n');
   return `
-    <button class="tf-block tf-block-${kind} ${handover ? 'tf-block-handover' : ''} ${block.overrun ? 'tf-block-overrun' : ''} ${stuck ? 'tf-block-blocked' : ''}" type="button" onclick="if((event.metaKey||event.ctrlKey)&&openBlockJira('${block.id}'))return;navigateToPlanungBlock('${block.id}')" title="${esc(title)}">
+    <button class="tf-block tf-block-${kind} ${handover ? 'tf-block-handover' : ''} ${block.overrun ? 'tf-block-overrun' : ''} ${stuck ? 'tf-block-blocked' : ''} ${elsewhere ? 'tf-block-elsewhere' : ''}" type="button" onclick="if((event.metaKey||event.ctrlKey)&&openBlockJira('${block.id}'))return;navigateToPlanungBlock('${block.id}')" title="${esc(title)}">
       <span class="tf-block-mark"></span>
       <span class="tf-block-body">
-        ${stuck ? blockStuckMark(block) : ''}<span class="tf-block-title">${esc(label)}</span>
+        ${stuck ? blockStuckMark(block) : ''}${blockElsewhereMark(block, elsewhere)}<span class="tf-block-title">${esc(label)}</span>
         ${ref ? `<span class="tf-block-ref">${esc(ref)}</span>` : ''}
       </span>
       <span class="tf-block-timing">${esc(timing)}</span>
@@ -444,18 +454,18 @@ function renderTeamFocusNow(entry, workingBlocks) {
     // Bei mehreren parallelen steht das zuerst endende da. Die Anzahl gehoert
     // in die Label-Zeile: viel Parallelarbeit ist selbst das Signal.
     const count = workingBlocks.length;
-    const all = workingBlocks.map(({ block }) => `${isBlockStuck(block) ? '⛔ ' : ''}${blockDisplayLabel(block)}`).join('\n');
+    const all = workingBlocks.map(({ block }) => `${isBlockStuck(block) ? '⛔ ' : ''}${blockJiraElsewhere(block) ? '↪ ' : ''}${blockDisplayLabel(block)}`).join('\n');
     return `
       <span class="tf-now"${count > 1 ? ` title="${esc(all)}"` : ''}>
         <span class="tf-now-label">${count > 1 ? `Arbeitet an <span class="tf-now-count${count >= 3 ? ' is-high' : ''}">${count} parallel</span>` : 'Arbeitet an'}</span>
-        <span class="tf-now-title">${blockStuckMark(current)}${esc(blockDisplayLabel(current))}</span>
+        <span class="tf-now-title">${blockStuckMark(current)}${blockElsewhereMark(current)}${esc(blockDisplayLabel(current))}</span>
       </span>`;
   }
   if (next) {
     return `
       <span class="tf-now tf-now-next">
         <span class="tf-now-label">Ab ${esc(formatDateShort(next.start))}</span>
-        <span class="tf-now-title">${esc(blockDisplayLabel(next))}</span>
+        <span class="tf-now-title">${blockElsewhereMark(next)}${esc(blockDisplayLabel(next))}</span>
       </span>`;
   }
   return '<span class="tf-now tf-now-empty"><span class="tf-now-label">Nichts eingeplant</span></span>';

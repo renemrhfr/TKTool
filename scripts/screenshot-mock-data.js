@@ -76,6 +76,10 @@ function buildMockData(TODAY) {
     ['POL-440', 'Vertragsübersicht: Filter nach Sparte', [
       ['POL-441', 'Backend-Query und Index', 'miriam', 'Offen'],
     ]],
+    // Liegt in QA -> im Standup ausgegraut
+    ['POL-425', 'Kundenportal: Dokumente nach Polizze gruppieren', [
+      ['POL-426', 'Gruppierung im Frontend', 'miriam', 'QA'],
+    ]],
     // Ohne Block in der Planung -> landet im Posteingang
     ['POL-445', 'Adressänderung: Validierung gegen Post-API', [
       ['POL-446', 'API-Client mit Retry', 'david', 'Offen'],
@@ -105,6 +109,12 @@ function buildMockData(TODAY) {
     parentKey: '', subtask: false, parentSummary: '' });
   refs['POL-450'] = { status: 'In Arbeit', statusCategory: 'indeterminate', assignee: 'acc-jonas',
     summary: 'Hotfix: Prämienrundung bei Ratenzahlung', parentKey: '', subtask: false, parentSummary: '' };
+  // Umgehaengt: Block steht noch bei Jonas, das Ticket liegt jetzt bei Felix
+  assignees['acc-felix'].push({ key: 'POL-455', summary: 'Bonus-Malus-Stufe im Angebot anzeigen', status: 'In Arbeit',
+    statusCategory: 'indeterminate', priority: 'Medium', type: 'Story', updated: day(-1) + 'T14:05:00.000+0200',
+    parentKey: '', subtask: false, parentSummary: '' });
+  refs['POL-455'] = { status: 'In Arbeit', statusCategory: 'indeterminate', assignee: 'acc-felix',
+    summary: 'Bonus-Malus-Stufe im Angebot anzeigen', parentKey: '', subtask: false, parentSummary: '' };
   // Erledigt
   refs['POL-360'] = { status: 'Erledigt', statusCategory: 'done', assignee: 'acc-miriam',
     summary: 'Zahlungsverzug: Mahnstufen im Kundenportal anzeigen', parentKey: '', subtask: false, parentSummary: '' };
@@ -151,6 +161,8 @@ function buildMockData(TODAY) {
   block('miriam', 'POL-440', wd(10), wd(16));
   block('jonas', 'POL-401', wd(-8), wd(12));
   block('jonas', 'POL-450', wd(-1), wd(1));
+  block('jonas', 'POL-455', wd(-3), wd(6));
+  block('miriam', 'POL-425', wd(-6), wd(1));
   away('felix', 'Zeitausgleich', wd(1), wd(1));
   block('felix', 'OPS-77', wd(-6), wd(5));
   block('sophie', 'POL-430', wd(7), wd(14));
