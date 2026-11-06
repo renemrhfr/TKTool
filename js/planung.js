@@ -291,11 +291,16 @@ function blockWaitingStatus(b) {
 // Bewusst vorsichtig, damit vorausgeplante Bloecke nicht rot werden:
 //  - ohne Snapshot, ohne Account-ID oder unbekanntem Key keine Aussage
 //  - erledigt oder in Uebergabe (QA) ist "wartet", nicht "weg"
-//  - niemandem zugewiesen zaehlt erst, wenn der Block schon begonnen hat
+//  - nur laufende Bloecke: abgelaufene sind vorbei, kommende vorausgeplant
 // Gelesen wird die rohe Ticketliste, nicht die gefilterte: ein Ticket in
 // einem ausgeblendeten Status gehoert der Person trotzdem noch.
 function blockJiraElsewhere(b) {
   if (!jiraSyncData || !b || isAbsenceBlock(b) || b.done) return null;
+  // Abgelaufene Bloecke sind Geschichte: dass das Ticket danach weitergezogen
+  // ist, ist normal und kein Hinweis mehr wert.
+  // Kommende ebenso: wer vorausplant, hat das Ticket oft noch gar nicht.
+  const today = todayStr();
+  if (isBlockParked(b) || b.end < today || b.start > today) return null;
   const key = blockAuftragKey(b);
   const person = key && data.persons.find(p => p.id === b.personId);
   const accountId = person && person.jiraAccountId ? person.jiraAccountId.trim() : '';
@@ -306,7 +311,6 @@ function blockJiraElsewhere(b) {
   if (auftrag.assignee === accountId) return null;
   const own = (jiraSyncData.assignees || {})[accountId] || [];
   if (own.some(t => t.statusCategory !== 'done' && jiraAuftragKey(t.key) === key)) return null;
-  if (!auftrag.assignee && !(b.start && b.start <= todayStr())) return null;
   const owner = auftrag.assignee && data.persons.find(p => (p.jiraAccountId || '').trim() === auftrag.assignee);
   return {
     assignee: auftrag.assignee || null,
@@ -501,6 +505,9 @@ function renderTimeline({ personIds, startDate, endDate, options = {} }) {
       if (viewState.planungHighlightBlockId === b.id) classes.push('tl-block-highlight');
       if (sIdx === eIdx) classes.push('tl-block-single');
       if (b.state === 'done') classes.push('tl-block-done');
+      // Vorbei: tritt zurueck. Ueberzogene Bloecke enden per blockView heute
+      // und bleiben damit voll sichtbar.
+      else if (!isBlockParked(b) && b.end < todayStr()) classes.push('tl-block-past');
       if (b.state === 'waiting') classes.push('tl-block-handover-on');
       if (b.overrun) classes.push('tl-block-overrun');
       if (isBlockBlocked(b) && b.state !== 'done') classes.push('tl-block-blocked');

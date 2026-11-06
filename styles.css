@@ -7802,3 +7802,8 @@ body[data-theme] .dashboard-sync:hover {
 .standup-block.is-waiting:focus-within { opacity: 1; }
 .standup-block.is-waiting .standup-block-title { color: var(--text-secondary); font-weight: 500; }
 .standup-chip-waiting { border-style: dashed; color: var(--text-muted); }
+
+/* Planung: abgelaufene Bloecke treten zurueck, wie Erledigtes, nur ohne
+   Durchstreichen. Spezifisch genug, um den Uebergabe-Stil zu ueberstimmen. */
+.tl-block.tl-block-past { opacity: 0.5; }
+.tl-block.tl-block-past:hover { opacity: 0.85; }

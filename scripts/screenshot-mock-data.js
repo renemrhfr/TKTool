@@ -165,6 +165,8 @@ function buildMockData(TODAY) {
   block('miriam', 'POL-425', wd(-6), wd(1));
   away('felix', 'Zeitausgleich', wd(1), wd(1));
   block('felix', 'OPS-77', wd(-6), wd(5));
+  // Abgelaufen: tritt in der Planung zurueck
+  block('felix', 'OPS-70', wd(-10), wd(-2), { label: 'Log-Retention auf 30 Tage' });
   block('sophie', 'POL-430', wd(7), wd(14));
   away('sophie', 'Urlaub', wd(22), wd(26));
 
