@@ -1078,6 +1078,9 @@ textarea {
 
 .team-section-block .card { margin-bottom: 0; }
 .team-section-planung { margin-bottom: 12px; }
+.team-section-planung .card-header { gap: 12px; }
+.team-section-planung .tf-plan-group-rows { grid-template-columns: 1fr; }
+.team-plan-upcoming { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--section-border, var(--border)); }
 .team-detail-notes { margin-bottom: 0; }
 .team-empty-copy { color: var(--text-muted); font-size: 12px; }
 

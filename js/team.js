@@ -205,6 +205,49 @@ function renderPersonJiraBlock(person) {
   `;
 }
 
+// Woran die Person laut Planung gerade sitzt: alle Bloecke, deren Spanne
+// heute umfasst — auch die, die auf QA/Review warten, denn "offen" heisst
+// hier "noch nicht erledigt", nicht "bindet die Person". Darunter die
+// naechsten kommenden, damit man sieht, was danach anliegt.
+const TEAM_UPCOMING_BLOCKS = 3;
+
+function personOpenPlanBlocks(personId, date = todayStr()) {
+  return (data.blocks || [])
+    .filter(b => b.personId === personId && !isAbsenceBlock(b) && !isBlockParked(b))
+    .map(blockView)
+    .filter(b => b.state !== 'done' && b.start <= date && b.end >= date)
+    .sort((a, b) => a.end.localeCompare(b.end));
+}
+
+function renderPersonPlanBlocks(person) {
+  const today = todayStr();
+  const running = personOpenPlanBlocks(person.id, today);
+  const upcoming = personUpcomingBlocks(person.id, today);
+  const shownUpcoming = upcoming.slice(0, TEAM_UPCOMING_BLOCKS);
+  const moreUpcoming = upcoming.length - shownUpcoming.length;
+  const absence = personAbsenceOnDate(person.id, today);
+  const empty = absence
+    ? `${esc(teamFocusAbsenceLabel(absence))} &middot; kein laufender Block`
+    : 'Kein laufender Block';
+  return `
+    <div class="team-section-block team-section-planung">
+      <div class="card-header">
+        <span class="card-title">Laufende Bl&ouml;cke (${running.length})</span>
+        <button class="tf-blocks-link" type="button" onclick="navigate('planung',{planungPerson:'${person.id}'})">In der Planung &ouml;ffnen &rarr;</button>
+      </div>
+      ${running.length
+        ? `<div class="tf-plan-group-rows">${running.map(b => renderTeamFocusBlockRow(b, 'active')).join('')}</div>`
+        : `<div class="team-empty-copy">${empty}</div>`}
+      ${shownUpcoming.length ? `
+        <div class="team-plan-upcoming">
+          <div class="tf-context-heading"><strong>Danach geplant <span class="tf-blocks-count">${upcoming.length}</span></strong>${moreUpcoming ? `<span>+${moreUpcoming} ${moreUpcoming === 1 ? 'weiterer' : 'weitere'} in der Planung</span>` : ''}</div>
+          <div class="tf-plan-group-rows">${shownUpcoming.map(b => renderTeamFocusBlockRow(b, 'upcoming')).join('')}</div>
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
+
 // ============================================================
 // TEAM VIEW
 // ============================================================
@@ -293,6 +336,8 @@ function renderTeam() {
                 </div>
               </div>
             </div>
+
+            ${renderPersonPlanBlocks(selectedPerson)}
 
             <div class="team-detail-grid">
               <div class="team-section-block">

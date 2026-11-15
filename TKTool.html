@@ -1162,6 +1162,9 @@ textarea {
 
 .team-section-block .card { margin-bottom: 0; }
 .team-section-planung { margin-bottom: 12px; }
+.team-section-planung .card-header { gap: 12px; }
+.team-section-planung .tf-plan-group-rows { grid-template-columns: 1fr; }
+.team-plan-upcoming { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--section-border, var(--border)); }
 .team-detail-notes { margin-bottom: 0; }
 .team-empty-copy { color: var(--text-muted); font-size: 12px; }
 
@@ -9427,7 +9430,7 @@ body[data-theme="spaceship"] input[type="month"]::-webkit-calendar-picker-indica
 // ============================================================
 // DATA LAYER — File System Access API
 // ============================================================
-const APP_VERSION = '1.0.90';
+const APP_VERSION = '1.0.91';
 const DATA_FILENAME = 'tktool-data.json';
 const JIRA_SYNC_FILENAME = 'jira-tickets.json';
 const JIRA_QUERY_MAX_RESULTS = 100;
@@ -12647,6 +12650,49 @@ function renderPersonJiraBlock(person) {
   `;
 }
 
+// Woran die Person laut Planung gerade sitzt: alle Bloecke, deren Spanne
+// heute umfasst — auch die, die auf QA/Review warten, denn "offen" heisst
+// hier "noch nicht erledigt", nicht "bindet die Person". Darunter die
+// naechsten kommenden, damit man sieht, was danach anliegt.
+const TEAM_UPCOMING_BLOCKS = 3;
+
+function personOpenPlanBlocks(personId, date = todayStr()) {
+  return (data.blocks || [])
+    .filter(b => b.personId === personId && !isAbsenceBlock(b) && !isBlockParked(b))
+    .map(blockView)
+    .filter(b => b.state !== 'done' && b.start <= date && b.end >= date)
+    .sort((a, b) => a.end.localeCompare(b.end));
+}
+
+function renderPersonPlanBlocks(person) {
+  const today = todayStr();
+  const running = personOpenPlanBlocks(person.id, today);
+  const upcoming = personUpcomingBlocks(person.id, today);
+  const shownUpcoming = upcoming.slice(0, TEAM_UPCOMING_BLOCKS);
+  const moreUpcoming = upcoming.length - shownUpcoming.length;
+  const absence = personAbsenceOnDate(person.id, today);
+  const empty = absence
+    ? `${esc(teamFocusAbsenceLabel(absence))} &middot; kein laufender Block`
+    : 'Kein laufender Block';
+  return `
+    <div class="team-section-block team-section-planung">
+      <div class="card-header">
+        <span class="card-title">Laufende Bl&ouml;cke (${running.length})</span>
+        <button class="tf-blocks-link" type="button" onclick="navigate('planung',{planungPerson:'${person.id}'})">In der Planung &ouml;ffnen &rarr;</button>
+      </div>
+      ${running.length
+        ? `<div class="tf-plan-group-rows">${running.map(b => renderTeamFocusBlockRow(b, 'active')).join('')}</div>`
+        : `<div class="team-empty-copy">${empty}</div>`}
+      ${shownUpcoming.length ? `
+        <div class="team-plan-upcoming">
+          <div class="tf-context-heading"><strong>Danach geplant <span class="tf-blocks-count">${upcoming.length}</span></strong>${moreUpcoming ? `<span>+${moreUpcoming} ${moreUpcoming === 1 ? 'weiterer' : 'weitere'} in der Planung</span>` : ''}</div>
+          <div class="tf-plan-group-rows">${shownUpcoming.map(b => renderTeamFocusBlockRow(b, 'upcoming')).join('')}</div>
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
+
 // ============================================================
 // TEAM VIEW
 // ============================================================
@@ -12735,6 +12781,8 @@ function renderTeam() {
                 </div>
               </div>
             </div>
+
+            ${renderPersonPlanBlocks(selectedPerson)}
 
             <div class="team-detail-grid">
               <div class="team-section-block">
@@ -15413,7 +15461,11 @@ function toggleTeamFocusCard(personId) {
 // Woran die Person arbeitet und was als naechstes kommt. Ein Klick fuehrt in
 // die Planung.
 function renderTeamFocusBlockRow(block, kind) {
-  const handover = kind === 'active' ? teamFocusBlockHandoverStatus(block) : '';
+  // Wartende Bloecke tauchen nur in der Team-Ansicht auf; dort zaehlt auch
+  // der Status der eigenen Tickets, nicht nur der des Auftrags.
+  const handover = kind === 'active'
+    ? (teamFocusBlockHandoverStatus(block) || (block.state === 'waiting' ? blockWaitingStatus(block) : ''))
+    : '';
   const canOpenJira = !!jiraUrl(blockAuftragKey(block));
   const label = blockDisplayLabel(block);
   const ref = blockAuftragKey(block);

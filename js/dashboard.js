@@ -347,7 +347,11 @@ function toggleTeamFocusCard(personId) {
 // Woran die Person arbeitet und was als naechstes kommt. Ein Klick fuehrt in
 // die Planung.
 function renderTeamFocusBlockRow(block, kind) {
-  const handover = kind === 'active' ? teamFocusBlockHandoverStatus(block) : '';
+  // Wartende Bloecke tauchen nur in der Team-Ansicht auf; dort zaehlt auch
+  // der Status der eigenen Tickets, nicht nur der des Auftrags.
+  const handover = kind === 'active'
+    ? (teamFocusBlockHandoverStatus(block) || (block.state === 'waiting' ? blockWaitingStatus(block) : ''))
+    : '';
   const canOpenJira = !!jiraUrl(blockAuftragKey(block));
   const label = blockDisplayLabel(block);
   const ref = blockAuftragKey(block);
