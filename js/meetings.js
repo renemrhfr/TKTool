@@ -432,6 +432,7 @@ function renderMeetings() {
               </div>
               <div class="meetings-detail-actions">
                 ${selected.personId ? `<button class="btn btn-secondary btn-sm" onclick="openPersonById('${selected.personId}')">@${esc(personName(selected.personId))}</button>` : ''}
+                ${selected.type === 'oneOnOne' && selected.personId ? renderMeetingMemberLinks(selected.personId) : ''}
                 ${selected.type !== 'oneOnOne' ? renderMeetingFormatPicker(`setMeetingFormat('${selected.id}','%')`, meetingFormat(selected)) : ''}
                 ${selected.type !== 'oneOnOne' ? `<button class="btn btn-secondary btn-sm" onclick="openMeetingTitleForm('${selected.id}')">Titel bearbeiten</button>` : ''}
                 ${selected.type === 'oneOnOne' && !selected.date ? `<button class="btn btn-secondary btn-sm" onclick="openScheduleMeetingDate('${selected.id}')">Einplanen</button>` : ''}
@@ -475,6 +476,7 @@ function renderMeetingDetail() {
       <span class="section-title">${meetingDisplayTitle(m)}</span>
       <div style="display:flex;gap:8px">
         ${m.personId ? `<button class="btn btn-secondary btn-sm" onclick="openPersonById('${m.personId}')">@${esc(personName(m.personId))}</button>` : ''}
+        ${m.type === 'oneOnOne' && m.personId ? renderMeetingMemberLinks(m.personId) : ''}
         ${m.type !== 'oneOnOne' ? renderMeetingFormatPicker(`setMeetingFormat('${m.id}','%')`, meetingFormat(m)) : ''}
         ${m.type !== 'oneOnOne' ? `<button class="btn btn-secondary btn-sm" onclick="openMeetingTitleForm('${m.id}')">Titel bearbeiten</button>` : ''}
         <button class="btn btn-primary btn-sm" onclick="openMeetingFollowUp('${m.id}')">+ Follow-up</button>
@@ -486,6 +488,15 @@ function renderMeetingDetail() {
     </div>
     ${renderMeetingDetailBody(m)}
   `;
+}
+
+// Im 1:1 will man oft kurz nachsehen, woran die Person gerade sitzt —
+// dieselben Jira-/GitLab-Shortlinks wie in der Team-Ansicht.
+function renderMeetingMemberLinks(personId) {
+  const person = data.persons.find(p => p.id === personId);
+  if (!person) return '';
+  const bar = renderMemberLinkBar(person);
+  return bar ? `<div class="meeting-member-links">${bar}</div>` : '';
 }
 
 function meetingStatusExpanded() {

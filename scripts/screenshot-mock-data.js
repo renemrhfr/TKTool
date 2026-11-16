@@ -33,7 +33,9 @@ function buildMockData(TODAY) {
   ];
   const persons = team.map(([key, name, push]) => ({
     id: 'p_' + key, name, type: 'team', pushDirection: push,
-    jiraUrl: '', jiraAccountId: 'acc-' + key, gitlabMrUrl: '',
+    jiraUrl: 'https://jira.example.com/issues/?filter=assignee-' + key,
+    jiraAccountId: 'acc-' + key,
+    gitlabMrUrl: 'https://gitlab.example.com/dashboard/merge_requests?assignee_username=' + key,
     supportMonate: [],
   }));
   const P = Object.fromEntries(persons.map(p => [p.id.slice(2), p.id]));

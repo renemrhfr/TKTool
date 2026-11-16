@@ -1209,6 +1209,19 @@ textarea {
   margin-top: 0;
 }
 
+.meeting-member-links {
+  display: flex;
+  align-items: center;
+}
+
+.meeting-member-links .member-link-bar {
+  margin-top: 0;
+}
+
+.meeting-member-links .member-link {
+  height: 28px;
+}
+
 .member-link:hover {
   border-color: var(--accent);
   background: var(--interactive-hover-bg);
