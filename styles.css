@@ -7641,6 +7641,26 @@ body[data-theme] .tf-work-metric > :not(.tf-now) { grid-row: 1; white-space: now
 .gitlab-badge-unapproved { background: var(--danger); color: #fff; border: 1px solid var(--danger); }
 .gitlab-item-unapproved { border-color: var(--danger); box-shadow: inset 3px 0 0 var(--danger); }
 .gitlab-item-unapproved .review-due-item-main { background: var(--danger-light); }
+
+/* --- Release-Check (Dialog, nicht gespeichert) --- */
+.modal-release-check { max-width: 720px; }
+.release-check-range { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+.release-check-more { margin-bottom: 8px; padding: 8px 10px; border-radius: var(--radius-md, 8px); background: var(--warning-light, transparent); color: var(--text); font-size: 13px; border: 1px solid var(--warning); }
+.release-check-result { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 14px; }
+.release-check-summary { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.release-check-summary-title { font-weight: 600; font-size: 15px; }
+.release-check-projects { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.release-check-project { border: 1px solid var(--border); border-radius: var(--radius-md, 8px); background: var(--surface); }
+.release-check-project > summary { display: flex; align-items: center; gap: 10px; padding: 9px 12px; cursor: pointer; list-style: none; }
+.release-check-project > summary::-webkit-details-marker { display: none; }
+.release-check-project > summary::before { content: '\25B8'; color: var(--text-muted); font-size: 12px; transition: transform .15s; }
+.release-check-project[open] > summary::before { transform: rotate(90deg); }
+.release-check-project-name { font-weight: 600; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.release-check-project-last { color: var(--text-muted); font-size: 12px; white-space: nowrap; }
+.release-check-project-count { min-width: 26px; padding: 1px 8px; border-radius: 999px; background: var(--accent); color: var(--on-accent, #fff); font-size: 12px; font-weight: 600; text-align: center; font-variant-numeric: tabular-nums; }
+.release-check-project .review-due-item-list { padding: 0 8px 8px; }
+.release-check-project .review-due-item-main { width: 100%; }
+@media (max-width: 520px) { .release-check-range { grid-template-columns: 1fr; } }
 /* ============================================================
    TAGESABSCHLUSS
    ============================================================ */

@@ -320,7 +320,7 @@ function renderGitlabMergeRequests() {
   if (!gitlabSyncData) {
     return `
       <div class="card gitlab-card">
-        <div class="card-header"><span class="card-title">Merge Requests</span></div>
+        <div class="card-header"><span class="card-title">Merge Requests</span>${renderReleaseCheckButton()}</div>
         <div class="review-due-empty">Noch nichts eingespielt. Oben rechts auf „GitLab“ klicken.</div>
       </div>`;
   }
@@ -331,7 +331,7 @@ function renderGitlabMergeRequests() {
   const unapproved = merged.filter(mr => !gitlabApprovalCount(mr)).length;
   return `
     <div class="card gitlab-card">
-      <div class="card-header"><span class="card-title">Merge Requests</span></div>
+      <div class="card-header"><span class="card-title">Merge Requests</span>${renderReleaseCheckButton()}</div>
       <div class="review-due-panel">
         <div class="review-due-sections">
           <div class="review-due-section review-due-section-warning">
@@ -362,6 +362,12 @@ function renderGitlabMergeRequests() {
       </div>
       ${gitlabSyncData.truncated ? '<div class="form-hint">GitLab hat mehr als 100 MRs geliefert — nur die ersten werden gezeigt.</div>' : ''}
     </div>`;
+}
+
+function renderReleaseCheckButton() {
+  return getGitlabGroupUrls().length
+    ? '<button type="button" class="btn btn-secondary btn-sm" onclick="openReleaseCheck()" title="Was wurde zwischen zwei Daten gemerged?">Release-Check</button>'
+    : '';
 }
 
 function gitlabRowAttrs(mr) {
